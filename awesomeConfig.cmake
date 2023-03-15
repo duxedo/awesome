@@ -308,14 +308,14 @@ include(tests/examples/CMakeLists.txt)
 
 # {{{ Configure files
 file(GLOB awesome_base_c_configure_files RELATIVE ${SOURCE_DIR}
-    ${SOURCE_DIR}/*.c
-    ${SOURCE_DIR}/*.h)
+    ${SOURCE_DIR}/src/*.c
+    ${SOURCE_DIR}/src/*.h)
 
 file(GLOB awesome_c_configure_files RELATIVE ${SOURCE_DIR}
-    ${SOURCE_DIR}/common/*.c
-    ${SOURCE_DIR}/common/*.h
-    ${SOURCE_DIR}/objects/*.c
-    ${SOURCE_DIR}/objects/*.h)
+    ${SOURCE_DIR}/src/common/*.c
+    ${SOURCE_DIR}/src/common/*.h
+    ${SOURCE_DIR}/src/objects/*.c
+    ${SOURCE_DIR}/src/objects/*.h)
 
 file(GLOB_RECURSE awesome_lua_configure_files RELATIVE ${SOURCE_DIR}
     ${SOURCE_DIR}/lib/*.lua)
@@ -324,21 +324,17 @@ file(GLOB_RECURSE awesome_theme_configure_files RELATIVE ${SOURCE_DIR}
     ${SOURCE_DIR}/themes/*/*.lua)
 
 set(AWESOME_CONFIGURE_FILES
-    ${awesome_base_c_configure_files}
     ${awesome_theme_configure_files}
-    config.h
     docs/config.ld
-    awesome-version-internal.h)
+    )
 
 foreach(file ${AWESOME_CONFIGURE_FILES})
-    configure_file(${SOURCE_DIR}/${file}
-                   ${BUILD_DIR}/${file}
-                   ESCAPE_QUOTES
-                   @ONLY)
+    configure_file(${SOURCE_DIR}/${file} ${BUILD_DIR}/${file} ESCAPE_QUOTES @ONLY)
 endforeach()
+configure_file(${SOURCE_DIR}/src/config.h.in ${BUILD_DIR}/src/config.h ESCAPE_QUOTES @ONLY)
+configure_file(${SOURCE_DIR}/src/awesome-version-internal.h.in ${BUILD_DIR}/src/awesome-version-internal.h ESCAPE_QUOTES @ONLY)
 
 set(AWESOME_CONFIGURE_COPYONLY_WITHCOV_FILES
-    ${awesome_c_configure_files}
     ${awesome_lua_configure_files}
 )
 
