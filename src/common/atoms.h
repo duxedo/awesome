@@ -24,7 +24,7 @@
 
 #include <xcb/xcb.h>
 
-#include "common/atoms-extern.h"
+#include "atoms-extern.h"
 
 void atoms_init(xcb_connection_t *);
 

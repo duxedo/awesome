@@ -1,0 +1,123 @@
+project('pellicle', 'c', 'cpp')
+
+deps = [
+    dependency('xcb', version : '>=1.6'),
+    dependency('glib-2.0', version : '>=2.40'),
+    dependency('gdk-pixbuf-2.0'),
+    dependency('cairo'),
+    dependency('x11'),
+    dependency('xcb-cursor'),
+    dependency('xcb-randr'),
+    dependency('xcb-xtest'),
+    dependency('xcb-xinerama'),
+    dependency('xcb-shape'),
+    dependency('xcb-util', version : '>=0.3.8'),
+    dependency('xcb-keysyms', version : '>=0.3.4'),
+    dependency('xcb-icccm', version : '>=0.3.8'),
+    dependency('xcb-xfixes'),
+    dependency('xcb-xkb'),
+    dependency('xkbcommon'),
+    dependency('xkbcommon-x11'),
+    dependency('cairo-xcb'),
+    dependency('libstartup-notification-1.0', version : '>=0.10'),
+    dependency('xproto', version : '>=7.0.15'),
+    dependency('libxdg-basedir', version : '>=1.0.0'),
+    dependency('xcb-xrm'),
+    dependency('dbus-1'),
+    dependency('luajit')
+]
+srcs = [
+    'src/awesome.c',
+    'src/banning.c',
+    'src/color.c',
+    'src/dbus.c',
+    'src/draw.c',
+    'src/event.c',
+    'src/ewmh.c',
+    'src/keygrabber.c',
+    'src/luaa.c',
+    'src/mouse.c',
+    'src/mousegrabber.c',
+    'src/property.c',
+    'src/root.c',
+    'src/selection.c',
+    'src/spawn.c',
+    'src/stack.c',
+    'src/strut.c',
+    'src/systray.c',
+    'src/xwindow.c',
+    'src/options.c',
+    'src/xkb.c',
+    'src/xrdb.c',
+    'src/common/atoms.c',
+    'src/common/backtrace.c',
+    'src/common/buffer.c',
+    'src/common/luaclass.c',
+    'src/common/lualib.c',
+    'src/common/luaobject.c',
+    'src/common/util.c',
+    'src/common/version.c',
+    'src/common/xcursor.c',
+    'src/common/xembed.c',
+    'src/common/xutil.c',
+    'src/objects/button.c',
+    'src/objects/client.c',
+    'src/objects/drawable.c',
+    'src/objects/drawin.c',
+    'src/objects/key.c',
+    'src/objects/screen.c',
+    'src/objects/selection_acquire.c',
+    'src/objects/selection_transfer.c',
+    'src/objects/selection_watcher.c',
+    'src/objects/tag.c',
+    'src/objects/selection_getter.c',
+    'src/objects/window.c'
+]
+
+include_dir = [
+    'src'
+]
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required : false)
+
+atoms_ext = custom_target(
+    output : 'atoms-extern.h',
+    input : ['build-utils/atoms-ext.sh', 'src/common/atoms.list'],
+    capture : true,
+    command : ['/bin/sh', '@INPUT0@', '@INPUT1@'],
+)
+
+atoms_int = custom_target(
+    output : 'atoms-intern.h',
+    input : ['build-utils/atoms-int.sh', 'src/common/atoms.list'],
+    capture : true,
+    command : ['/bin/sh', '@INPUT0@', '@INPUT1@'],
+)
+#install_config ${INSTALL_PREFIX}/etc
+#install xdg -> XDG_CONFIG_DIR | ${INSTALL_PREFIX}/xdg
+#install data -> ${INSTALL_PREFIX}/share/pellicle
+#install xsessions -> ${INSTALL_PREFIX}/share/xsessions
+#install man -> ${INSTALL_PREFIX}/share/man
+
+confdata = configuration_data()
+data_path = '/usr/share/awesome'
+confdata.set('AWESOME_LUA_LIB_PATH', data_path / 'lib')
+confdata.set('XDG_CONFIG_DIR', '/etc/xdg')
+
+confdata.set('AWESOME_THEMES_PATH', data_path / 'themes')
+confdata.set('AWESOME_ICON_PATH', data_path / 'icons')
+confdata.set('AWESOME_DEFAULT_CONF', '/etc/xdg/awesome/rc.lua')
+confdata.set('WITH_DBUS', true)
+confdata.set('WITH_XCB_ERRORS', false)
+confdata.set('HAS_EXECINFO', 1)
+
+config_h = configure_file(input: 'src/config.h.in', output: 'config.h', configuration:confdata)
+
+versdata = configuration_data()
+versdata.set('AWESOME_VERSION', '0.1')
+versdata.set('AWESOME_RELEASE', 'bouncy')
+versdata.set('AWESOME_API_LEVEL', 4)
+version_h = configure_file(input: 'src/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata)
+
+executable('redundant', [srcs, atoms_int, atoms_ext, config_h, version_h], dependencies : [deps, m_dep], include_directories : include_dir)
+
