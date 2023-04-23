@@ -115,9 +115,9 @@ luaA_object_ref(lua_State *L, int oud)
  * \return The object reference, or NULL if not referenceable.
  */
 static inline void *
-luaA_object_ref_class(lua_State *L, int oud, lua_class_t *class)
+luaA_object_ref_class(lua_State *L, int oud, lua_class_t *cls)
 {
-    luaA_checkudata(L, oud, class);
+    luaA_checkudata(L, oud, cls);
     return luaA_object_ref(L, oud);
 }
 
@@ -166,7 +166,7 @@ int luaA_object_emit_signal_simple(lua_State *);
     static inline type *                                                       \
     prefix##_new(lua_State *L)                                                 \
     {                                                                          \
-        type *p = lua_newuserdata(L, sizeof(type));                            \
+        type *p = reinterpret_cast<type*>(lua_newuserdata(L, sizeof(type)));                            \
         p_clear(p, 1);                                                         \
         (lua_class).instances++;                                               \
         luaA_settype(L, &(lua_class));                                         \
@@ -196,6 +196,13 @@ int luaA_object_emit_signal_simple(lua_State *);
         return 1; \
     }
 
+#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher) \
+    static int \
+    luaA_##pfx##_get_##name(lua_State *L, type *object) \
+    { \
+        pusher(L, object->field); \
+        return 1; \
+    }
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
     static int \
     luaA_##pfx##_get_##field(lua_State *L, type *object) \

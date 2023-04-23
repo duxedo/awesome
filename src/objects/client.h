@@ -108,7 +108,7 @@ struct client_t
     /** Client name */
     char *name, *alt_name, *icon_name, *alt_icon_name;
     /** WM_CLASS stuff */
-    char *class, *instance;
+    char *cls, *instance;
     /** Window geometry */
     area_t geometry;
     /** Old window geometry currently configured in X11 */
