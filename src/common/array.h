@@ -38,7 +38,7 @@
     for(int __foreach_index_##var = 0; \
         __foreach_index_##var < (array).len; \
         __foreach_index_##var = (array).len) \
-        for(typeof((array).tab) var = &(array).tab[__foreach_index_##var];  \
+        for(decltype((array).tab) var = &(array).tab[__foreach_index_##var];  \
             (__foreach_index_##var < (array).len) &&                        \
             (var = &(array).tab[__foreach_index_##var]);                    \
             ++__foreach_index_##var)
@@ -47,7 +47,7 @@
     for(int __foreach_index_##var = (array).len-1; \
         __foreach_index_##var > -1; \
         __foreach_index_##var = -1) \
-        for(typeof((array).tab) var = &(array).tab[__foreach_index_##var];  \
+        for(decltype((array).tab) var = &(array).tab[__foreach_index_##var];  \
             (__foreach_index_##var > -1) &&                                 \
             (var = &(array).tab[__foreach_index_##var]);                    \
             --__foreach_index_##var)
@@ -139,7 +139,7 @@
     static inline type_t *                                                  \
     pfx##_array_lookup(pfx##_array_t *arr, type_t *e)                       \
     {                                                                       \
-        return bsearch(e, arr->tab, arr->len, sizeof(type_t), cmp);         \
+        return (type_t*)bsearch(e, arr->tab, arr->len, sizeof(type_t), cmp);         \
     }
 
 #define DO_ARRAY(type_t, pfx, dtor)                                         \

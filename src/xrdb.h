@@ -22,9 +22,9 @@
 #ifndef AWESOME_XRDB_H
 #define AWESOME_XRDB_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 
-int luaA_xrdb_get_value(lua_State *L);
+extern "C" int luaA_xrdb_get_value(lua_State *L);
 
 #endif
 

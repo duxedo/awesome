@@ -22,7 +22,7 @@
 #ifndef AWESOME_MOUSEGRABBER_H
 #define AWESOME_MOUSEGRABBER_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 #include <xcb/xcb.h>
 
 int luaA_mousegrabber_stop(lua_State *);

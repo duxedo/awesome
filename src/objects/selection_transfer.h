@@ -22,7 +22,7 @@
 #ifndef AWESOME_OBJECTS_SELECTION_TRANSFER_H
 #define AWESOME_OBJECTS_SELECTION_TRANSFER_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 #include <xcb/xcb.h>
 
 void selection_transfer_class_setup(lua_State*);

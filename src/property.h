@@ -67,7 +67,8 @@ struct xproperty {
 static inline int
 xproperty_cmp(const void *a, const void *b)
 {
-    const xproperty_t *x = a, *y = b;
+    const xproperty_t *x = (const xproperty*)a,
+          *y = (const xproperty*)b;
     return x->atom - y->atom;
 }
 

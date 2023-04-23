@@ -24,7 +24,7 @@
 
 #include "objects/client.h"
 
-#include <lua.h>
+#include "common/luahdr.h"
 
 void spawn_init(void);
 void spawn_start_notify(client_t *, const char *);

@@ -23,7 +23,9 @@
 #ifndef AWESOME_COMMON_UTIL_H
 #define AWESOME_COMMON_UTIL_H
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
 
 #include <string.h>
 #include <sys/types.h>
@@ -59,7 +61,7 @@
 #define ssizeof(foo)            (ssize_t)sizeof(foo)
 #define countof(foo)            (ssizeof(foo) / ssizeof(foo[0]))
 #define fieldsizeof(type_t, m)  sizeof(((type_t *)0)->m)
-#define fieldtypeof(type_t, m)  typeof(((type_t *)0)->m)
+#define fieldtypeof(type_t, m)  decltype(((type_t *)0)->m)
 
 #define p_alloca(type, count)                                \
         ((type *)memset(alloca(sizeof(type) * (count)),      \
@@ -68,7 +70,7 @@
 #define p_alloc_nr(x)           (((x) + 16) * 3 / 2)
 #define p_new(type, count)      ((type *)xmalloc(sizeof(type) * (count)))
 #define p_clear(p, count)       ((void)memset((p), 0, sizeof(*(p)) * (count)))
-#define p_realloc(pp, count)    xrealloc((void*)(pp), sizeof(**(pp)) * (count))
+#define p_realloc(pp, count)    xrealloc((void**)(pp), sizeof(**(pp)) * (count))
 #define p_dup(p, count)         xmemdup((p), sizeof(*(p)) * (count))
 #define p_grow(pp, goalnb, allocnb)                  \
     do {                                             \
@@ -166,7 +168,7 @@ static inline ssize_t a_strnlen(const char *s, ssize_t n)
 {
     if (s)
     {
-        const char *p = memchr(s, '\0', n);
+        const char *p = (const char *)memchr(s, '\0', n);
         return p ? p - s : n;
     }
     return 0;
@@ -186,7 +188,7 @@ static inline
 char *a_strdup(const char *s)
 {
     ssize_t len = a_strlen(s);
-    return len ? p_dup(s, len + 1) : NULL;
+    return len ? (char*)p_dup(s, len + 1) : (char*)NULL;
 }
 
 /** \brief safe limited strdup.
@@ -206,7 +208,7 @@ char * a_strndup(const char *s, ssize_t l)
     ssize_t len = MIN(a_strlen(s), l);
     if(len)
     {
-        char *p = p_dup(s, len + 1);
+        char *p = (char*)p_dup(s, len + 1);
         p[len] = '\0';
         return p;
     }

@@ -22,7 +22,7 @@
 #ifndef AWESOME_KEYGRABBER_H
 #define AWESOME_KEYGRABBER_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 #include <xcb/xcb.h>
 
 #include <stdbool.h>

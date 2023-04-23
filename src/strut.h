@@ -22,7 +22,7 @@
 #ifndef AWESOME_STRUT_H
 #define AWESOME_STRUT_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 #include <stdint.h>
 #include <stdbool.h>
 

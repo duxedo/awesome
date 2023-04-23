@@ -23,9 +23,7 @@
 #define AWESOME_COMMON_LUACLASS
 
 #include "common/signal.h"
-
-#include <lua.h>
-#include <lauxlib.h>
+#include "common/luahdr.h"
 
 typedef struct lua_class_property lua_class_property_t;
 
@@ -106,17 +104,17 @@ int luaA_class_new(lua_State *, lua_class_t *);
 void * luaA_checkudata(lua_State *, int, lua_class_t *);
 void * luaA_toudata(lua_State *L, int ud, lua_class_t *);
 
-static inline void luaA_class_set_tostring(lua_class_t *class, lua_class_propfunc_t callback)
+static inline void luaA_class_set_tostring(lua_class_t *cls, lua_class_propfunc_t callback)
 {
-    class->tostring = callback;
+    cls->tostring = callback;
 }
 
 static inline void *
-luaA_checkudataornil(lua_State *L, int udx, lua_class_t *class)
+luaA_checkudataornil(lua_State *L, int udx, lua_class_t *cls)
 {
     if(lua_isnil(L, udx))
         return NULL;
-    return luaA_checkudata(L, udx, class);
+    return luaA_checkudata(L, udx, cls);
 }
 
 #define LUA_CLASS_FUNCS(prefix, lua_class) \

@@ -67,7 +67,7 @@ buffer_init(buffer_t *buf)
 static inline void
 buffer_init_buf(buffer_t *b, void *buf, int size)
 {
-    *b = (buffer_t){ .s = buf, .size = size };
+    *b = (buffer_t){ .s = (char*)buf, .size = size };
     b->s[0] = '\0';
 }
 

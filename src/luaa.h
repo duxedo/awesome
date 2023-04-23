@@ -19,11 +19,7 @@
  *
  */
 
-#ifndef AWESOME_LUA_H
-#define AWESOME_LUA_H
-
-#include <lua.h>
-#include <lauxlib.h>
+#pragma once
 
 #include <basedir.h>
 
@@ -317,19 +313,18 @@ luaA_registerfct(lua_State *L, int idx, int *fct)
 typedef bool luaA_config_callback(const char *);
 
 void luaA_init(xdgHandle *, string_array_t *);
-const char *luaA_find_config(xdgHandle *, const char *, luaA_config_callback *);
-bool luaA_parserc(xdgHandle *, const char *);
+extern "C" const char *luaA_find_config(xdgHandle *, const char *, luaA_config_callback *);
+extern "C" bool luaA_parserc(xdgHandle *, const char *);
 
 /** Global signals */
 extern signal_array_t global_signals;
 
-int luaA_class_index_miss_property(lua_State *, lua_object_t *);
-int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);
-int luaA_default_index(lua_State *);
-int luaA_default_newindex(lua_State *);
-void luaA_emit_startup(void);
+extern "C" int luaA_class_index_miss_property(lua_State *, lua_object_t *);
+extern "C" int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);
+extern "C" int luaA_default_index(lua_State *);
+extern "C" int luaA_default_newindex(lua_State *);
+extern "C" void luaA_emit_startup(void);
 
-void luaA_systray_invalidate(void);
+extern "C" void luaA_systray_invalidate(void);
 
-#endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

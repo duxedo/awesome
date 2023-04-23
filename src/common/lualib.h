@@ -19,12 +19,9 @@
  *
  */
 
-#ifndef AWESOME_COMMON_LUALIB
-#define AWESOME_COMMON_LUALIB
+#pragma once
 
-#include <lua.h>
-#include <lauxlib.h>
-
+#include "common/luahdr.h"
 #include "common/util.h"
 
 /** Lua function to call on dofunction() error */
@@ -118,7 +115,5 @@ int luaA_call_handler(lua_State *L, int handler)
     lua_remove(L, error_func_pos);
     return lua_gettop(L);
 }
-
-#endif
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
