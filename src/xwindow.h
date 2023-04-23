@@ -19,13 +19,12 @@
  *
  */
 
-#ifndef AWESOME_WINDOW_H
-#define AWESOME_WINDOW_H
+#pragma once
 
 #include "globalconf.h"
 #include "color.h"
+#include <xcb/shape.h>
 
-enum xcb_shape_sk_t;
 
 void xwindow_set_state(xcb_window_t, uint32_t);
 xcb_get_property_cookie_t xwindow_get_state_unchecked(xcb_window_t);
@@ -40,8 +39,8 @@ void xwindow_grabkeys(xcb_window_t, key_array_t *);
 void xwindow_takefocus(xcb_window_t);
 void xwindow_set_cursor(xcb_window_t, xcb_cursor_t);
 void xwindow_set_border_color(xcb_window_t, color_t *);
-cairo_surface_t *xwindow_get_shape(xcb_window_t, enum xcb_shape_sk_t);
-void xwindow_set_shape(xcb_window_t, int, int, enum xcb_shape_sk_t, cairo_surface_t *, int);
+cairo_surface_t *xwindow_get_shape(xcb_window_t, xcb_shape_sk_t);
+void xwindow_set_shape(xcb_window_t, int, int, xcb_shape_sk_t, cairo_surface_t *, int);
 void xwindow_translate_for_gravity(xcb_gravity_t, int16_t, int16_t, int16_t, int16_t, int16_t *, int16_t *);
 
 #define xwindow_set_name_static(win, name) \
@@ -53,5 +52,4 @@ void xwindow_translate_for_gravity(xcb_gravity_t, int16_t, int16_t, int16_t, int
 #define _xwindow_set_class_instance_static(win, instance_class) \
     xcb_icccm_set_wm_class(globalconf.connection, win, sizeof(instance_class), instance_class)
 
-#endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

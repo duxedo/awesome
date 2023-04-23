@@ -35,7 +35,7 @@ typedef struct
 static inline int
 signal_cmp(const void *a, const void *b)
 {
-    const signal_t *x = a, *y = b;
+    const signal_t *x = (signal_t*)a, *y = (signal_t*)b;
     return x->id > y->id ? 1 : (x->id < y->id ? -1 : 0);
 }
 

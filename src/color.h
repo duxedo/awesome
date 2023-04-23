@@ -25,7 +25,8 @@
 
 #include <xcb/xcb.h>
 #include <stdbool.h>
-#include <lua.h>
+
+#include "common/luahdr.h"
 
 typedef struct
 {

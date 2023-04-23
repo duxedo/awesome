@@ -24,7 +24,7 @@
 
 #include <stdbool.h>
 #include <xcb/xcb.h>
-#include <lua.h>
+#include "common/luahdr.h"
 
 bool mouse_query_pointer(xcb_window_t, int16_t *, int16_t *, xcb_window_t *, uint16_t *);
 int luaA_mouse_pushstatus(lua_State *, int, int, uint16_t);
