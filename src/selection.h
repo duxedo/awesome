@@ -22,7 +22,7 @@
 #ifndef AWESOME_SELECTION_H
 #define AWESOME_SELECTION_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 
 void selection_setup(lua_State *);
 

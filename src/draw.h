@@ -24,7 +24,7 @@
 
 #include <xcb/xcb.h>
 #include <cairo.h>
-#include <lua.h>
+#include "common/luahdr.h"
 #include <glib.h> /* for GError */
 
 #include "common/array.h"

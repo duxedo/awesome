@@ -22,7 +22,7 @@
 #ifndef AWESOME_OBJECTS_SELECTION_ACQUIRE_H
 #define AWESOME_OBJECTS_SELECTION_ACQUIRE_H
 
-#include <lua.h>
+#include "common/luahdr.h"
 #include <xcb/xcb.h>
 
 void selection_acquire_class_setup(lua_State*);

@@ -30,51 +30,51 @@ deps = [
     dependency('luajit')
 ]
 srcs = [
-    'src/awesome.c',
-    'src/banning.c',
-    'src/color.c',
-    'src/dbus.c',
-    'src/draw.c',
-    'src/event.c',
-    'src/ewmh.c',
-    'src/keygrabber.c',
-    'src/luaa.c',
-    'src/mouse.c',
-    'src/mousegrabber.c',
-    'src/property.c',
-    'src/root.c',
-    'src/selection.c',
-    'src/spawn.c',
-    'src/stack.c',
-    'src/strut.c',
-    'src/systray.c',
-    'src/xwindow.c',
-    'src/options.c',
-    'src/xkb.c',
-    'src/xrdb.c',
-    'src/common/atoms.c',
-    'src/common/backtrace.c',
-    'src/common/buffer.c',
-    'src/common/luaclass.c',
-    'src/common/lualib.c',
-    'src/common/luaobject.c',
-    'src/common/util.c',
-    'src/common/version.c',
-    'src/common/xcursor.c',
-    'src/common/xembed.c',
-    'src/common/xutil.c',
-    'src/objects/button.c',
-    'src/objects/client.c',
-    'src/objects/drawable.c',
-    'src/objects/drawin.c',
-    'src/objects/key.c',
-    'src/objects/screen.c',
-    'src/objects/selection_acquire.c',
-    'src/objects/selection_transfer.c',
-    'src/objects/selection_watcher.c',
-    'src/objects/tag.c',
-    'src/objects/selection_getter.c',
-    'src/objects/window.c'
+    'src/awesome.cpp',
+    'src/banning.cpp',
+    'src/color.cpp',
+    'src/dbus.cpp',
+    'src/draw.cpp',
+    'src/event.cpp',
+    'src/ewmh.cpp',
+    'src/keygrabber.cpp',
+    'src/luaa.cpp',
+    'src/mouse.cpp',
+    'src/mousegrabber.cpp',
+    'src/property.cpp',
+    'src/root.cpp',
+    'src/selection.cpp',
+    'src/spawn.cpp',
+    'src/stack.cpp',
+    'src/strut.cpp',
+    'src/systray.cpp',
+    'src/xwindow.cpp',
+    'src/options.cpp',
+    'src/xkb.cpp',
+    'src/xrdb.cpp',
+    'src/common/atoms.cpp',
+    'src/common/backtrace.cpp',
+    'src/common/buffer.cpp',
+    'src/common/luaclass.cpp',
+    'src/common/lualib.cpp',
+    'src/common/luaobject.cpp',
+    'src/common/util.cpp',
+    'src/common/version.cpp',
+    'src/common/xcursor.cpp',
+    'src/common/xembed.cpp',
+    'src/common/xutil.cpp',
+    'src/objects/button.cpp',
+    'src/objects/client.cpp',
+    'src/objects/drawable.cpp',
+    'src/objects/drawin.cpp',
+    'src/objects/key.cpp',
+    'src/objects/screen.cpp',
+    'src/objects/selection_acquire.cpp',
+    'src/objects/selection_transfer.cpp',
+    'src/objects/selection_watcher.cpp',
+    'src/objects/tag.cpp',
+    'src/objects/selection_getter.cpp',
+    'src/objects/window.cpp'
 ]
 
 include_dir = [
@@ -114,16 +114,19 @@ confdata.set('WITH_DBUS', true)
 confdata.set('WITH_XCB_ERRORS', false)
 confdata.set('HAS_EXECINFO', 1)
 
-config_h = configure_file(input: 'src/config.h.in', output: 'config.h', configuration:confdata)
+config_h = configure_file(input: 'src/config.h.in', output: 'config.h', configuration:confdata, install:false)
 
 versdata = configuration_data()
 versdata.set('AWESOME_VERSION', '0.1')
 versdata.set('AWESOME_RELEASE', 'bouncy')
 versdata.set('AWESOME_API_LEVEL', 4)
-version_h = configure_file(input: 'src/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata)
+version_h = configure_file(input: 'src/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata, install: false)
 
 executable(
-'redundant',
-[srcs, atoms_int, atoms_ext, config_h, version_h],
-dependencies : [deps, m_dep],
-include_directories : include_dir)
+    'redundant',
+    [srcs, atoms_int, atoms_ext, config_h, version_h],
+    dependencies : [deps, m_dep],
+    include_directories : include_dir,
+    c_args: ['-Wno-unused-function'],
+    cpp_args: ['-Wno-unused-function'],
+)
