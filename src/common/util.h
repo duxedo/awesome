@@ -26,6 +26,8 @@
 #define _GNU_SOURCE
 
 #include <string.h>
+#include <sys/types.h>
+#include <strings.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdarg.h>
@@ -222,7 +224,7 @@ static inline int a_strcmp(const char *a, const char *b)
     return strcmp(NONULL(a), NONULL(b));
 }
 
-#define  A_STREQ(a, b) (((a) == (b)) || a_strcmp(a, b) == 0)
+#define  A_STREQ(a, b) (a_strcmp(a, b) == 0)
 #define A_STRNEQ(a, b) (!A_STREQ(a, b))
 
 /** \brief \c NULL resistant strcasecmp.
