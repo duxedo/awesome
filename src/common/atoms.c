@@ -29,7 +29,7 @@ typedef struct
     xcb_atom_t *atom;
 } atom_item_t;
 
-#include "common/atoms-intern.h"
+#include "atoms-intern.h"
 
 void
 atoms_init(xcb_connection_t *conn)
