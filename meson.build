@@ -1,10 +1,6 @@
-project('pellicle', 'c', 'cpp')
-
-deps = [
+project('pellicle', 'c', 'cpp', default_options: ['cpp_std=c++20', 'c_std=gnu18'])
+xorg_deps = [
     dependency('xcb', version : '>=1.6'),
-    dependency('glib-2.0', version : '>=2.40'),
-    dependency('gdk-pixbuf-2.0'),
-    dependency('cairo'),
     dependency('x11'),
     dependency('xcb-cursor'),
     dependency('xcb-randr'),
@@ -16,13 +12,20 @@ deps = [
     dependency('xcb-icccm', version : '>=0.3.8'),
     dependency('xcb-xfixes'),
     dependency('xcb-xkb'),
-    dependency('xkbcommon'),
     dependency('xkbcommon-x11'),
     dependency('cairo-xcb'),
-    dependency('libstartup-notification-1.0', version : '>=0.10'),
     dependency('xproto', version : '>=7.0.15'),
-    dependency('libxdg-basedir', version : '>=1.0.0'),
     dependency('xcb-xrm'),
+    dependency('libuv'),
+]
+deps = [
+    xorg_deps,
+    dependency('glib-2.0', version : '>=2.40'),
+    dependency('gdk-pixbuf-2.0'),
+    dependency('cairo'),
+    dependency('xkbcommon'),
+    dependency('libstartup-notification-1.0', version : '>=0.10'),
+    dependency('libxdg-basedir', version : '>=1.0.0'),
     dependency('dbus-1'),
     dependency('luajit')
 ]
@@ -119,5 +122,8 @@ versdata.set('AWESOME_RELEASE', 'bouncy')
 versdata.set('AWESOME_API_LEVEL', 4)
 version_h = configure_file(input: 'src/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata)
 
-executable('redundant', [srcs, atoms_int, atoms_ext, config_h, version_h], dependencies : [deps, m_dep], include_directories : include_dir)
-
+executable(
+'redundant',
+[srcs, atoms_int, atoms_ext, config_h, version_h],
+dependencies : [deps, m_dep],
+include_directories : include_dir)

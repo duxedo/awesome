@@ -46,6 +46,8 @@
 #include <signal.h>
 #include <sys/time.h>
 
+#include <uv.h>
+
 #include <xcb/bigreq.h>
 #include <xcb/randr.h>
 #include <xcb/xcb_atom.h>
