@@ -666,7 +666,9 @@ main(int argc, char **argv)
     g_unix_signal_add(SIGINT, exit_on_signal, NULL);
     g_unix_signal_add(SIGTERM, exit_on_signal, NULL);
     g_unix_signal_add(SIGHUP, restart_on_signal, NULL);
-    struct sigaction sa = { .sa_handler = signal_fatal, .sa_flags = (decltype(sa.sa_flags))SA_RESETHAND };
+    struct sigaction sa;
+    memset(&sa, 0 , sizeof(sa));
+    sa.sa_handler = signal_fatal, sa.sa_flags = (decltype(sa.sa_flags))SA_RESETHAND;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGABRT, &sa, 0);
     sigaction(SIGBUS, &sa, 0);

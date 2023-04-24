@@ -119,13 +119,6 @@ luaA_checkudataornil(lua_State *L, int udx, lua_class_t *cls)
 
 #define LUA_CLASS_FUNCS(prefix, lua_class) \
     static inline int                                                          \
-    luaA_##prefix##_class_add_signal(lua_State *L)                             \
-    {                                                                          \
-        luaA_deprecate(L, "signal usage without add_signal()");                \
-        return 0;                                                              \
-    }                                                                          \
-                                                                               \
-    static inline int                                                          \
     luaA_##prefix##_class_connect_signal(lua_State *L)                         \
     {                                                                          \
         luaA_class_connect_signal_from_stack(L, &(lua_class),                  \
@@ -169,7 +162,6 @@ luaA_checkudataornil(lua_State *L, int udx, lua_class_t *cls)
     }
 
 #define LUA_CLASS_METHODS(class) \
-    { "add_signal", luaA_##class##_class_add_signal }, \
     { "connect_signal", luaA_##class##_class_connect_signal }, \
     { "disconnect_signal", luaA_##class##_class_disconnect_signal }, \
     { "emit_signal", luaA_##class##_class_emit_signal }, \
