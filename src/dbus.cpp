@@ -419,18 +419,19 @@ a_dbus_process_request(DBusConnection *dbus_connection, DBusMessage *msg)
 
     if(dbus_message_get_no_reply(msg))
     {
-        signal_t *sigfound = signal_array_getbyname(&dbus_signals, interface);
+        auto signalIt = dbus_signals.find(interface);
         /* emit signals */
-        if(sigfound)
+        if(signalIt != dbus_signals.end()) {
             signal_object_emit(L, &dbus_signals, NONULL(interface), nargs);
+        }
     }
     else
     {
-        signal_t *sig = signal_array_getbyname(&dbus_signals, interface);
-        if(sig)
+        auto signalIt = dbus_signals.find(interface);
+        if(signalIt != dbus_signals.end())
         {
             /* there can be only ONE handler to send reply */
-            void *func = (void *) sig->sigfuncs.tab[0];
+            void *func = (void *) signalIt->second.functions.front();
 
             int n = lua_gettop(L) - nargs;
 
@@ -770,8 +771,8 @@ luaA_dbus_connect_signal(lua_State *L)
 {
     const char *name = luaL_checkstring(L, 1);
     luaA_checkfunction(L, 2);
-    signal_t *sig = signal_array_getbyname(&dbus_signals, name);
-    if(sig) {
+    auto signalIt = dbus_signals.find(name);
+    if(signalIt != dbus_signals.end()) {
         luaA_warn(L, "cannot add signal %s on D-Bus, already existing", name);
         lua_pushnil(L);
         lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name);

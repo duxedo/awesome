@@ -24,6 +24,7 @@
 
 #include "common/signal.h"
 #include "common/luahdr.h"
+#include "common/array.h"
 
 typedef struct lua_class_property lua_class_property_t;
 

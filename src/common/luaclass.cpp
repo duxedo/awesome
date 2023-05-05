@@ -200,7 +200,7 @@ static int
 luaA_class_gc(lua_State *L)
 {
     lua_object_t *item = reinterpret_cast<lua_object_t*>(lua_touserdata(L, 1));
-    signal_array_wipe(&item->signals);
+    item->signals.clear();
     /* Get the object class */
     lua_class_t *cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
     cls->instances--;

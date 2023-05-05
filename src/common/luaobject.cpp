@@ -230,22 +230,24 @@ luaA_object_disconnect_signal_from_stack(lua_State *L, int oud,
 void
 signal_object_emit(lua_State *L, signal_array_t *arr, const char *name, int nargs)
 {
-    signal_t *sigfound = signal_array_getbyname(arr, name);
+    auto signalIt = arr->find(name);
 
-    if(sigfound)
+    if(signalIt != arr->end())
     {
-        int nbfunc = sigfound->sigfuncs.len;
+        int nbfunc = signalIt->second.functions.size();
         luaL_checkstack(L, nbfunc + nargs + 1, "too much signal");
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
-        foreach(func, sigfound->sigfuncs)
-            luaA_object_push(L, *func);
+        for(auto func : signalIt->second.functions) {
+            luaA_object_push(L, func);
+        }
 
         for(int i = 0; i < nbfunc; i++)
         {
             /* push all args */
-            for(int j = 0; j < nargs; j++)
+            for(int j = 0; j < nargs; j++) {
                 lua_pushvalue(L, - nargs - nbfunc + i);
+            }
             /* push first function */
             lua_pushvalue(L, - nargs - nbfunc + i);
             /* remove this first function */
@@ -278,15 +280,16 @@ luaA_object_emit_signal(lua_State *L, int oud,
         luaA_warn(L, "Trying to emit signal '%s' on invalid object", name);
         return;
     }
-    signal_t *sigfound = signal_array_getbyname(&obj->signals, name);
-    if(sigfound)
+    auto signalIt = obj->signals.find(name);
+    if(signalIt != obj->signals.end())
     {
-        int nbfunc = sigfound->sigfuncs.len;
+        int nbfunc = signalIt->second.functions.size();
         luaL_checkstack(L, nbfunc + nargs + 2, "too much signal");
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
-        foreach(func, sigfound->sigfuncs)
-            luaA_object_push_item(L, oud_abs, *func);
+        for(auto func: signalIt->second.functions) {
+            luaA_object_push_item(L, oud_abs, func);
+        }
 
         for(int i = 0; i < nbfunc; i++)
         {

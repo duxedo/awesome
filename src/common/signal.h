@@ -22,45 +22,18 @@
 #ifndef AWESOME_COMMON_SIGNAL
 #define AWESOME_COMMON_SIGNAL
 
-#include "common/array.h"
+#include <vector>
+#include <compare>
+#include <unordered_map>
+#include <string>
+#include <algorithm>
 
-DO_ARRAY(const void *, cptr, DO_NOTHING)
-
-typedef struct
+struct signal_t
 {
-    unsigned long id;
-    cptr_array_t sigfuncs;
-} signal_t;
+    std::vector<const void*> functions;
+};
 
-static inline int
-signal_cmp(const void *a, const void *b)
-{
-    const signal_t *x = (signal_t*)a, *y = (signal_t*)b;
-    return x->id > y->id ? 1 : (x->id < y->id ? -1 : 0);
-}
-
-static inline void
-signal_wipe(signal_t *sig)
-{
-    cptr_array_wipe(&sig->sigfuncs);
-}
-
-DO_BARRAY(signal_t, signal, signal_wipe, signal_cmp)
-
-static inline signal_t *
-signal_array_getbyid(signal_array_t *arr, unsigned long id)
-{
-    signal_t sig = { .id = id };
-    return signal_array_lookup(arr, &sig);
-}
-
-static inline signal_t *
-signal_array_getbyname(signal_array_t *arr, const char *name)
-{
-    signal_t sig = { .id = a_strhash((const unsigned char *) NONULL(name)) };
-    return signal_array_lookup(arr, &sig);
-}
-
+using signal_array_t = std::unordered_map<std::string, signal_t> ;
 /** Connect a signal inside a signal array.
  * You are in charge of reference counting.
  * \param arr The signal array.
@@ -70,16 +43,7 @@ signal_array_getbyname(signal_array_t *arr, const char *name)
 static inline void
 signal_connect(signal_array_t *arr, const char *name, const void *ref)
 {
-    unsigned long tok = a_strhash((const unsigned char *) name);
-    signal_t *sigfound = signal_array_getbyid(arr, tok);
-    if(sigfound)
-        cptr_array_append(&sigfound->sigfuncs, ref);
-    else
-    {
-        signal_t sig = { .id = tok };
-        cptr_array_append(&sig.sigfuncs, ref);
-        signal_array_insert(arr, sig);
-    }
+    (*arr)[name].functions.push_back(ref);
 }
 
 /** Disconnect a signal inside a signal array.
@@ -91,21 +55,13 @@ signal_connect(signal_array_t *arr, const char *name, const void *ref)
 static inline bool
 signal_disconnect(signal_array_t *arr, const char *name, const void *ref)
 {
-    signal_t *sigfound = signal_array_getbyname(arr, name);
-    if(sigfound)
-    {
-        foreach(func, sigfound->sigfuncs)
-            if(ref == *func)
-            {
-                cptr_array_remove(&sigfound->sigfuncs, func);
-                if(sigfound->sigfuncs.len == 0) {
-                    if(sigfound->sigfuncs.tab) {
-                        cptr_array_wipe(&sigfound->sigfuncs);
-                    }
-                    signal_array_remove(arr, sigfound);
-                }
-                return true;
-            }
+    if(auto it = arr->find(name); it != arr->end()) {
+        auto funIt = std::remove(it->second.functions.begin(), it->second.functions.end(), ref);
+        if(funIt == it->second.functions.end()) {
+            return false;
+        }
+        it->second.functions.erase(funIt);
+        return true;
     }
     return false;
 }
