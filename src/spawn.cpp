@@ -52,43 +52,60 @@
  */
 
 #include "spawn.h"
+#include "glibconfig.h"
+#include "libsn/sn-monitor.h"
+#include "luaa.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
 
 #include <unistd.h>
 #include <glib.h>
+#include <vector>
+#include <memory>
+#include <set>
 
 /** 20 seconds timeout */
 #define AWESOME_SPAWN_TIMEOUT 20.0
 
 /** Wrapper for unrefing startup sequence.
  */
-static inline void
-a_sn_startup_sequence_unref(SnStartupSequence **sss)
-{
-    return sn_startup_sequence_unref(*sss);
-}
-
-DO_ARRAY(SnStartupSequence *, SnStartupSequence, a_sn_startup_sequence_unref)
-
+struct SnStartupDeleter {
+    void operator()(SnStartupSequence *sss)
+    {
+        return sn_startup_sequence_unref(sss);
+    }
+};
+using StartupSequenceHandle = std::unique_ptr<SnStartupSequence, SnStartupDeleter>;
 /** The array of startup sequence running */
-static SnStartupSequence_array_t sn_waits;
+std::vector<StartupSequenceHandle> sn_waits;
 
-typedef struct {
+struct running_child_t {
     GPid pid;
     int exit_callback;
-} running_child_t;
+    auto operator<=>(const running_child_t & c) {
+        return pid <=> c.pid;
+    }
+    auto operator<=>(GPid pid) {
+        return this->pid <=> pid;
+    }
+};
 
-static int
-compare_pids(const void *a, const void *b)
-{
-    return ((running_child_t *) a)->pid - ((running_child_t *) b)->pid;
-}
+struct ChildPidComparator {
+    using is_transparent = void;
+    bool operator()(const running_child_t & lhs, const running_child_t & rhs) const {
+        return lhs.pid < rhs.pid;
+    }
+    bool operator()(const running_child_t & lhs, GPid rhs) const {
+        return lhs.pid < rhs;
+    }
+    bool operator()(GPid lhs, const running_child_t & rhs) const {
+        return lhs < rhs.pid;
+    }
+};
 
-DO_BARRAY(running_child_t, running_child, DO_NOTHING, compare_pids)
 
-static running_child_array_t running_children;
+static std::set<running_child_t, ChildPidComparator> running_children;
 
 /** Remove a SnStartupSequence pointer from an array and forget about it.
  * \param s The startup sequence to find, remove and unref.
@@ -97,13 +114,13 @@ static running_child_array_t running_children;
 static inline bool
 spawn_sequence_remove(SnStartupSequence *s)
 {
-    for(int i = 0; i < sn_waits.len; i++)
-        if(sn_waits.tab[i] == s)
-        {
-            SnStartupSequence_array_take(&sn_waits, i);
-            sn_startup_sequence_unref(s);
-            return true;
-        }
+    auto it = std::find_if(sn_waits.begin(), sn_waits.end(), [s](const auto & var) {
+        return var.get() == s;
+    });
+    if(it == sn_waits.end()) {
+        return false;
+    }
+    sn_waits.erase(it);
     return false;
 }
 
@@ -112,18 +129,18 @@ spawn_monitor_timeout(gpointer sequence)
 {
     if(spawn_sequence_remove((SnStartupSequence*)sequence))
     {
-         signal_t *sig = signal_array_getbyname(&global_signals, "spawn::timeout");
-         if(sig)
+         auto sigIt = global_signals.find("spawn::timeout");
+         if(sigIt != global_signals.end())
          {
              /* send a timeout signal */
              lua_State *L = globalconf_get_lua_State();
              lua_createtable(L, 0, 2);
              lua_pushstring(L, sn_startup_sequence_get_id((SnStartupSequence*)sequence));
              lua_setfield(L, -2, "id");
-             foreach(func, sig->sigfuncs)
+             for(auto func : sigIt->second.functions)
              {
                  lua_pushvalue(L, -1);
-                 luaA_object_push(L, (void *) *func);
+                 luaA_object_push(L, (void *) func);
                  luaA_dofunction(L, 1, 0);
              }
              lua_pop(L, 1);
@@ -151,7 +168,7 @@ spawn_monitor_event(SnMonitorEvent *event, void *data)
       case SN_MONITOR_EVENT_INITIATED:
         /* ref the sequence for the array */
         sn_startup_sequence_ref(sequence);
-        SnStartupSequence_array_append(&sn_waits, sequence);
+        sn_waits.push_back(StartupSequenceHandle{sequence});
         event_type_str = "spawn::initiated";
 
         /* Add a timeout function so we do not wait for this event to complete
@@ -219,14 +236,14 @@ spawn_monitor_event(SnMonitorEvent *event, void *data)
     }
 
     /* send the signal */
-    signal_t *sig = signal_array_getbyname(&global_signals, event_type_str);
+    auto sigIt = global_signals.find(event_type_str);
 
-    if(sig)
+    if(sigIt != global_signals.end())
     {
-        foreach(func, sig->sigfuncs)
+        for(auto func : sigIt->second.functions)
         {
             lua_pushvalue(L, -1);
-            luaA_object_push(L, (void *) *func);
+            luaA_object_push(L, (void *) func);
             luaA_dofunction(L, 1, 0);
         }
         lua_pop(L, 1);
@@ -240,9 +257,9 @@ spawn_monitor_event(SnMonitorEvent *event, void *data)
 void
 spawn_start_notify(client_t *c, const char * startup_id)
 {
-    foreach(_seq, sn_waits)
+    for(auto & _seq : sn_waits)
     {
-        SnStartupSequence *seq = *_seq;
+        SnStartupSequence *seq = _seq.get();
         bool found = false;
         const char *seqid = sn_startup_sequence_get_id(seq);
 
@@ -380,17 +397,16 @@ void
 spawn_child_exited(pid_t pid, int status)
 {
     int exit_callback;
-    running_child_t needle = { .pid = pid };
     lua_State *L = globalconf_get_lua_State();
 
-    running_child_t *child = running_child_array_lookup(&running_children, &needle);
-    if (child == NULL) {
+    auto it = running_children.find(GPid(pid));
+    if (it == running_children.end()) {
         warn("Unknown child %d exited with %s %d",
                  (int)pid, WIFEXITED(status) ? "status" : "signal", status);
         return;
     }
-    exit_callback = child->exit_callback;
-    running_child_array_remove(&running_children, child);
+    exit_callback = it->exit_callback;
+    running_children.erase(it);
 
     /* 'Decode' the exit status */
     if (WIFEXITED(status)) {
@@ -584,7 +600,7 @@ luaA_spawn(lua_State *L)
         /* Only do this down here to avoid leaks in case of errors */
         running_child_t child = { .pid = pid, .exit_callback = LUA_REFNIL };
         luaA_registerfct(L, 6, &child.exit_callback);
-        running_child_array_insert(&running_children, child);
+        running_children.insert(child);
     }
 
     /* push pid on stack */
