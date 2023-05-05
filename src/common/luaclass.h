@@ -24,6 +24,7 @@
 
 #include "common/signal.h"
 #include "common/luahdr.h"
+#include "common/array.h"
 
 #define LUA_OBJECT_HEADER \
         signal_array_t signals;
