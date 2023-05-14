@@ -331,7 +331,7 @@ tag_view(lua_State *L, int udx, bool view)
     {
         tag->selected = view;
         banning_need_update();
-        foreach(screen, globalconf.screens)
+        foreach(screen, getGlobals().screens)
             screen_update_workarea(*screen);
 
         luaA_object_emit_signal(L, udx, "property::selected", 0);
@@ -425,18 +425,18 @@ tags_get_current_or_first_selected_index(void)
      * basically a tag user actively interacts with.
      * If no focused windows are present, fallback to first selected.
      */
-    if(globalconf.focus.client)
+    if(getGlobals().focus.client)
     {
-        foreach(tag, globalconf.tags)
+        foreach(tag, getGlobals().tags)
         {
-            if((*tag)->selected && is_client_tagged(globalconf.focus.client, *tag))
-                return tag_array_indexof(&globalconf.tags, tag);
+            if((*tag)->selected && is_client_tagged(getGlobals().focus.client, *tag))
+                return tag_array_indexof(&getGlobals().tags, tag);
         }
     }
-    foreach(tag, globalconf.tags)
+    foreach(tag, getGlobals().tags)
     {
         if((*tag)->selected)
-            return tag_array_indexof(&globalconf.tags, tag);
+            return tag_array_indexof(&getGlobals().tags, tag);
     }
     return 0;
 }
@@ -564,14 +564,14 @@ luaA_tag_set_activated(lua_State *L, tag_t *tag)
     if(activated)
     {
         lua_pushvalue(L, -3);
-        tag_array_append(&globalconf.tags, (tag_t*)luaA_object_ref_class(L, -1, &tag_class));
+        tag_array_append(&getGlobals().tags, (tag_t*)luaA_object_ref_class(L, -1, &tag_class));
     }
     else
     {
-        for (int i = 0; i < globalconf.tags.len; i++)
-            if(globalconf.tags.tab[i] == tag)
+        for (int i = 0; i < getGlobals().tags.len; i++)
+            if(getGlobals().tags.tab[i] == tag)
             {
-                tag_array_take(&globalconf.tags, i);
+                tag_array_take(&getGlobals().tags, i);
                 break;
             }
 

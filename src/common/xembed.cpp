@@ -25,7 +25,7 @@
 #include "common/atoms.h"
 #include "luaa.h"
 /* I should really include the correct header instead... */
-
+namespace XEmbed {
 /** Send an XEMBED message to a window.
  * \param connection Connection to the X server.
  * \param towin Destination window
@@ -34,9 +34,10 @@
  * \param d2 Element 4 of message.
  * \param d3 Element 5 of message.
  */
+#define IFLAG(x) static_cast<uint32_t>(InfoFlags::x)
 void
 xembed_message_send(xcb_connection_t *connection, xcb_window_t towin,
-                    xcb_timestamp_t timestamp, uint32_t message, uint32_t d1, uint32_t d2, uint32_t d3)
+                    xcb_timestamp_t timestamp, Message message, uint32_t d1, uint32_t d2, uint32_t d3)
 {
     xcb_client_message_event_t ev;
 
@@ -45,7 +46,7 @@ xembed_message_send(xcb_connection_t *connection, xcb_window_t towin,
     ev.window = towin;
     ev.format = 32;
     ev.data.data32[0] = timestamp;
-    ev.data.data32[1] = message;
+    ev.data.data32[1] = to_native(message);
     ev.data.data32[2] = d1;
     ev.data.data32[3] = d2;
     ev.data.data32[4] = d3;
@@ -59,14 +60,14 @@ xembed_message_send(xcb_connection_t *connection, xcb_window_t towin,
  * \return A cookie.
  */
 xcb_get_property_cookie_t
-xembed_info_get_unchecked(xcb_connection_t *connection, xcb_window_t win)
+info_get_unchecked(xcb_connection_t *connection, xcb_window_t win)
 {
     return xcb_get_property_unchecked(connection, false, win, _XEMBED_INFO,
                                       XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
 }
 
 static bool
-xembed_info_from_reply(xembed_info_t *info, xcb_get_property_reply_t *prop_r)
+xembed_info_from_reply(info *info, xcb_get_property_reply_t *prop_r)
 {
     uint32_t *data;
 
@@ -77,7 +78,7 @@ xembed_info_from_reply(xembed_info_t *info, xcb_get_property_reply_t *prop_r)
         return false;
 
     info->version = data[0];
-    info->flags = data[1] & XEMBED_INFO_FLAGS_ALL;
+    info->flags = data[1] & IFLAG(FLAGS_ALL);
 
     return true;
 }
@@ -90,26 +91,12 @@ xembed_info_from_reply(xembed_info_t *info, xcb_get_property_reply_t *prop_r)
 bool
 xembed_info_get_reply(xcb_connection_t *connection,
                       xcb_get_property_cookie_t cookie,
-                      xembed_info_t *info)
+                      info *info)
 {
     xcb_get_property_reply_t *prop_r = xcb_get_property_reply(connection, cookie, NULL);
     bool ret = xembed_info_from_reply(info, prop_r);
     p_delete(&prop_r);
     return ret;
-}
-
-/** Get a XEMBED window from a xembed_window_t list.
- * \param list The xembed window list.
- * \param win The window to look for.
- * \return The xembed window if found, NULL otherwise.
- */
-xembed_window_t *
-xembed_getbywin(xembed_window_array_t *list, xcb_window_t win)
-{
-    for(int i = 0; i < list->len; i++)
-        if(list->tab[i].win == win)
-            return &list->tab[i];
-    return NULL;
 }
 
 /** Update embedded window properties.
@@ -119,34 +106,35 @@ xembed_getbywin(xembed_window_array_t *list, xcb_window_t win)
  * \param reply The property reply to handle.
  */
 void
-xembed_property_update(xcb_connection_t *connection, xembed_window_t *emwin,
+xembed_property_update(xcb_connection_t *connection, window &emwin,
                        xcb_timestamp_t timestamp, xcb_get_property_reply_t *reply)
 {
     int flags_changed;
-    xembed_info_t info = { 0, 0 };
+    info info = { 0, static_cast<uint32_t>(InfoFlags::UNMAPPED) };
 
     xembed_info_from_reply(&info, reply);
 
     /* test if it changed */
-    if(!(flags_changed = info.flags ^ emwin->info.flags))
+    if(!(flags_changed = static_cast<int32_t>(info.flags) ^ static_cast<uint32_t>(emwin.info.flags)))
         return;
 
-    emwin->info.flags = info.flags;
-    if(flags_changed & XEMBED_MAPPED)
+    emwin.info.flags = info.flags;
+    if(flags_changed & IFLAG(MAPPED))
     {
-        if(info.flags & XEMBED_MAPPED)
+        if(info.flags & IFLAG(MAPPED))
         {
-            xcb_map_window(connection, emwin->win);
-            xembed_window_activate(connection, emwin->win, timestamp);
+            xcb_map_window(connection, emwin.win);
+            xembed_window_activate(connection, emwin.win, timestamp);
         }
         else
         {
-            xcb_unmap_window(connection, emwin->win);
-            xembed_window_deactivate(connection, emwin->win, timestamp);
-            xembed_focus_out(connection, emwin->win, timestamp);
+            xcb_unmap_window(connection, emwin.win);
+            xembed_window_deactivate(connection, emwin.win, timestamp);
+            xembed_focus_out(connection, emwin.win, timestamp);
         }
         luaA_systray_invalidate();
     }
+}
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
