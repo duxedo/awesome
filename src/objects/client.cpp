@@ -1546,6 +1546,7 @@ client_wipe(client_t *c)
     p_delete(&c->name);
     p_delete(&c->alt_name);
     p_delete(&c->startup_id);
+    c->~client_t();
 }
 
 /** Change the clients urgency flag.
