@@ -21,11 +21,13 @@
 
 #include "systray.h"
 #include "common/atoms.h"
+#include "common/xembed.h"
 #include "common/xutil.h"
 #include "objects/drawin.h"
 #include "xwindow.h"
 #include "globalconf.h"
 
+#include <algorithm>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/xcb_atom.h>
@@ -40,34 +42,34 @@ systray_init(void)
     xcb_intern_atom_cookie_t atom_systray_q;
     xcb_intern_atom_reply_t *atom_systray_r;
     char *atom_name;
-    xcb_screen_t *xscreen = globalconf.screen;
+    xcb_screen_t *xscreen = getGlobals().screen;
 
-    globalconf.systray.window = xcb_generate_id(globalconf.connection);
-    globalconf.systray.background_pixel = xscreen->black_pixel;
-    xcb_create_window(globalconf.connection, xscreen->root_depth,
-                      globalconf.systray.window,
+    getGlobals().systray.window = xcb_generate_id(getGlobals().connection);
+    getGlobals().systray.background_pixel = xscreen->black_pixel;
+    xcb_create_window(getGlobals().connection, xscreen->root_depth,
+                      getGlobals().systray.window,
                       xscreen->root,
                       -1, -1, 1, 1, 0,
                       XCB_COPY_FROM_PARENT, xscreen->root_visual,
                       XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK, (const uint32_t [])
                       { xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT });
-    xwindow_set_class_instance(globalconf.systray.window);
-    xwindow_set_name_static(globalconf.systray.window, "Awesome systray window");
+    xwindow_set_class_instance(getGlobals().systray.window);
+    xwindow_set_name_static(getGlobals().systray.window, "Awesome systray window");
 
-    atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", globalconf.default_screen);
+    atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", getGlobals().default_screen);
     if(!atom_name)
         fatal("error getting systray atom name");
 
-    atom_systray_q = xcb_intern_atom_unchecked(globalconf.connection, false,
+    atom_systray_q = xcb_intern_atom_unchecked(getGlobals().connection, false,
                                                a_strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
-    atom_systray_r = xcb_intern_atom_reply(globalconf.connection, atom_systray_q, NULL);
+    atom_systray_r = xcb_intern_atom_reply(getGlobals().connection, atom_systray_q, NULL);
     if(!atom_systray_r)
         fatal("error getting systray atom");
 
-    globalconf.systray.atom = atom_systray_r->atom;
+    getGlobals().systray.atom = atom_systray_r->atom;
     p_delete(&atom_systray_r);
 }
 
@@ -77,12 +79,12 @@ static void
 systray_register(void)
 {
     xcb_client_message_event_t ev;
-    xcb_screen_t *xscreen = globalconf.screen;
+    xcb_screen_t *xscreen = getGlobals().screen;
 
-    if(globalconf.systray.registered)
+    if(getGlobals().systray.registered)
         return;
 
-    globalconf.systray.registered = true;
+    getGlobals().systray.registered = true;
 
     /* Fill event */
     p_clear(&ev, 1);
@@ -90,17 +92,17 @@ systray_register(void)
     ev.window = xscreen->root;
     ev.format = 32;
     ev.type = MANAGER;
-    ev.data.data32[0] = globalconf.timestamp;
-    ev.data.data32[1] = globalconf.systray.atom;
-    ev.data.data32[2] = globalconf.systray.window;
+    ev.data.data32[0] = getGlobals().timestamp;
+    ev.data.data32[1] = getGlobals().systray.atom;
+    ev.data.data32[2] = getGlobals().systray.window;
     ev.data.data32[3] = ev.data.data32[4] = 0;
 
-    xcb_set_selection_owner(globalconf.connection,
-                            globalconf.systray.window,
-                            globalconf.systray.atom,
-                            globalconf.timestamp);
+    xcb_set_selection_owner(getGlobals().connection,
+                            getGlobals().systray.window,
+                            getGlobals().systray.atom,
+                            getGlobals().timestamp);
 
-    xcb_send_event(globalconf.connection, false, xscreen->root, 0xFFFFFF, (char *) &ev);
+    xcb_send_event(getGlobals().connection, false, xscreen->root, 0xFFFFFF, (char *) &ev);
 }
 
 /** Remove systray information in X.
@@ -108,18 +110,18 @@ systray_register(void)
 void
 systray_cleanup(void)
 {
-    if(!globalconf.systray.registered)
+    if(!getGlobals().systray.registered)
         return;
 
-    globalconf.systray.registered = false;
+    getGlobals().systray.registered = false;
 
-    xcb_set_selection_owner(globalconf.connection,
+    xcb_set_selection_owner(getGlobals().connection,
                             XCB_NONE,
-                            globalconf.systray.atom,
-                            globalconf.timestamp);
+                            getGlobals().systray.atom,
+                            getGlobals().timestamp);
 
-    xcb_unmap_window(globalconf.connection,
-                     globalconf.systray.window);
+    xcb_unmap_window(getGlobals().connection,
+                     getGlobals().systray.window);
 }
 
 /** Handle a systray request.
@@ -129,7 +131,7 @@ systray_cleanup(void)
 int
 systray_request_handle(xcb_window_t embed_win)
 {
-    xembed_window_t em;
+    XEmbed::window em;
     xcb_get_property_cookie_t em_cookie;
     const uint32_t select_input_val[] =
     {
@@ -139,37 +141,40 @@ systray_request_handle(xcb_window_t embed_win)
     };
 
     /* check if not already trayed */
-    if(xembed_getbywin(&globalconf.embedded, embed_win))
+    auto it = std::find_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [embed_win](const auto & window) {
+            return window.win == embed_win;
+            });
+    if(it != getGlobals().embedded.end())
         return -1;
 
     p_clear(&em_cookie, 1);
 
-    em_cookie = xembed_info_get_unchecked(globalconf.connection, embed_win);
+    em_cookie = XEmbed::info_get_unchecked(getGlobals().connection, embed_win);
 
-    xcb_change_window_attributes(globalconf.connection, embed_win, XCB_CW_EVENT_MASK,
+    xcb_change_window_attributes(getGlobals().connection, embed_win, XCB_CW_EVENT_MASK,
                                  select_input_val);
 
     /* we grab the window, but also make sure it's automatically reparented back
      * to the root window if we should die.
      */
-    xcb_change_save_set(globalconf.connection, XCB_SET_MODE_INSERT, embed_win);
-    xcb_reparent_window(globalconf.connection, embed_win,
-                        globalconf.systray.window,
+    xcb_change_save_set(getGlobals().connection, XCB_SET_MODE_INSERT, embed_win);
+    xcb_reparent_window(getGlobals().connection, embed_win,
+                        getGlobals().systray.window,
                         0, 0);
 
     em.win = embed_win;
 
-    if (!xembed_info_get_reply(globalconf.connection, em_cookie, &em.info)) {
+    if (!xembed_info_get_reply(getGlobals().connection, em_cookie, &em.info)) {
         /* Set some sane defaults */
         em.info.version = XEMBED_VERSION;
-        em.info.flags = XEMBED_MAPPED;
+        em.info.flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
     }
 
-    xembed_embedded_notify(globalconf.connection, em.win,
-                           globalconf.timestamp, globalconf.systray.window,
+    XEmbed::xembed_embedded_notify(getGlobals().connection, em.win,
+                           getGlobals().timestamp, getGlobals().systray.window,
                            MIN(XEMBED_VERSION, em.info.version));
 
-    xembed_window_array_append(&globalconf.embedded, em);
+    getGlobals().embedded.push_back(em);
     luaA_systray_invalidate();
 
     return 0;
@@ -189,12 +194,12 @@ systray_process_client_message(xcb_client_message_event_t *ev)
     switch(ev->data.data32[1])
     {
       case SYSTEM_TRAY_REQUEST_DOCK:
-        geom_c = xcb_get_geometry_unchecked(globalconf.connection, ev->window);
+        geom_c = xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
 
-        if(!(geom_r = xcb_get_geometry_reply(globalconf.connection, geom_c, NULL)))
+        if(!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL)))
             return -1;
 
-        if(globalconf.screen->root == geom_r->root)
+        if(getGlobals().screen->root == geom_r->root)
             ret = systray_request_handle(ev->data.data32[2]);
 
         p_delete(&geom_r);
@@ -217,11 +222,11 @@ systray_iskdedockapp(xcb_window_t w)
 
     /* Check if that is a KDE tray because it does not respect fdo standards,
      * thanks KDE. */
-    kde_check_q = xcb_get_property_unchecked(globalconf.connection, false, w,
+    kde_check_q = xcb_get_property_unchecked(getGlobals().connection, false, w,
                                              _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR,
                                              XCB_ATOM_WINDOW, 0, 1);
 
-    kde_check = xcb_get_property_reply(globalconf.connection, kde_check_q, NULL);
+    kde_check = xcb_get_property_reply(getGlobals().connection, kde_check_q, NULL);
 
     /* it's a KDE systray ?*/
     ret = (kde_check && kde_check->value_len);
@@ -238,11 +243,12 @@ systray_iskdedockapp(xcb_window_t w)
 int
 xembed_process_client_message(xcb_client_message_event_t *ev)
 {
-    switch(ev->data.data32[1])
+    switch(XEmbed::from_native(ev->data.data32[1]))
     {
-      case XEMBED_REQUEST_FOCUS:
-        xembed_focus_in(globalconf.connection, ev->window,
-                        globalconf.timestamp, XEMBED_FOCUS_CURRENT);
+        case XEmbed::Message::REQUEST_FOCUS:
+        xembed_focus_in(getGlobals().connection, ev->window,
+                        getGlobals().timestamp, XEmbed::Focus::CURRENT);
+        default:
         break;
     }
     return 0;
@@ -251,11 +257,9 @@ xembed_process_client_message(xcb_client_message_event_t *ev)
 static int
 systray_num_visible_entries(void)
 {
-    int result = 0;
-    foreach(em, globalconf.embedded)
-        if (em->info.flags & XEMBED_MAPPED)
-            result++;
-    return result;
+    return std::count_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [](const auto & em) {
+                return em.info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
+            });
 }
 
 /** Inform lua that the systray needs to be updated.
@@ -268,7 +272,7 @@ luaA_systray_invalidate(void)
 
     /* Unmap now if the systray became empty */
     if(systray_num_visible_entries() == 0)
-        xcb_unmap_window(globalconf.connection, globalconf.systray.window);
+        xcb_unmap_window(getGlobals().connection, getGlobals().systray.window);
 }
 
 static void
@@ -288,35 +292,35 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
         config_vals[0] = base_size * rows + spacing * (rows - 1);
         config_vals[1] = base_size * cols + spacing * (cols - 1);
     }
-    xcb_configure_window(globalconf.connection,
-                         globalconf.systray.window,
+    xcb_configure_window(getGlobals().connection,
+                         getGlobals().systray.window,
                          XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                          config_vals);
 
     /* Now resize each embedded window */
     config_vals[0] = config_vals[1] = 0;
     config_vals[2] = config_vals[3] = base_size;
-    for(int i = 0; i < globalconf.embedded.len; i++)
+    for(int i = 0; i < getGlobals().embedded.size(); i++)
     {
-        xembed_window_t *em;
+        decltype(getGlobals().embedded)::iterator em;
 
         if(reverse)
-            em = &globalconf.embedded.tab[(globalconf.embedded.len - i - 1)];
+            em = getGlobals().embedded.begin() + (getGlobals().embedded.size() - i - 1);
         else
-            em = &globalconf.embedded.tab[i];
+            em = getGlobals().embedded.begin() + i;
 
-        if (!(em->info.flags & XEMBED_MAPPED))
+        if (!(em->info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED)))
         {
-            xcb_unmap_window(globalconf.connection, em->win);
+            xcb_unmap_window(getGlobals().connection, em->win);
             continue;
         }
 
-        xcb_configure_window(globalconf.connection, em->win,
+        xcb_configure_window(getGlobals().connection, em->win,
                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                              config_vals);
-        xcb_map_window(globalconf.connection, em->win);
+        xcb_map_window(getGlobals().connection, em->win);
         if (force_redraw)
-            xcb_clear_area(globalconf.connection, 1, em->win, 0, 0, 0, 0);
+            xcb_clear_area(getGlobals().connection, 1, em->win, 0, 0, 0, 0);
         if (i % rows == rows - 1) {
             if (horizontal) {
                 config_vals[0] += base_size + spacing;
@@ -372,44 +376,44 @@ luaA_systray(lua_State *L)
         color_t bg_color;
         bool force_redraw = false;
 
-        if(color_init_reply(color_init_unchecked(&bg_color, bg, bg_len, globalconf.default_visual))
-                && globalconf.systray.background_pixel != bg_color.pixel)
+        if(color_init_reply(color_init_unchecked(&bg_color, bg, bg_len, getGlobals().default_visual))
+                && getGlobals().systray.background_pixel != bg_color.pixel)
         {
             uint32_t config_back[] = { bg_color.pixel };
-            globalconf.systray.background_pixel = bg_color.pixel;
-            xcb_change_window_attributes(globalconf.connection,
-                                         globalconf.systray.window,
+            getGlobals().systray.background_pixel = bg_color.pixel;
+            xcb_change_window_attributes(getGlobals().connection,
+                                         getGlobals().systray.window,
                                          XCB_CW_BACK_PIXEL, config_back);
-            xcb_clear_area(globalconf.connection, 1, globalconf.systray.window, 0, 0, 0, 0);
+            xcb_clear_area(getGlobals().connection, 1, getGlobals().systray.window, 0, 0, 0, 0);
             force_redraw = true;
         }
 
-        if(globalconf.systray.parent != w)
-            xcb_reparent_window(globalconf.connection,
-                                globalconf.systray.window,
+        if(getGlobals().systray.parent != w)
+            xcb_reparent_window(getGlobals().connection,
+                                getGlobals().systray.window,
                                 w->window,
                                 x, y);
         else
         {
             uint32_t config_vals[2] = { (uint32_t)x, (uint32_t)y };
-            xcb_configure_window(globalconf.connection,
-                                 globalconf.systray.window,
+            xcb_configure_window(getGlobals().connection,
+                                 getGlobals().systray.window,
                                  XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
                                  config_vals);
         }
 
-        globalconf.systray.parent = w;
+        getGlobals().systray.parent = w;
 
         if(systray_num_visible_entries() != 0)
         {
             systray_update(base_size, horiz, revers, spacing, force_redraw, rows);
-            xcb_map_window(globalconf.connection,
-                           globalconf.systray.window);
+            xcb_map_window(getGlobals().connection,
+                           getGlobals().systray.window);
         }
     }
 
     lua_pushinteger(L, systray_num_visible_entries());
-    luaA_object_push(L, globalconf.systray.parent);
+    luaA_object_push(L, getGlobals().systray.parent);
     return 2;
 }
 

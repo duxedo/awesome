@@ -30,10 +30,10 @@ banning_need_update(void)
 {
     /* We update the complete banning only once per main loop to avoid
      * excessive updates...  */
-    globalconf.need_lazy_banning = true;
+    getGlobals().need_lazy_banning = true;
 
     /* But if a client will be banned in our next update we unfocus it now. */
-    foreach(_c, globalconf.clients)
+    foreach(_c, getGlobals().clients)
     {
         client_t *c = *_c;
 
@@ -47,18 +47,18 @@ banning_need_update(void)
 void
 banning_refresh(void)
 {
-    if (!globalconf.need_lazy_banning)
+    if (!getGlobals().need_lazy_banning)
         return;
 
-    globalconf.need_lazy_banning = false;
+    getGlobals().need_lazy_banning = false;
 
-    foreach(c, globalconf.clients)
+    foreach(c, getGlobals().clients)
         if(client_isvisible(*c))
             client_unban(*c);
 
     /* Some people disliked the short flicker of background, so we first unban everything.
      * Afterwards we ban everything we don't want. This should avoid that. */
-    foreach(c, globalconf.clients)
+    foreach(c, getGlobals().clients)
         if(!client_isvisible(*c))
             client_ban(*c);
 }

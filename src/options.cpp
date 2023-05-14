@@ -57,7 +57,7 @@ set_api_level(char *value)
     if (ret < 4)
         ret = 4;
 
-    globalconf.api_level = ret;
+    getGlobals().api_level = ret;
 }
 
 static void
@@ -454,17 +454,17 @@ options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths
             if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on")))
                 fatal("The possible values of -m/--screen are \"on\" or \"off\"");
 
-            globalconf.no_auto_screen = A_STREQ(optarg, "off");
+            getGlobals().no_auto_screen = A_STREQ(optarg, "off");
 
             (*init_flags) &= ~INIT_FLAG_AUTO_SCREEN;
 
             break;
           case 's':
-            globalconf.have_searchpaths = true;
+            getGlobals().have_searchpaths = true;
             string_array_append(paths, a_strdup(optarg));
             break;
           case 'a':
-            globalconf.had_overriden_depth = true;
+            getGlobals().had_overriden_depth = true;
             (*init_flags) &= ~INIT_FLAG_ARGB;
             break;
           case 'r':

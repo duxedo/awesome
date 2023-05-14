@@ -43,7 +43,8 @@ using signal_array_t = std::unordered_map<std::string, signal_t> ;
 static inline void
 signal_connect(signal_array_t *arr, const char *name, const void *ref)
 {
-    (*arr)[name].functions.push_back(ref);
+    auto [it, inserted] = arr->try_emplace(name, signal_t{});
+    it->second.functions.push_back(ref);
 }
 
 /** Disconnect a signal inside a signal array.
