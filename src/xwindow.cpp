@@ -38,7 +38,7 @@ void
 xwindow_set_state(xcb_window_t win, uint32_t state)
 {
     uint32_t data[] = { state, XCB_NONE };
-    xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE, win,
+    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, win,
                         WM_STATE, WM_STATE, 32, 2, data);
 }
 
@@ -49,7 +49,7 @@ xwindow_set_state(xcb_window_t win, uint32_t state)
 xcb_get_property_cookie_t
 xwindow_get_state_unchecked(xcb_window_t w)
 {
-    return xcb_get_property_unchecked(globalconf.connection, false, w, WM_STATE,
+    return xcb_get_property_unchecked(getGlobals().connection, false, w, WM_STATE,
                                       WM_STATE, 0L, 2L);
 }
 
@@ -64,7 +64,7 @@ xwindow_get_state_reply(xcb_get_property_cookie_t cookie)
     uint32_t result = XCB_ICCCM_WM_STATE_NORMAL;
     xcb_get_property_reply_t *prop_r;
 
-    if((prop_r = xcb_get_property_reply(globalconf.connection, cookie, NULL)))
+    if((prop_r = xcb_get_property_reply(getGlobals().connection, cookie, NULL)))
     {
         if(xcb_get_property_value_length(prop_r))
             result = *(uint32_t *) xcb_get_property_value(prop_r);
@@ -95,7 +95,7 @@ xwindow_configure(xcb_window_t win, area_t geometry, int border)
     ce.border_width = border;
     ce.above_sibling = XCB_NONE;
     ce.override_redirect = false;
-    xcb_send_event(globalconf.connection, false, win,
+    xcb_send_event(getGlobals().connection, false, win,
                    XCB_EVENT_MASK_STRUCTURE_NOTIFY, (char *) &ce);
 }
 
@@ -110,10 +110,10 @@ xwindow_buttons_grab(xcb_window_t win, button_array_t *buttons)
         return;
 
     /* Ungrab everything first */
-    xcb_ungrab_button(globalconf.connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
+    xcb_ungrab_button(getGlobals().connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
 
     foreach(b, *buttons)
-        xcb_grab_button(globalconf.connection, false, win, BUTTONMASK,
+        xcb_grab_button(getGlobals().connection, false, win, BUTTONMASK,
                         XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE,
                         (*b)->button, (*b)->modifiers);
 }
@@ -126,15 +126,15 @@ static void
 xwindow_grabkey(xcb_window_t win, keyb_t *k)
 {
     if(k->keycode)
-        xcb_grab_key(globalconf.connection, true, win,
+        xcb_grab_key(getGlobals().connection, true, win,
                      k->modifiers, k->keycode, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
     else if(k->keysym)
     {
-        xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(globalconf.keysyms, k->keysym);
+        xcb_keycode_t *keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, k->keysym);
         if(keycodes)
         {
             for(xcb_keycode_t *kc = keycodes; *kc; kc++)
-                xcb_grab_key(globalconf.connection, true, win,
+                xcb_grab_key(getGlobals().connection, true, win,
                              k->modifiers, *kc, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC);
             p_delete(&keycodes);
         }
@@ -145,7 +145,7 @@ void
 xwindow_grabkeys(xcb_window_t win, key_array_t *keys)
 {
     /* Ungrab everything first */
-    xcb_ungrab_key(globalconf.connection, XCB_GRAB_ANY, win, XCB_BUTTON_MASK_ANY);
+    xcb_ungrab_key(getGlobals().connection, XCB_GRAB_ANY, win, XCB_BUTTON_MASK_ANY);
 
     foreach(k, *keys)
         xwindow_grabkey(win, *k);
@@ -158,7 +158,7 @@ xwindow_grabkeys(xcb_window_t win, key_array_t *keys)
 xcb_get_property_cookie_t
 xwindow_get_opacity_unchecked(xcb_window_t win)
 {
-    return xcb_get_property_unchecked(globalconf.connection, false, win,
+    return xcb_get_property_unchecked(getGlobals().connection, false, win,
                                       _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 0L, 1L);
 }
 
@@ -182,7 +182,7 @@ double
 xwindow_get_opacity_from_cookie(xcb_get_property_cookie_t cookie)
 {
     xcb_get_property_reply_t *prop_r =
-        xcb_get_property_reply(globalconf.connection, cookie, NULL);
+        xcb_get_property_reply(getGlobals().connection, cookie, NULL);
 
     if(prop_r && prop_r->value_len && prop_r->format == 32)
     {
@@ -207,11 +207,11 @@ xwindow_set_opacity(xcb_window_t win, double opacity)
         if(opacity >= 0 && opacity <= 1)
         {
             uint32_t real_opacity = opacity * 0xffffffff;
-            xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE, win,
+            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, win,
                                 _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 32, 1L, &real_opacity);
         }
         else
-            xcb_delete_property(globalconf.connection, win, _NET_WM_WINDOW_OPACITY);
+            xcb_delete_property(getGlobals().connection, win, _NET_WM_WINDOW_OPACITY);
     }
 }
 
@@ -229,11 +229,11 @@ xwindow_takefocus(xcb_window_t win)
     ev.response_type = XCB_CLIENT_MESSAGE;
     ev.window = win;
     ev.format = 32;
-    ev.data.data32[1] = globalconf.timestamp;
+    ev.data.data32[1] = getGlobals().timestamp;
     ev.type = WM_PROTOCOLS;
     ev.data.data32[0] = WM_TAKE_FOCUS;
 
-    xcb_send_event(globalconf.connection, false, win,
+    xcb_send_event(getGlobals().connection, false, win,
                    XCB_EVENT_MASK_NO_EVENT, (char *) &ev);
 }
 
@@ -244,7 +244,7 @@ xwindow_takefocus(xcb_window_t win)
 void
 xwindow_set_cursor(xcb_window_t w, xcb_cursor_t c)
 {
-    xcb_change_window_attributes(globalconf.connection, w, XCB_CW_CURSOR,
+    xcb_change_window_attributes(getGlobals().connection, w, XCB_CW_CURSOR,
                                  (const uint32_t[]) { c });
 }
 
@@ -256,29 +256,29 @@ void
 xwindow_set_border_color(xcb_window_t w, color_t *color)
 {
     if(w)
-        xcb_change_window_attributes(globalconf.connection, w, XCB_CW_BORDER_PIXEL, &color->pixel);
+        xcb_change_window_attributes(getGlobals().connection, w, XCB_CW_BORDER_PIXEL, &color->pixel);
 }
 
 /** Get one of a window's shapes as a cairo surface */
 cairo_surface_t *
 xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind)
 {
-    if (!globalconf.have_shape)
+    if (!getGlobals().have_shape)
         return NULL;
-    if (kind == XCB_SHAPE_SK_INPUT && !globalconf.have_input_shape)
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape)
         return NULL;
 
     int16_t x, y;
     uint16_t width, height;
-    xcb_shape_get_rectangles_cookie_t rcookie = xcb_shape_get_rectangles(globalconf.connection, win, kind);
+    xcb_shape_get_rectangles_cookie_t rcookie = xcb_shape_get_rectangles(getGlobals().connection, win, kind);
     if (kind == XCB_SHAPE_SK_INPUT)
     {
         /* We cannot query the size/existence of an input shape... */
-        xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(globalconf.connection,
-                xcb_get_geometry(globalconf.connection, win), NULL);
+        xcb_get_geometry_reply_t *geom = xcb_get_geometry_reply(getGlobals().connection,
+                xcb_get_geometry(getGlobals().connection, win), NULL);
         if (!geom)
         {
-            xcb_discard_reply(globalconf.connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
             /* Create a cairo surface in an error state */
             return cairo_image_surface_create(CAIRO_FORMAT_INVALID, -1, -1);
         }
@@ -289,13 +289,13 @@ xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind)
     }
     else
     {
-        xcb_shape_query_extents_cookie_t ecookie = xcb_shape_query_extents(globalconf.connection, win);
-        xcb_shape_query_extents_reply_t *extents = xcb_shape_query_extents_reply(globalconf.connection, ecookie, NULL);
+        xcb_shape_query_extents_cookie_t ecookie = xcb_shape_query_extents(getGlobals().connection, win);
+        xcb_shape_query_extents_reply_t *extents = xcb_shape_query_extents_reply(getGlobals().connection, ecookie, NULL);
         bool shaped;
 
         if (!extents)
         {
-            xcb_discard_reply(globalconf.connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
             /* Create a cairo surface in an error state */
             return cairo_image_surface_create(CAIRO_FORMAT_INVALID, -1, -1);
         }
@@ -319,12 +319,12 @@ xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind)
 
         if (!shaped)
         {
-            xcb_discard_reply(globalconf.connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
             return NULL;
         }
     }
 
-    xcb_shape_get_rectangles_reply_t *rects_reply = xcb_shape_get_rectangles_reply(globalconf.connection, rcookie, NULL);
+    xcb_shape_get_rectangles_reply_t *rects_reply = xcb_shape_get_rectangles_reply(getGlobals().connection, rcookie, NULL);
     if (!rects_reply)
     {
         /* Create a cairo surface in an error state */
@@ -352,15 +352,15 @@ xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind)
 static xcb_pixmap_t
 xwindow_shape_pixmap(int width, int height, cairo_surface_t *surf)
 {
-    xcb_pixmap_t pixmap = xcb_generate_id(globalconf.connection);
+    xcb_pixmap_t pixmap = xcb_generate_id(getGlobals().connection);
     cairo_surface_t *dest;
     cairo_t *cr;
 
     if (width <= 0 || height <= 0)
         return XCB_NONE;
 
-    xcb_create_pixmap(globalconf.connection, 1, pixmap, globalconf.screen->root, width, height);
-    dest = cairo_xcb_surface_create_for_bitmap(globalconf.connection, globalconf.screen, pixmap, width, height);
+    xcb_create_pixmap(getGlobals().connection, 1, pixmap, getGlobals().screen->root, width, height);
+    dest = cairo_xcb_surface_create_for_bitmap(getGlobals().connection, getGlobals().screen, pixmap, width, height);
 
     cr = cairo_create(dest);
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
@@ -379,19 +379,19 @@ xwindow_shape_pixmap(int width, int height, cairo_surface_t *surf)
 void
 xwindow_set_shape(xcb_window_t win, int width, int height, enum xcb_shape_sk_t kind, cairo_surface_t *surf, int offset)
 {
-    if (!globalconf.have_shape)
+    if (!getGlobals().have_shape)
         return;
-    if (kind == XCB_SHAPE_SK_INPUT && !globalconf.have_input_shape)
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape)
         return;
 
     xcb_pixmap_t pixmap = XCB_NONE;
     if (surf)
         pixmap = xwindow_shape_pixmap(width, height, surf);
 
-    xcb_shape_mask(globalconf.connection, XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
+    xcb_shape_mask(getGlobals().connection, XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
 
     if (pixmap != XCB_NONE)
-        xcb_free_pixmap(globalconf.connection, pixmap);
+        xcb_free_pixmap(getGlobals().connection, pixmap);
 }
 
 /** Calculate the position change that a window needs applied.

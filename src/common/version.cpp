@@ -78,15 +78,15 @@ eprint_version(void)
         /* release      */ AWESOME_RELEASE,
         /* Lua linked   */ LUA_RELEASE,
         /* Lua runtime  */ lua_tostring(L, -2),
-        /* API Level    */ globalconf.api_level,
+        /* API Level    */ getGlobals().api_level,
         /* DBus         */ has_dbus,
         /* XCB Error    */ has_xcb_errors,
         /* Execinfo     */ has_execinfo,
         /* XRandR major */ XCB_RANDR_MAJOR_VERSION,
         /* XRandR minor */ XCB_RANDR_MINOR_VERSION,
         /* LGI version  */ lua_tostring(L, -1),
-        /* ARGB support */ globalconf.had_overriden_depth ? "no"  : "yes",
-        /* Search path  */ globalconf.have_searchpaths    ? "yes" : "no"
+        /* ARGB support */ getGlobals().had_overriden_depth ? "no"  : "yes",
+        /* Search path  */ getGlobals().have_searchpaths    ? "yes" : "no"
     );
     lua_close(L);
 

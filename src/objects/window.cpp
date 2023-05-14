@@ -110,7 +110,7 @@ luaA_window_struts(lua_State *L)
         ewmh_update_strut(window->window, &window->strut);
         luaA_object_emit_signal(L, 1, "property::struts", 0);
         /* We don't know the correct screen, update them all */
-        foreach(s, globalconf.screens)
+        foreach(s, getGlobals().screens)
             screen_update_workarea(*s);
     }
 
@@ -178,7 +178,7 @@ window_border_refresh(window_t *window)
     window->border_need_update = false;
     xwindow_set_border_color(window_get(window), &window->border_color);
     if(window->window)
-        xcb_configure_window(globalconf.connection, window_get(window),
+        xcb_configure_window(getGlobals().connection, window_get(window),
                              XCB_CONFIG_WINDOW_BORDER_WIDTH,
                              (uint32_t[]) { window->border_width });
 }
@@ -195,7 +195,7 @@ luaA_window_set_border_color(lua_State *L, window_t *window)
     const char *color_name = luaL_checklstring(L, -1, &len);
 
     if(color_name &&
-       color_init_reply(color_init_unchecked(&window->border_color, color_name, len, globalconf.visual)))
+       color_init_reply(color_init_unchecked(&window->border_color, color_name, len, getGlobals().visual)))
     {
         window->border_need_update = true;
         luaA_object_emit_signal(L, -3, "property::border_color", 0);
@@ -345,7 +345,7 @@ static xproperty_t *
 luaA_find_xproperty(lua_State *L, int idx)
 {
     const char *name = luaL_checkstring(L, idx);
-    foreach(prop, globalconf.xproperties)
+    foreach(prop, getGlobals().xproperties)
         if (A_STREQ(prop->name, name))
             return prop;
     luaL_argerror(L, idx, "Unknown xproperty");
@@ -363,7 +363,7 @@ window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_
 
     if(lua_isnil(L, value_idx))
     {
-        xcb_delete_property(globalconf.connection, window, prop->atom);
+        xcb_delete_property(getGlobals().connection, window, prop->atom);
     } else {
         uint8_t format;
         if(prop->type == xproperty::PROP_STRING)
@@ -384,7 +384,7 @@ window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_
         } else
             fatal("Got an xproperty with invalid type");
 
-        xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE, window,
+        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, window,
                             prop->atom, type, format, len, data);
     }
     return 0;
@@ -401,8 +401,8 @@ window_get_xproperty(lua_State *L, xcb_window_t window, int prop_idx)
 
     type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
-    reply = xcb_get_property_reply(globalconf.connection,
-            xcb_get_property_unchecked(globalconf.connection, false, window,
+    reply = xcb_get_property_reply(getGlobals().connection,
+            xcb_get_property_unchecked(getGlobals().connection, false, window,
                 prop->atom, type, 0, length), NULL);
     if(!reply)
         return 0;

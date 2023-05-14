@@ -27,10 +27,10 @@
 void
 stack_client_remove(client_t *c)
 {
-    foreach(client, globalconf.stack)
+    foreach(client, getGlobals().stack)
         if(*client == c)
         {
-            client_array_remove(&globalconf.stack, client);
+            client_array_remove(&getGlobals().stack, client);
             break;
         }
     ewmh_update_net_client_list_stacking();
@@ -44,7 +44,7 @@ void
 stack_client_push(client_t *c)
 {
     stack_client_remove(c);
-    client_array_push(&globalconf.stack, c);
+    client_array_push(&getGlobals().stack, c);
     ewmh_update_net_client_list_stacking();
     stack_windows();
 }
@@ -56,7 +56,7 @@ void
 stack_client_append(client_t *c)
 {
     stack_client_remove(c);
-    client_array_append(&globalconf.stack, c);
+    client_array_append(&getGlobals().stack, c);
     ewmh_update_net_client_list_stacking();
     stack_windows();
 }
@@ -82,7 +82,7 @@ stack_window_above(xcb_window_t w, xcb_window_t previous)
          * themselves. Doing it like this is better. */
         return;
 
-    xcb_configure_window(globalconf.connection, w,
+    xcb_configure_window(getGlobals().connection, w,
                          XCB_CONFIG_WINDOW_SIBLING | XCB_CONFIG_WINDOW_STACK_MODE,
                          (uint32_t[]) { previous, XCB_STACK_MODE_ABOVE });
 }
@@ -100,7 +100,7 @@ stack_client_above(client_t *c, xcb_window_t previous)
     previous = c->frame_window;
 
     /* stack transient window on top of their parents */
-    foreach(node, globalconf.stack)
+    foreach(node, getGlobals().stack)
         if((*node)->transient_for == c)
             previous = stack_client_above(*node, previous);
 
@@ -136,8 +136,8 @@ client_layer_translator(client_t *c)
      * recently raised client.  Using the stack position (instead of focus)
      * ensures that focus changes alone (e.g. sloppy / mouse-enter focus)
      * do not alter the stacking order of fullscreen windows. */
-    else if(c->fullscreen && globalconf.stack.len
-            && globalconf.stack.tab[globalconf.stack.len-1] == c)
+    else if(c->fullscreen && getGlobals().stack.len
+            && getGlobals().stack.tab[getGlobals().stack.len-1] == c)
         return WINDOW_LAYER_FULLSCREEN;
     else if(c->above)
         return WINDOW_LAYER_ABOVE;
@@ -173,12 +173,12 @@ stack_refresh()
 
     /* stack desktop windows */
     for(int layer = WINDOW_LAYER_DESKTOP; layer < WINDOW_LAYER_BELOW; layer++)
-        foreach(node, globalconf.stack)
+        foreach(node, getGlobals().stack)
             if(client_layer_translator(*node) == layer)
                 next = stack_client_above(*node, next);
 
     /* first stack not ontop drawin window */
-    foreach(drawin, globalconf.drawins)
+    foreach(drawin, getGlobals().drawins)
         if(!(*drawin)->ontop)
         {
             stack_window_above((*drawin)->window, next);
@@ -187,12 +187,12 @@ stack_refresh()
 
     /* then stack clients */
     for(int layer = WINDOW_LAYER_BELOW; layer < WINDOW_LAYER_COUNT; layer++)
-        foreach(node, globalconf.stack)
+        foreach(node, getGlobals().stack)
             if(client_layer_translator(*node) == layer)
                 next = stack_client_above(*node, next);
 
     /* then stack ontop drawin window */
-    foreach(drawin, globalconf.drawins)
+    foreach(drawin, getGlobals().drawins)
         if((*drawin)->ontop)
         {
             stack_window_above((*drawin)->window, next);

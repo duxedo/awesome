@@ -102,8 +102,8 @@ mouse_query_pointer(xcb_window_t window, int16_t *x, int16_t *y, xcb_window_t *c
     xcb_query_pointer_cookie_t query_ptr_c;
     xcb_query_pointer_reply_t *query_ptr_r;
 
-    query_ptr_c = xcb_query_pointer_unchecked(globalconf.connection, window);
-    query_ptr_r = xcb_query_pointer_reply(globalconf.connection, query_ptr_c, NULL);
+    query_ptr_c = xcb_query_pointer_unchecked(getGlobals().connection, window);
+    query_ptr_r = xcb_query_pointer_reply(getGlobals().connection, query_ptr_c, NULL);
 
     if(!query_ptr_r || !query_ptr_r->same_screen)
     {
@@ -134,7 +134,7 @@ mouse_query_pointer(xcb_window_t window, int16_t *x, int16_t *y, xcb_window_t *c
 static bool
 mouse_query_pointer_root(int16_t *x, int16_t *y, xcb_window_t *child, uint16_t *mask)
 {
-    xcb_window_t root = globalconf.screen->root;
+    xcb_window_t root = getGlobals().screen->root;
 
     return mouse_query_pointer(root, x, y, child, mask);
 }
@@ -147,7 +147,7 @@ mouse_query_pointer_root(int16_t *x, int16_t *y, xcb_window_t *child, uint16_t *
 static inline void
 mouse_warp_pointer(xcb_window_t window, int16_t x, int16_t y)
 {
-    xcb_warp_pointer(globalconf.connection, XCB_NONE, window,
+    xcb_warp_pointer(getGlobals().connection, XCB_NONE, window,
                      0, 0, 0, 0, x, y);
 }
 
@@ -178,8 +178,8 @@ luaA_mouse_index(lua_State *L)
         /* Nothing ever handles mouse.screen being nil. Lying is better than
          * having lots of lua errors in this case.
          */
-        if (globalconf.focus.client)
-            luaA_object_push(L, globalconf.focus.client->screen);
+        if (getGlobals().focus.client)
+            luaA_object_push(L, getGlobals().focus.client->screen);
         else
             luaA_object_push(L, screen_get_primary());
         return 1;
@@ -209,7 +209,7 @@ luaA_mouse_newindex(lua_State *L)
     }
 
     screen = luaA_checkscreen(L, 3);
-    mouse_warp_pointer(globalconf.screen->root, screen->geometry.x, screen->geometry.y);
+    mouse_warp_pointer(getGlobals().screen->root, screen->geometry.x, screen->geometry.y);
     return 0;
 }
 
@@ -266,7 +266,7 @@ luaA_mouse_coords(lua_State *L)
         if(ignore_enter_notify)
             client_ignore_enterleave_events();
 
-        mouse_warp_pointer(globalconf.screen->root, x, y);
+        mouse_warp_pointer(getGlobals().screen->root, x, y);
 
         if(ignore_enter_notify)
             client_restore_enterleave_events();

@@ -55,28 +55,28 @@ luaA_selection_get(lua_State *L)
     luaA_deprecate(L, "selection.getter(\"PRIMARY\", \"UTF8_STRING\")");
     if(selection_window == XCB_NONE)
     {
-        xcb_screen_t *screen = globalconf.screen;
+        xcb_screen_t *screen = getGlobals().screen;
         uint32_t mask = XCB_CW_BACK_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
         uint32_t values[] = { screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE };
 
-        selection_window = xcb_generate_id(globalconf.connection);
+        selection_window = xcb_generate_id(getGlobals().connection);
 
-        xcb_create_window(globalconf.connection, screen->root_depth, selection_window, screen->root,
+        xcb_create_window(getGlobals().connection, screen->root_depth, selection_window, screen->root,
                           0, 0, 1, 1, 0, XCB_COPY_FROM_PARENT, screen->root_visual,
                           mask, values);
         xwindow_set_class_instance(selection_window);
         xwindow_set_name_static(selection_window, "Awesome selection window");
     }
 
-    xcb_convert_selection(globalconf.connection, selection_window,
-                          XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, globalconf.timestamp);
-    xcb_flush(globalconf.connection);
+    xcb_convert_selection(getGlobals().connection, selection_window,
+                          XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, getGlobals().timestamp);
+    xcb_flush(getGlobals().connection);
 
     xcb_generic_event_t *event;
 
     while(true)
     {
-        event = xcb_wait_for_event(globalconf.connection);
+        event = xcb_wait_for_event(getGlobals().connection);
 
         if(!event)
             return 0;
@@ -105,18 +105,18 @@ luaA_selection_get(lua_State *L)
         {
             xcb_icccm_get_text_property_reply_t prop;
             xcb_get_property_cookie_t cookie =
-                xcb_icccm_get_text_property(globalconf.connection,
+                xcb_icccm_get_text_property(getGlobals().connection,
 					    event_notify->requestor,
 					    event_notify->property);
 
-            if(xcb_icccm_get_text_property_reply(globalconf.connection,
+            if(xcb_icccm_get_text_property_reply(getGlobals().connection,
 						 cookie, &prop, NULL))
 	      {
                 lua_pushlstring(L, prop.name, prop.name_len);
 
                 xcb_icccm_get_text_property_reply_wipe(&prop);
 
-                xcb_delete_property(globalconf.connection,
+                xcb_delete_property(getGlobals().connection,
                                     event_notify->requestor,
                                     event_notify->property);
 

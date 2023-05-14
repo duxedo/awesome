@@ -144,7 +144,7 @@ color_init_unchecked(color_t *color, const char *colstr, ssize_t len, xcb_visual
         pixel |= apply_mask(red, visual->red_mask);
         pixel |= apply_mask(blue, visual->blue_mask);
         pixel |= apply_mask(green, visual->green_mask);
-        if (draw_visual_depth(globalconf.screen, visual->visual_id) == 32) {
+        if (draw_visual_depth(getGlobals().screen, visual->visual_id) == 32) {
             /* This is not actually in the X11 protocol, but we assume that this
              * is an ARGB visual and everything unset in some mask is alpha.
              */
@@ -158,8 +158,8 @@ color_init_unchecked(color_t *color, const char *colstr, ssize_t len, xcb_visual
         req.color->initialized = true;
         return req;
     }
-    req.cookie_hexa = xcb_alloc_color_unchecked(globalconf.connection,
-                                                globalconf.default_cmap,
+    req.cookie_hexa = xcb_alloc_color_unchecked(getGlobals().connection,
+                                                getGlobals().default_cmap,
                                                 RGB_8TO16(red),
                                                 RGB_8TO16(green),
                                                 RGB_8TO16(blue));
@@ -182,7 +182,7 @@ color_init_reply(color_init_request_t req)
 
     xcb_alloc_color_reply_t *hexa_color;
 
-    if((hexa_color = xcb_alloc_color_reply(globalconf.connection,
+    if((hexa_color = xcb_alloc_color_reply(getGlobals().connection,
                                            req.cookie_hexa, NULL)))
     {
         req.color->pixel = hexa_color->pixel;
