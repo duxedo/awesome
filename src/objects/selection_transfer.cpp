@@ -58,7 +58,7 @@ LUA_OBJECT_FUNCS(selection_transfer_class, selection_transfer_t, selection_trans
 
 static size_t max_property_length(void)
 {
-    uint32_t max_request_length = xcb_get_maximum_request_length(globalconf.connection);
+    uint32_t max_request_length = xcb_get_maximum_request_length(getGlobals().connection);
     max_request_length = MIN(max_request_length, (1<<16) - 1);
     return max_request_length * 4 - sizeof(xcb_change_property_request_t);
 }
@@ -77,7 +77,7 @@ selection_transfer_notify(xcb_window_t requestor, xcb_atom_t selection,
     ev.property = property;
     ev.time = time;
 
-    xcb_send_event(globalconf.connection, false, requestor,
+    xcb_send_event(getGlobals().connection, false, requestor,
             XCB_EVENT_MASK_NO_EVENT, (char *) &ev);
 }
 
@@ -128,10 +128,10 @@ transfer_continue_incremental(lua_State *L, int ud)
             }
         }
         /* End of transfer */
-        xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE,
+        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                 transfer->requestor, transfer->property, UTF8_STRING, 8,
                 0, NULL);
-        xcb_change_window_attributes(globalconf.connection,
+        xcb_change_window_attributes(getGlobals().connection,
                 transfer->requestor, XCB_CW_EVENT_MASK,
                 (uint32_t[]) { 0 });
         transfer_done(L, transfer);
@@ -139,7 +139,7 @@ transfer_continue_incremental(lua_State *L, int ud)
         /* Send next piece of data */
         assert(transfer->offset < data_length);
         size_t next_length = MIN(data_length - transfer->offset, max_property_length());
-        xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE,
+        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                 transfer->requestor, transfer->property, UTF8_STRING, 8,
                 next_length, &data[transfer->offset]);
         transfer->offset += next_length;
@@ -171,8 +171,8 @@ selection_transfer_begin(lua_State *L, int ud, xcb_window_t requestor,
     lua_pop(L, 1);
 
     /* Get the atom name */
-    xcb_get_atom_name_reply_t *reply = xcb_get_atom_name_reply(globalconf.connection,
-            xcb_get_atom_name_unchecked(globalconf.connection, target), NULL);
+    xcb_get_atom_name_reply_t *reply = xcb_get_atom_name_reply(getGlobals().connection,
+            xcb_get_atom_name_unchecked(getGlobals().connection, target), NULL);
     if (reply) {
         lua_pushlstring(L, xcb_get_atom_name_name(reply),
                 xcb_get_atom_name_name_length(reply));
@@ -262,17 +262,17 @@ luaA_selection_transfer_send(lua_State *L)
         xcb_intern_atom_cookie_t cookies[len];
         xcb_atom_t atoms[len];
         for (size_t i = 0; i < len; i++) {
-            cookies[i] = xcb_intern_atom_unchecked(globalconf.connection, false,
+            cookies[i] = xcb_intern_atom_unchecked(getGlobals().connection, false,
                     atom_lengths[i], atom_strings[i]);
         }
         for (size_t i = 0; i < len; i++) {
-            xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(globalconf.connection,
+            xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(getGlobals().connection,
                     cookies[i], NULL);
             atoms[i] = reply ? reply->atom : XCB_NONE;
             p_delete(&reply);
         }
 
-        xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE,
+        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                 transfer->requestor, transfer->property, XCB_ATOM_ATOM, 32,
                 len, &atoms[0]);
     } else {
@@ -286,11 +286,11 @@ luaA_selection_transfer_send(lua_State *L)
             incr = true;
 
         if (incr) {
-            xcb_change_window_attributes(globalconf.connection,
+            xcb_change_window_attributes(getGlobals().connection,
                     transfer->requestor, XCB_CW_EVENT_MASK,
                     (uint32_t[]) { XCB_EVENT_MASK_PROPERTY_CHANGE });
 
-            xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE,
+            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                     transfer->requestor, transfer->property, INCR, 32, 1,
                     (const uint32_t[]) { (uint32_t)incr_size });
 
@@ -304,7 +304,7 @@ luaA_selection_transfer_send(lua_State *L)
             transfer->state = TRANSFER_INCREMENTAL_SENDING;
             transfer->offset = 0;
         } else {
-            xcb_change_property(globalconf.connection, XCB_PROP_MODE_REPLACE,
+            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                     transfer->requestor, transfer->property, UTF8_STRING, 8,
                     data_length, data);
         }

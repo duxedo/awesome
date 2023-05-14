@@ -153,17 +153,17 @@ LUA_OBJECT_FUNCS(drawin_class, drawin_t, drawin)
 static void
 drawin_systray_kickout(drawin_t *w)
 {
-    if(globalconf.systray.parent == w)
+    if(getGlobals().systray.parent == w)
     {
         /* Who! Check that we're not deleting a drawin with a systray, because it
          * may be its parent. If so, we reparent to root before, otherwise it will
          * hurt very much. */
-        xcb_reparent_window(globalconf.connection,
-                            globalconf.systray.window,
-                            globalconf.screen->root,
+        xcb_reparent_window(getGlobals().connection,
+                            getGlobals().systray.window,
+                            getGlobals().screen->root,
                             -512, -512);
 
-        globalconf.systray.parent = NULL;
+        getGlobals().systray.parent = NULL;
     }
 }
 
@@ -183,7 +183,7 @@ drawin_wipe(drawin_t *w)
     {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(w);
-        xcb_destroy_window(globalconf.connection, w->window);
+        xcb_destroy_window(getGlobals().connection, w->window);
         w->window = XCB_NONE;
     }
     /* No unref needed because we are being garbage collected */
@@ -216,7 +216,7 @@ drawin_apply_moveresize(drawin_t *w)
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
-    xcb_configure_window(globalconf.connection, w->window,
+    xcb_configure_window(getGlobals().connection, w->window,
                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
                          | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                          (const uint32_t [])
@@ -232,7 +232,7 @@ drawin_apply_moveresize(drawin_t *w)
 void
 drawin_refresh(void)
 {
-    foreach(item, globalconf.drawins)
+    foreach(item, getGlobals().drawins)
     {
         drawin_apply_moveresize(*item);
         window_border_refresh((window_t *) *item);
@@ -250,7 +250,7 @@ luaA_drawin_get(lua_State *L)
 
     lua_newtable(L);
 
-    foreach(d, globalconf.drawins) {
+    foreach(d, getGlobals().drawins) {
         luaA_object_push(L, *d);
         lua_rawseti(L, -2, i++);
     }
@@ -318,8 +318,8 @@ drawin_refresh_pixmap_partial(drawin_t *drawin,
 
     /* Make cairo do all pending drawing */
     cairo_surface_flush(drawin->drawable->surface);
-    xcb_copy_area(globalconf.connection, drawin->drawable->pixmap,
-                  drawin->window, globalconf.gc, x, y, x, y,
+    xcb_copy_area(getGlobals().connection, drawin->drawable->pixmap,
+                  drawin->window, getGlobals().gc, x, y, x, y,
                   w, h);
 }
 
@@ -332,13 +332,13 @@ drawin_map(lua_State *L, int widx)
     /* Activate BMA */
     client_ignore_enterleave_events();
     /* Map the drawin */
-    xcb_map_window(globalconf.connection, drawin->window);
+    xcb_map_window(getGlobals().connection, drawin->window);
     /* Deactivate BMA */
     client_restore_enterleave_events();
     /* Stack this drawin correctly */
     stack_windows();
     /* Add it to the list of visible drawins */
-    drawin_array_append(&globalconf.drawins, drawin);
+    drawin_array_append(&getGlobals().drawins, drawin);
     /* Make sure it has a surface */
     if(drawin->drawable->surface == NULL)
         drawin_update_drawing(L, widx);
@@ -347,11 +347,11 @@ drawin_map(lua_State *L, int widx)
 static void
 drawin_unmap(drawin_t *drawin)
 {
-    xcb_unmap_window(globalconf.connection, drawin->window);
-    foreach(item, globalconf.drawins)
+    xcb_unmap_window(getGlobals().connection, drawin->window);
+    foreach(item, getGlobals().drawins)
         if(*item == drawin)
         {
-            drawin_array_remove(&globalconf.drawins, item);
+            drawin_array_remove(&getGlobals().drawins, item);
             break;
         }
 }
@@ -363,7 +363,7 @@ drawin_unmap(drawin_t *drawin)
 drawin_t *
 drawin_getbywin(xcb_window_t win)
 {
-    foreach(w, globalconf.drawins)
+    foreach(w, getGlobals().drawins)
         if((*w)->window == win)
             return *w;
     return NULL;
@@ -414,7 +414,7 @@ drawin_set_visible(lua_State *L, int udx, bool v)
 static drawin_t *
 drawin_allocator(lua_State *L)
 {
-    xcb_screen_t *s = globalconf.screen;
+    xcb_screen_t *s = getGlobals().screen;
     drawin_t *w = drawin_new(L);
 
     w->visible = false;
@@ -429,11 +429,11 @@ drawin_allocator(lua_State *L)
     drawable_allocator(L, (drawable_refresh_callback *) drawin_refresh_pixmap, w);
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);
 
-    w->window = xcb_generate_id(globalconf.connection);
-    xcb_create_window(globalconf.connection, globalconf.default_depth, w->window, s->root,
+    w->window = xcb_generate_id(getGlobals().connection);
+    xcb_create_window(getGlobals().connection, getGlobals().default_depth, w->window, s->root,
                       w->geometry.x, w->geometry.y,
                       w->geometry.width, w->geometry.height,
-                      w->border_width, XCB_COPY_FROM_PARENT, globalconf.visual->visual_id,
+                      w->border_width, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
                       XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY
                       | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP
                       | XCB_CW_CURSOR,
@@ -448,8 +448,8 @@ drawin_allocator(lua_State *L)
                           | XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS
                           | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE
                           | XCB_EVENT_MASK_PROPERTY_CHANGE,
-                          globalconf.default_cmap,
-                          xcursor_new(globalconf.cursor_ctx, xcursor_font_fromstr(w->cursor))
+                          getGlobals().default_cmap,
+                          xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor))
                       });
     xwindow_set_class_instance(w->window);
     xwindow_set_name_static(w->window, "Awesome drawin");
@@ -611,7 +611,7 @@ luaA_drawin_set_cursor(lua_State *L, drawin_t *drawin)
         uint16_t cursor_font = xcursor_font_fromstr(buf);
         if(cursor_font)
         {
-            xcb_cursor_t cursor = xcursor_new(globalconf.cursor_ctx, cursor_font);
+            xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
             p_delete(&drawin->cursor);
             drawin->cursor = a_strdup(buf);
             xwindow_set_cursor(drawin->window, cursor);

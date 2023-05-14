@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_GLOBALCONF_H
-#define AWESOME_GLOBALCONF_H
+#pragma once
 
 #define SN_API_NOT_YET_FROZEN
 #include <libsn/sn.h>
@@ -78,8 +76,9 @@ DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
 
 /** Main configuration structure */
-typedef struct
+class Globals
 {
+    public:
     /** Connection ref */
     xcb_connection_t *connection;
     /** X Resources DB */
@@ -137,7 +136,7 @@ typedef struct
     /** Clients list */
     client_array_t clients;
     /** Embedded windows */
-    xembed_window_array_t embedded;
+    std::vector<XEmbed::window> embedded;
     /** Stack client history */
     client_array_t stack;
     /** Lua VM state (opaque to avoid mis-use, see globalconf_get_lua_State()) */
@@ -230,19 +229,18 @@ typedef struct
     int exit_code;
     /** The Global API level */
     int api_level;
-} awesome_t;
+};
 
-extern awesome_t globalconf;
+Globals & getGlobals();
 
 /** You should always use this as lua_State *L = globalconf_get_lua_State().
  * That way it becomes harder to introduce coroutine-related problems.
  */
 static inline lua_State *globalconf_get_lua_State(void) {
-    return globalconf.L.real_L_dont_use_directly;
+    return getGlobals().L.real_L_dont_use_directly;
 }
 
 /* Defined in root.c */
 void root_update_wallpaper(void);
 
-#endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

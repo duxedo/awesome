@@ -122,7 +122,7 @@ drawable_unset_surface(drawable_t *d)
     cairo_surface_finish(d->surface);
     cairo_surface_destroy(d->surface);
     if (d->pixmap)
-        xcb_free_pixmap(globalconf.connection, d->pixmap);
+        xcb_free_pixmap(getGlobals().connection, d->pixmap);
     d->refreshed = false;
     d->surface = NULL;
     d->pixmap = XCB_NONE;
@@ -146,11 +146,11 @@ drawable_set_geometry(lua_State *L, int didx, area_t geom)
         drawable_unset_surface(d);
     if (area_changed && geom.width > 0 && geom.height > 0)
     {
-        d->pixmap = xcb_generate_id(globalconf.connection);
-        xcb_create_pixmap(globalconf.connection, globalconf.default_depth, d->pixmap,
-                          globalconf.screen->root, geom.width, geom.height);
-        d->surface = cairo_xcb_surface_create(globalconf.connection,
-                                              d->pixmap, globalconf.visual,
+        d->pixmap = xcb_generate_id(getGlobals().connection);
+        xcb_create_pixmap(getGlobals().connection, getGlobals().default_depth, d->pixmap,
+                          getGlobals().screen->root, geom.width, geom.height);
+        d->surface = cairo_xcb_surface_create(getGlobals().connection,
+                                              d->pixmap, getGlobals().visual,
                                               geom.width, geom.height);
         luaA_object_emit_signal(L, didx, "property::surface", 0);
     }

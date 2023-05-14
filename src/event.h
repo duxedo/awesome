@@ -48,7 +48,7 @@ awesome_refresh(void)
     banning_refresh();
     stack_refresh();
     client_destroy_later();
-    return xcb_flush(globalconf.connection);
+    return xcb_flush(getGlobals().connection);
 }
 
 void event_init(void);

@@ -21,6 +21,8 @@
 
 #include "event.h"
 #include "awesome.h"
+#include "common/xembed.h"
+#include "globalconf.h"
 #include "property.h"
 #include "objects/tag.h"
 #include "objects/selection_getter.h"
@@ -39,6 +41,9 @@
 #include "common/atoms.h"
 #include "common/xutil.h"
 
+#include <bits/ranges_util.h>
+#include <map>
+#include <set>
 #include <xcb/xcb.h>
 #include <xcb/randr.h>
 #include <xcb/shape.h>
@@ -126,11 +131,11 @@ DO_EVENT_HOOK_CALLBACK(keyb_t, key, XCB_KEY, key_array_t, event_key_match)
 static bool
 event_handle_mousegrabber(int x, int y, uint16_t mask)
 {
-    if(globalconf.mousegrabber != LUA_REFNIL)
+    if(getGlobals().mousegrabber != LUA_REFNIL)
     {
         lua_State *L = globalconf_get_lua_State();
         mousegrabber_handleevent(L, x, y, mask);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, globalconf.mousegrabber);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().mousegrabber);
         if(!luaA_dofunction(L, 1, 1))
         {
             warn("Stopping mousegrabber.");
@@ -185,7 +190,7 @@ event_handle_button(xcb_button_press_event_t *ev)
     client_t *c;
     drawin_t *drawin;
 
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
     {
         /* ev->state contains the state before the event. Compute the state
@@ -232,7 +237,7 @@ event_handle_button(xcb_button_press_event_t *ev)
          * "eaten" instead of being handled again on the root window.
          */
         if(ev->child == XCB_NONE)
-            xcb_allow_events(globalconf.connection,
+            xcb_allow_events(getGlobals().connection,
                              XCB_ALLOW_ASYNC_POINTER,
                              ev->time);
     }
@@ -274,14 +279,14 @@ event_handle_button(xcb_button_press_event_t *ev)
             /* then check if any button objects match */
             event_button_callback(ev, &c->buttons, L, -1, 1, NULL);
         }
-        xcb_allow_events(globalconf.connection,
+        xcb_allow_events(getGlobals().connection,
                          XCB_ALLOW_REPLAY_POINTER,
                          ev->time);
     }
     else if(ev->child == XCB_NONE)
-        if(globalconf.screen->root == ev->event)
+        if(getGlobals().screen->root == ev->event)
         {
-            event_button_callback(ev, &globalconf.buttons, L, 0, 0, NULL);
+            event_button_callback(ev, &getGlobals().buttons, L, 0, 0, NULL);
             return;
         }
 }
@@ -329,7 +334,7 @@ event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev
         config_win_vals[i++] = ev->stack_mode;
     }
 
-    xcb_configure_window(globalconf.connection, ev->window, config_win_mask, config_win_vals);
+    xcb_configure_window(getGlobals().connection, ev->window, config_win_mask, config_win_vals);
 }
 
 /** The configure event handler.
@@ -426,7 +431,7 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
         luaA_object_emit_signal(L, -3, "request::geometry", 2);
         lua_pop(L, 1);
     }
-    else if (xembed_getbywin(&globalconf.embedded, ev->window))
+    else if (std::find_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [xwin = ev->window](const auto & win) { return win.win == xwin;}) != getGlobals().embedded.end())
     {
         /* Ignore this so that systray icons cannot resize themselves.
          * We decide their size!
@@ -435,14 +440,14 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
          * window that its configure request was denied.
          */
         xcb_get_geometry_cookie_t geom_cookie =
-            xcb_get_geometry_unchecked(globalconf.connection, ev->window);
+            xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
         xcb_translate_coordinates_cookie_t coords_cookie =
-            xcb_translate_coordinates_unchecked(globalconf.connection,
-                    ev->window, globalconf.screen->root, 0, 0);
+            xcb_translate_coordinates_unchecked(getGlobals().connection,
+                    ev->window, getGlobals().screen->root, 0, 0);
         xcb_get_geometry_reply_t *geom =
-            xcb_get_geometry_reply(globalconf.connection, geom_cookie, NULL);
+            xcb_get_geometry_reply(getGlobals().connection, geom_cookie, NULL);
         xcb_translate_coordinates_reply_t *coords =
-            xcb_translate_coordinates_reply(globalconf.connection, coords_cookie, NULL);
+            xcb_translate_coordinates_reply(getGlobals().connection, coords_cookie, NULL);
 
         if (geom && coords)
         {
@@ -466,7 +471,7 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
 static void
 event_handle_configurenotify(xcb_configure_notify_event_t *ev)
 {
-    xcb_screen_t *screen = globalconf.screen;
+    xcb_screen_t *screen = getGlobals().screen;
 
     if(ev->window == screen->root)
         screen_schedule_refresh();
@@ -486,15 +491,13 @@ event_handle_destroynotify(xcb_destroy_notify_event_t *ev)
 {
     client_t *c;
 
-    if((c = client_getbywin(ev->window)))
+    if((c = client_getbywin(ev->window))) {
         client_unmanage(c, CLIENT_UNMANAGE_DESTROYED);
-    else
-        for(int i = 0; i < globalconf.embedded.len; i++)
-            if(globalconf.embedded.tab[i].win == ev->window)
-            {
-                xembed_window_array_take(&globalconf.embedded, i);
-                luaA_systray_invalidate();
-            }
+    }
+    else if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; }))
+    {
+        luaA_systray_invalidate();
+    }
 }
 
 /** Record that the given drawable contains the pointer.
@@ -507,28 +510,28 @@ event_drawable_under_mouse(lua_State *L, int ud)
     lua_pushvalue(L, ud);
     d = luaA_object_ref(L, -1);
 
-    if (d == globalconf.drawable_under_mouse)
+    if (d == getGlobals().drawable_under_mouse)
     {
         /* Nothing to do */
         luaA_object_unref(L, d);
         return;
     }
 
-    if (globalconf.drawable_under_mouse != NULL)
+    if (getGlobals().drawable_under_mouse != NULL)
     {
         /* Emit leave on previous drawable */
-        luaA_object_push(L, globalconf.drawable_under_mouse);
+        luaA_object_push(L, getGlobals().drawable_under_mouse);
         luaA_object_emit_signal(L, -1, "mouse::leave", 0);
         lua_pop(L, 1);
 
         /* Unref the previous drawable */
-        luaA_object_unref(L, globalconf.drawable_under_mouse);
-        globalconf.drawable_under_mouse = NULL;
+        luaA_object_unref(L, getGlobals().drawable_under_mouse);
+        getGlobals().drawable_under_mouse = NULL;
     }
     if (d != NULL)
     {
         /* Reference the drawable for leave event later */
-        globalconf.drawable_under_mouse = (drawable_t *)d;
+        getGlobals().drawable_under_mouse = (drawable_t *)d;
 
         /* Emit enter */
         luaA_object_emit_signal(L, ud, "mouse::enter", 0);
@@ -545,7 +548,7 @@ event_handle_motionnotify(xcb_motion_notify_event_t *ev)
     drawin_t *w;
     client_t *c;
 
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
     if(event_handle_mousegrabber(ev->root_x, ev->root_y, ev->state))
         return;
@@ -593,7 +596,7 @@ event_handle_leavenotify(xcb_leave_notify_event_t *ev)
     lua_State *L = globalconf_get_lua_State();
     client_t *c;
 
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
     /*
      * Ignore events with non-normal modes. Those are because a grab
@@ -643,7 +646,7 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
     client_t *c;
     drawin_t *drawin;
 
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
     /*
      * Ignore events with non-normal modes. Those are because a grab
@@ -691,11 +694,11 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
         event_drawable_under_mouse(L, -1);
         lua_pop(L, 2);
     }
-    else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && ev->event == globalconf.screen->root) {
+    else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && ev->event == getGlobals().screen->root) {
         /* When there are multiple X screens with awesome running separate
          * instances, reset focus.
          */
-        globalconf.focus.need_update = true;
+        getGlobals().focus.need_update = true;
     }
 }
 
@@ -705,9 +708,9 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
 static void
 event_handle_focusin(xcb_focus_in_event_t *ev)
 {
-    if (ev->event == globalconf.screen->root) {
+    if (ev->event == getGlobals().screen->root) {
         /* Received focus in for root window, refocusing the focused window */
-        globalconf.focus.need_update = true;
+        getGlobals().focus.need_update = true;
     }
 
     if (ev->mode == XCB_NOTIFY_MODE_GRAB
@@ -767,13 +770,13 @@ static void
 event_handle_key(xcb_key_press_event_t *ev)
 {
     lua_State *L = globalconf_get_lua_State();
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
-    if(globalconf.keygrabber != LUA_REFNIL)
+    if(getGlobals().keygrabber != LUA_REFNIL)
     {
         if(keygrabber_handlekpress(L, ev))
         {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, globalconf.keygrabber);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().keygrabber);
 
             if(!luaA_dofunction(L, 3, 0))
             {
@@ -785,7 +788,7 @@ event_handle_key(xcb_key_press_event_t *ev)
     else
     {
         /* get keysym ignoring all modifiers */
-        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(globalconf.keysyms, ev->detail, 0);
+        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().keysyms, ev->detail, 0);
         client_t *c;
         if((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event)))
         {
@@ -793,7 +796,7 @@ event_handle_key(xcb_key_press_event_t *ev)
             event_key_callback(ev, &c->keys, L, -1, 1, &keysym);
         }
         else
-            event_key_callback(ev, &globalconf.keys, L, 0, 0, &keysym);
+            event_key_callback(ev, &getGlobals().keys, L, 0, 0, &keysym);
     }
 }
 
@@ -804,30 +807,29 @@ static void
 event_handle_maprequest(xcb_map_request_event_t *ev)
 {
     client_t *c;
-    xembed_window_t *em;
     xcb_get_window_attributes_cookie_t wa_c;
     xcb_get_window_attributes_reply_t *wa_r;
     xcb_get_geometry_cookie_t geom_c;
     xcb_get_geometry_reply_t *geom_r;
 
-    wa_c = xcb_get_window_attributes_unchecked(globalconf.connection, ev->window);
+    wa_c = xcb_get_window_attributes_unchecked(getGlobals().connection, ev->window);
 
-    if(!(wa_r = xcb_get_window_attributes_reply(globalconf.connection, wa_c, NULL)))
+    if(!(wa_r = xcb_get_window_attributes_reply(getGlobals().connection, wa_c, NULL)))
         return;
 
     if(wa_r->override_redirect)
         goto bailout;
 
-    if((em = xembed_getbywin(&globalconf.embedded, ev->window)))
+    if(auto em = std::ranges::find_if(getGlobals().embedded, [xwin = ev->window](const auto & win){ return win.win == xwin; }); em != getGlobals().embedded.end())
     {
-        xcb_map_window(globalconf.connection, ev->window);
-        xembed_window_activate(globalconf.connection, ev->window, globalconf.timestamp);
+        xcb_map_window(getGlobals().connection, ev->window);
+        XEmbed::xembed_window_activate(getGlobals().connection, ev->window, getGlobals().timestamp);
         /* The correct way to set this is via the _XEMBED_INFO property. Neither
          * of the XEMBED not the systray spec talk about mapping windows.
          * Apparently, Qt doesn't care and does not set an _XEMBED_INFO
          * property. Let's simulate the XEMBED_MAPPED bit.
          */
-        em->info.flags |= XEMBED_MAPPED;
+        em->info.flags |= static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
         luaA_systray_invalidate();
     }
     else if((c = client_getbywin(ev->window)))
@@ -845,9 +847,9 @@ event_handle_maprequest(xcb_map_request_event_t *ev)
     }
     else
     {
-        geom_c = xcb_get_geometry_unchecked(globalconf.connection, ev->window);
+        geom_c = xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
 
-        if(!(geom_r = xcb_get_geometry_reply(globalconf.connection, geom_c, NULL)))
+        if(!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL)))
         {
             goto bailout;
         }
@@ -880,20 +882,20 @@ static void
 event_handle_randr_screen_change_notify(xcb_randr_screen_change_notify_event_t *ev)
 {
     /* Ignore events for other roots (do we get them at all?) */
-    if (ev->root != globalconf.screen->root)
+    if (ev->root != getGlobals().screen->root)
         return;
 
     /* Do (part of) what XRRUpdateConfiguration() would do (update our state) */
     if (ev->rotation & (XCB_RANDR_ROTATION_ROTATE_90 | XCB_RANDR_ROTATION_ROTATE_270)) {
-        globalconf.screen->width_in_pixels = ev->height;
-        globalconf.screen->width_in_millimeters = ev->mheight;
-        globalconf.screen->height_in_pixels = ev->width;
-        globalconf.screen->height_in_millimeters = ev->mwidth;
+        getGlobals().screen->width_in_pixels = ev->height;
+        getGlobals().screen->width_in_millimeters = ev->mheight;
+        getGlobals().screen->height_in_pixels = ev->width;
+        getGlobals().screen->height_in_millimeters = ev->mwidth;
     } else {
-        globalconf.screen->width_in_pixels = ev->width;
-        globalconf.screen->width_in_millimeters = ev->mwidth;
-        globalconf.screen->height_in_pixels = ev->height;
-        globalconf.screen->height_in_millimeters = ev->mheight;;
+        getGlobals().screen->width_in_pixels = ev->width;
+        getGlobals().screen->width_in_millimeters = ev->mwidth;
+        getGlobals().screen->height_in_pixels = ev->height;
+        getGlobals().screen->height_in_millimeters = ev->mheight;;
     }
 
     screen_schedule_refresh();
@@ -915,8 +917,8 @@ event_handle_randr_output_change_notify(xcb_randr_notify_event_t *ev)
          * the final state of the connection. There could be more notification
          * events underway and using some "old" timestamp causes problems.
          */
-        info = xcb_randr_get_output_info_reply(globalconf.connection,
-            xcb_randr_get_output_info_unchecked(globalconf.connection,
+        info = xcb_randr_get_output_info_reply(getGlobals().connection,
+            xcb_randr_get_output_info_unchecked(getGlobals().connection,
                 output,
                 XCB_CURRENT_TIME),
             NULL);
@@ -973,7 +975,7 @@ static void
 event_handle_clientmessage(xcb_client_message_event_t *ev)
 {
     /* check for startup notification messages */
-    if(sn_xcb_display_process_event(globalconf.sndisplay, (xcb_generic_event_t *) ev))
+    if(sn_xcb_display_process_event(getGlobals().sndisplay, (xcb_generic_event_t *) ev))
         return;
 
     if(ev->type == WM_CHANGE_STATE)
@@ -1006,28 +1008,25 @@ event_handle_reparentnotify(xcb_reparent_notify_event_t *ev)
     {
         /* Ignore reparents to the root window, they *might* be caused by
          * ourselves if a client quickly unmaps and maps itself again. */
-        if (ev->parent != globalconf.screen->root)
+        if (ev->parent != getGlobals().screen->root)
             client_unmanage(c, CLIENT_UNMANAGE_REPARENT);
     }
-    else if (ev->parent != globalconf.systray.window) {
+    else if (ev->parent != getGlobals().systray.window) {
         /* Embedded window moved elsewhere, end of embedding */
-        for(int i = 0; i < globalconf.embedded.len; i++)
-            if(globalconf.embedded.tab[i].win == ev->window)
-            {
-                xembed_window_array_take(&globalconf.embedded, i);
-                xcb_change_save_set(globalconf.connection, XCB_SET_MODE_DELETE, ev->window);
-                luaA_systray_invalidate();
-            }
+        if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; })) {
+            xcb_change_save_set(getGlobals().connection, XCB_SET_MODE_DELETE, ev->window);
+            luaA_systray_invalidate();
+        }
     }
 }
 
 static void
 event_handle_selectionclear(xcb_selection_clear_event_t *ev)
 {
-    if(ev->selection == globalconf.selection_atom)
+    if(ev->selection == getGlobals().selection_atom)
     {
         warn("Lost WM_Sn selection, exiting...");
-        g_main_loop_quit(globalconf.loop);
+        g_main_loop_quit(getGlobals().loop);
     } else
         selection_handle_selectionclear(ev);
 }
@@ -1052,12 +1051,12 @@ xerror(xcb_generic_error_t *e)
 
 #ifdef WITH_XCB_ERRORS
     const char *major = xcb_errors_get_name_for_major_code(
-            globalconf.errors_ctx, e->major_code);
+            getGlobals().errors_ctx, e->major_code);
     const char *minor = xcb_errors_get_name_for_minor_code(
-            globalconf.errors_ctx, e->major_code, e->minor_code);
+            getGlobals().errors_ctx, e->major_code, e->minor_code);
     const char *extension = NULL;
     const char *error = xcb_errors_get_name_for_error(
-            globalconf.errors_ctx, e->error_code, &extension);
+            getGlobals().errors_ctx, e->error_code, &extension);
 #else
     const char *major = xcb_event_get_request_label(e->major_code);
     const char *minor = NULL;
@@ -1080,22 +1079,22 @@ should_ignore(xcb_generic_event_t *event)
 
     /* Remove completed sequences */
     uint32_t sequence = event->full_sequence;
-    while (globalconf.ignore_enter_leave_events.len > 0) {
-        uint32_t end = globalconf.ignore_enter_leave_events.tab[0].end.sequence;
+    while (getGlobals().ignore_enter_leave_events.len > 0) {
+        uint32_t end = getGlobals().ignore_enter_leave_events.tab[0].end.sequence;
         /* Do if (end >= sequence) break;, but handle wrap-around: The above is
          * equivalent to end-sequence > 0 (assuming unlimited precision). With
          * int32_t, this would mean that the sign bit is cleared, which means:
          */
         if (end - sequence < UINT32_MAX / 2)
             break;
-        sequence_pair_array_take(&globalconf.ignore_enter_leave_events, 0);
+        sequence_pair_array_take(&getGlobals().ignore_enter_leave_events, 0);
     }
 
     /* Check if this event should be ignored */
     if ((response_type == XCB_ENTER_NOTIFY || response_type == XCB_LEAVE_NOTIFY)
-            && globalconf.ignore_enter_leave_events.len > 0) {
-        uint32_t begin = globalconf.ignore_enter_leave_events.tab[0].begin.sequence;
-        uint32_t end   = globalconf.ignore_enter_leave_events.tab[0].end.sequence;
+            && getGlobals().ignore_enter_leave_events.len > 0) {
+        uint32_t begin = getGlobals().ignore_enter_leave_events.tab[0].begin.sequence;
+        uint32_t end   = getGlobals().ignore_enter_leave_events.tab[0].end.sequence;
         if (sequence >= begin && sequence <= end)
             return true;
     }
@@ -1149,8 +1148,8 @@ void event_handle(xcb_generic_event_t *event)
     }
 
 #define EXTENSION_EVENT(base, offset, callback) \
-    if (globalconf.event_base_ ## base != 0 \
-            && response_type == globalconf.event_base_ ## base + (offset)) \
+    if (getGlobals().event_base_ ## base != 0 \
+            && response_type == getGlobals().event_base_ ## base + (offset)) \
         callback((decltype(get_argt(callback))) event)
     EXTENSION_EVENT(randr, XCB_RANDR_SCREEN_CHANGE_NOTIFY, event_handle_randr_screen_change_notify);
     EXTENSION_EVENT(randr, XCB_RANDR_NOTIFY, event_handle_randr_output_change_notify);
@@ -1164,21 +1163,21 @@ void event_init(void)
 {
     const xcb_query_extension_reply_t *reply;
 
-    reply = xcb_get_extension_data(globalconf.connection, &xcb_randr_id);
+    reply = xcb_get_extension_data(getGlobals().connection, &xcb_randr_id);
     if (reply && reply->present)
-        globalconf.event_base_randr = reply->first_event;
+        getGlobals().event_base_randr = reply->first_event;
 
-    reply = xcb_get_extension_data(globalconf.connection, &xcb_shape_id);
+    reply = xcb_get_extension_data(getGlobals().connection, &xcb_shape_id);
     if (reply && reply->present)
-        globalconf.event_base_shape = reply->first_event;
+        getGlobals().event_base_shape = reply->first_event;
 
-    reply = xcb_get_extension_data(globalconf.connection, &xcb_xkb_id);
+    reply = xcb_get_extension_data(getGlobals().connection, &xcb_xkb_id);
     if (reply && reply->present)
-        globalconf.event_base_xkb = reply->first_event;
+        getGlobals().event_base_xkb = reply->first_event;
 
-    reply = xcb_get_extension_data(globalconf.connection, &xcb_xfixes_id);
+    reply = xcb_get_extension_data(getGlobals().connection, &xcb_xfixes_id);
     if (reply && reply->present)
-        globalconf.event_base_xfixes = reply->first_event;
+        getGlobals().event_base_xfixes = reply->first_event;
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -295,13 +295,13 @@ luaA_checkscreen(lua_State *L, int sidx)
     if (lua_isnumber(L, sidx))
     {
         int screen = lua_tointeger(L, sidx);
-        if(screen < 1 || screen > globalconf.screens.len)
+        if(screen < 1 || screen > getGlobals().screens.len)
         {
-            luaA_warn(L, "invalid screen number: %d (of %d existing)", screen, globalconf.screens.len);
+            luaA_warn(L, "invalid screen number: %d (of %d existing)", screen, getGlobals().screens.len);
             lua_pushnil(L);
             return NULL;
         }
-        return globalconf.screens.tab[screen - 1];
+        return getGlobals().screens.tab[screen - 1];
     } else
         return (screen_t *)luaA_checkudata(L, sidx, &screen_class);
 }
@@ -550,7 +550,7 @@ viewport_purge(void)
         cur = first_screen_viewport;
         first_screen_viewport = cur->next;
 
-        foreach(existing_screen, globalconf.screens)
+        foreach(existing_screen, getGlobals().screens)
             if ((*existing_screen)->viewport == cur)
                 (*existing_screen)->viewport = NULL;
 
@@ -575,7 +575,7 @@ viewport_purge(void)
             if (tmp == last_screen_viewport)
                 last_screen_viewport = cur;
 
-            foreach(existing_screen, globalconf.screens)
+            foreach(existing_screen, getGlobals().screens)
                 if ((*existing_screen)->viewport == tmp)
                     (*existing_screen)->viewport = NULL;
 
@@ -622,8 +622,8 @@ screen_get_randr_output(lua_State *L, xcb_randr_monitor_info_iterator_t *it)
     output.mm_width  = it->data->width_in_millimeters;
     output.mm_height = it->data->height_in_millimeters;
 
-    name_c = xcb_get_atom_name_unchecked(globalconf.connection, it->data->name);
-    name_r = xcb_get_atom_name_reply(globalconf.connection, name_c, NULL);
+    name_c = xcb_get_atom_name_unchecked(getGlobals().connection, it->data->name);
+    name_r = xcb_get_atom_name_reply(getGlobals().connection, name_c, NULL);
 
     if (name_r) {
         const char *name = xcb_get_atom_name_name(name_r);
@@ -650,8 +650,8 @@ screen_get_randr_output(lua_State *L, xcb_randr_monitor_info_iterator_t *it)
 static void
 screen_scan_randr_monitors(lua_State *L, screen_array_t *screens)
 {
-    xcb_randr_get_monitors_cookie_t monitors_c = xcb_randr_get_monitors(globalconf.connection, globalconf.screen->root, 1);
-    xcb_randr_get_monitors_reply_t *monitors_r = xcb_randr_get_monitors_reply(globalconf.connection, monitors_c, NULL);
+    xcb_randr_get_monitors_cookie_t monitors_c = xcb_randr_get_monitors(getGlobals().connection, getGlobals().screen->root, 1);
+    xcb_randr_get_monitors_reply_t *monitors_r = xcb_randr_get_monitors_reply(getGlobals().connection, monitors_c, NULL);
     xcb_randr_monitor_info_iterator_t monitor_iter;
 
     if (monitors_r == NULL) {
@@ -675,7 +675,7 @@ screen_scan_randr_monitors(lua_State *L, screen_array_t *screens)
 
         screen_output_array_append(&viewport->outputs, output);
 
-        if (globalconf.ignore_screens)
+        if (getGlobals().ignore_screens)
             continue;
 
         new_screen = screen_add(L, screens);
@@ -705,8 +705,8 @@ screen_get_randr_crtcs_outputs(lua_State *L, xcb_randr_get_crtc_info_reply_t *cr
 
     for(int j = 0; j < xcb_randr_get_crtc_info_outputs_length(crtc_info_r); j++)
     {
-        xcb_randr_get_output_info_cookie_t output_info_c = xcb_randr_get_output_info(globalconf.connection, randr_outputs[j], XCB_CURRENT_TIME);
-        xcb_randr_get_output_info_reply_t *output_info_r = xcb_randr_get_output_info_reply(globalconf.connection, output_info_c, NULL);
+        xcb_randr_get_output_info_cookie_t output_info_c = xcb_randr_get_output_info(getGlobals().connection, randr_outputs[j], XCB_CURRENT_TIME);
+        xcb_randr_get_output_info_reply_t *output_info_r = xcb_randr_get_output_info_reply(getGlobals().connection, output_info_c, NULL);
         screen_output_t output;
 
         if (!output_info_r) {
@@ -737,8 +737,8 @@ screen_scan_randr_crtcs(lua_State *L, screen_array_t *screens)
     /* A quick XRandR recall:
      * You have CRTC that manages a part of a SCREEN.
      * Each CRTC can draw stuff on one or more OUTPUT. */
-    xcb_randr_get_screen_resources_cookie_t screen_res_c = xcb_randr_get_screen_resources(globalconf.connection, globalconf.screen->root);
-    xcb_randr_get_screen_resources_reply_t *screen_res_r = xcb_randr_get_screen_resources_reply(globalconf.connection, screen_res_c, NULL);
+    xcb_randr_get_screen_resources_cookie_t screen_res_c = xcb_randr_get_screen_resources(getGlobals().connection, getGlobals().screen->root);
+    xcb_randr_get_screen_resources_reply_t *screen_res_r = xcb_randr_get_screen_resources_reply(getGlobals().connection, screen_res_c, NULL);
 
     if (screen_res_r == NULL) {
         warn("RANDR GetScreenResources failed; this should not be possible");
@@ -751,8 +751,8 @@ screen_scan_randr_crtcs(lua_State *L, screen_array_t *screens)
     for(int i = 0; i < screen_res_r->num_crtcs; i++)
     {
         /* Get info on the output crtc */
-        xcb_randr_get_crtc_info_cookie_t crtc_info_c = xcb_randr_get_crtc_info(globalconf.connection, randr_crtcs[i], XCB_CURRENT_TIME);
-        xcb_randr_get_crtc_info_reply_t *crtc_info_r = xcb_randr_get_crtc_info_reply(globalconf.connection, crtc_info_c, NULL);
+        xcb_randr_get_crtc_info_cookie_t crtc_info_c = xcb_randr_get_crtc_info(getGlobals().connection, randr_crtcs[i], XCB_CURRENT_TIME);
+        xcb_randr_get_crtc_info_reply_t *crtc_info_r = xcb_randr_get_crtc_info_reply(getGlobals().connection, crtc_info_c, NULL);
 
         if(!crtc_info_r) {
             warn("RANDR GetCRTCInfo failed; this should not be possible");
@@ -772,7 +772,7 @@ screen_scan_randr_crtcs(lua_State *L, screen_array_t *screens)
 
         screen_get_randr_crtcs_outputs(L, crtc_info_r, &viewport->outputs);
 
-        if (globalconf.ignore_screens)
+        if (getGlobals().ignore_screens)
         {
             p_delete(&crtc_info_r);
             continue;
@@ -825,13 +825,13 @@ screen_scan_randr(lua_State *L, screen_array_t *screens)
     uint32_t minor_version;
 
     /* Check for extension before checking for XRandR */
-    extension_reply = xcb_get_extension_data(globalconf.connection, &xcb_randr_id);
+    extension_reply = xcb_get_extension_data(getGlobals().connection, &xcb_randr_id);
     if(!extension_reply || !extension_reply->present)
         return;
 
     version_reply =
-        xcb_randr_query_version_reply(globalconf.connection,
-                                      xcb_randr_query_version(globalconf.connection, 1, 5), 0);
+        xcb_randr_query_version_reply(getGlobals().connection,
+                                      xcb_randr_query_version(getGlobals().connection, 1, 5), 0);
     if(!version_reply)
         return;
 
@@ -844,31 +844,31 @@ screen_scan_randr(lua_State *L, screen_array_t *screens)
     if (major_version != 1 || minor_version < 2)
         return;
 
-    globalconf.have_randr_13 = minor_version >= 3;
+    getGlobals().have_randr_13 = minor_version >= 3;
 #if XCB_RANDR_MAJOR_VERSION > 1 || XCB_RANDR_MINOR_VERSION >= 5
-    globalconf.have_randr_15 = minor_version >= 5;
+    getGlobals().have_randr_15 = minor_version >= 5;
 #else
     globalconf.have_randr_15 = false;
 #endif
 
     /* We want to know when something changes */
-    xcb_randr_select_input(globalconf.connection,
-                           globalconf.screen->root,
+    xcb_randr_select_input(getGlobals().connection,
+                           getGlobals().screen->root,
                            XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
 
-    if (globalconf.have_randr_15)
+    if (getGlobals().have_randr_15)
         screen_scan_randr_monitors(L, screens);
     else
         screen_scan_randr_crtcs(L, screens);
 
-    if (screens->len == 0 && !globalconf.ignore_screens)
+    if (screens->len == 0 && !getGlobals().ignore_screens)
     {
         /* Scanning failed, disable randr again */
-        xcb_randr_select_input(globalconf.connection,
-                               globalconf.screen->root,
+        xcb_randr_select_input(getGlobals().connection,
+                               getGlobals().screen->root,
                                0);
-        globalconf.have_randr_13 = false;
-        globalconf.have_randr_15 = false;
+        getGlobals().have_randr_13 = false;
+        getGlobals().have_randr_15 = false;
     }
 }
 
@@ -883,18 +883,18 @@ screen_scan_xinerama(lua_State *L, screen_array_t *screens)
     int xinerama_screen_number;
 
     /* Check for extension before checking for Xinerama */
-    extension_reply = xcb_get_extension_data(globalconf.connection, &xcb_xinerama_id);
+    extension_reply = xcb_get_extension_data(getGlobals().connection, &xcb_xinerama_id);
     if(!extension_reply || !extension_reply->present)
         return;
 
-    xia = xcb_xinerama_is_active_reply(globalconf.connection, xcb_xinerama_is_active(globalconf.connection), NULL);
+    xia = xcb_xinerama_is_active_reply(getGlobals().connection, xcb_xinerama_is_active(getGlobals().connection), NULL);
     xinerama_is_active = xia && xia->state;
     p_delete(&xia);
     if(!xinerama_is_active)
         return;
 
-    xsq = xcb_xinerama_query_screens_reply(globalconf.connection,
-                                           xcb_xinerama_query_screens_unchecked(globalconf.connection),
+    xsq = xcb_xinerama_query_screens_reply(getGlobals().connection,
+                                           xcb_xinerama_query_screens_unchecked(getGlobals().connection),
                                            NULL);
 
     if(!xsq) {
@@ -914,7 +914,7 @@ screen_scan_xinerama(lua_State *L, screen_array_t *screens)
             xsi[screen].height
         );
 
-        if (globalconf.ignore_screens)
+        if (getGlobals().ignore_screens)
             continue;
 
         screen_t *s = screen_add(L, screens);
@@ -932,7 +932,7 @@ screen_scan_xinerama(lua_State *L, screen_array_t *screens)
 
 static void screen_scan_x11(lua_State *L, screen_array_t *screens)
 {
-    xcb_screen_t *xcb_screen = globalconf.screen;
+    xcb_screen_t *xcb_screen = getGlobals().screen;
 
     viewport_t *viewport = viewport_add(L,
         0,
@@ -941,7 +941,7 @@ static void screen_scan_x11(lua_State *L, screen_array_t *screens)
         xcb_screen->height_in_pixels
     );
 
-    if (globalconf.ignore_screens)
+    if (getGlobals().ignore_screens)
         return;
 
     screen_t *s = screen_add(L, screens);
@@ -987,17 +987,17 @@ screen_scan_common(bool quiet)
 
     monitor_unmark();
 
-    screen_scan_randr(L, &globalconf.screens);
-    if (globalconf.screens.len == 0)
-        screen_scan_xinerama(L, &globalconf.screens);
-    if (globalconf.screens.len == 0)
-        screen_scan_x11(L, &globalconf.screens);
+    screen_scan_randr(L, &getGlobals().screens);
+    if (getGlobals().screens.len == 0)
+        screen_scan_xinerama(L, &getGlobals().screens);
+    if (getGlobals().screens.len == 0)
+        screen_scan_x11(L, &getGlobals().screens);
 
-    check(globalconf.screens.len > 0 || globalconf.ignore_screens);
+    check(getGlobals().screens.len > 0 || getGlobals().ignore_screens);
 
-    screen_deduplicate(L, &globalconf.screens);
+    screen_deduplicate(L, &getGlobals().screens);
 
-    foreach(screen, globalconf.screens) {
+    foreach(screen, getGlobals().screens) {
         screen_added(L, *screen);
     }
 
@@ -1033,10 +1033,10 @@ screen_removed(lua_State *L, int sidx)
 
     luaA_object_emit_signal(L, sidx, "removed", 0);
 
-    if (globalconf.primary_screen == screen)
-        globalconf.primary_screen = NULL;
+    if (getGlobals().primary_screen == screen)
+        getGlobals().primary_screen = NULL;
 
-    foreach(c, globalconf.clients) {
+    foreach(c, getGlobals().clients) {
         if((*c)->screen == screen)
             screen_client_moveto(*c, screen_getbycoord(
                         (*c)->geometry.x, (*c)->geometry.y), false);
@@ -1045,8 +1045,8 @@ screen_removed(lua_State *L, int sidx)
 
 void screen_cleanup(void)
 {
-    while(globalconf.screens.len)
-        screen_array_take(&globalconf.screens, 0);
+    while(getGlobals().screens.len)
+        screen_array_take(&getGlobals().screens, 0);
 
     monitor_unmark();
     viewport_purge();
@@ -1103,7 +1103,7 @@ screen_modified(screen_t *existing_screen, screen_t *other_screen)
 static gboolean
 screen_refresh(gpointer unused)
 {
-    globalconf.screen_refresh_pending = false;
+    getGlobals().screen_refresh_pending = false;
 
     monitor_unmark();
 
@@ -1113,7 +1113,7 @@ screen_refresh(gpointer unused)
     bool list_changed = false;
 
     screen_array_init(&new_screens);
-    if (globalconf.have_randr_15)
+    if (getGlobals().have_randr_15)
         screen_scan_randr_monitors(L, &new_screens);
     else
         screen_scan_randr_crtcs(L, &new_screens);
@@ -1131,10 +1131,10 @@ screen_refresh(gpointer unused)
     /* Add new screens */
     foreach(new_screen, new_screens) {
         bool found = false;
-        foreach(old_screen, globalconf.screens)
+        foreach(old_screen, getGlobals().screens)
             found |= (*new_screen)->xid == (*old_screen)->xid;
         if(!found) {
-            screen_array_append(&globalconf.screens, *new_screen);
+            screen_array_append(&getGlobals().screens, *new_screen);
             screen_added(L, *new_screen);
             /* Get an extra reference since both new_screens and
              * globalconf.screens reference this screen now */
@@ -1147,15 +1147,15 @@ screen_refresh(gpointer unused)
 
     /* Remove screens which are gone */
     screen_array_init(&removed_screens);
-    for(int i = 0; i < globalconf.screens.len; i++) {
-        screen_t *old_screen = globalconf.screens.tab[i];
+    for(int i = 0; i < getGlobals().screens.len; i++) {
+        screen_t *old_screen = getGlobals().screens.tab[i];
         bool found = old_screen->xid == FAKE_SCREEN_XID;
 
         foreach(new_screen, new_screens)
             found |= (*new_screen)->xid == old_screen->xid;
 
         if(old_screen->lifecycle & SCREEN_LIFECYCLE_C && !found) {
-            screen_array_take(&globalconf.screens, i);
+            screen_array_take(&getGlobals().screens, i);
             i--;
 
             screen_array_append(&removed_screens, old_screen);
@@ -1172,7 +1172,7 @@ screen_refresh(gpointer unused)
     screen_array_wipe(&removed_screens);
 
     /* Update changed screens */
-    foreach(existing_screen, globalconf.screens)
+    foreach(existing_screen, getGlobals().screens)
         foreach(new_screen, new_screens)
             if((*existing_screen)->xid == (*new_screen)->xid)
                 screen_modified(*existing_screen, *new_screen);
@@ -1192,10 +1192,10 @@ screen_refresh(gpointer unused)
 void
 screen_schedule_refresh(void)
 {
-    if(globalconf.screen_refresh_pending || !globalconf.have_randr_13)
+    if(getGlobals().screen_refresh_pending || !getGlobals().have_randr_13)
         return;
 
-    globalconf.screen_refresh_pending = true;
+    getGlobals().screen_refresh_pending = true;
     g_idle_add_full(G_PRIORITY_LOW, screen_refresh, NULL, NULL);
 }
 
@@ -1239,14 +1239,14 @@ screen_get_distance_squared(screen_t *s, int x, int y)
 screen_t *
 screen_getbycoord(int x, int y)
 {
-    foreach(s, globalconf.screens)
+    foreach(s, getGlobals().screens)
         if(screen_coord_in_screen(*s, x, y))
             return *s;
 
     /* No screen found, find nearest screen. */
     screen_t *nearest_screen = NULL;
     unsigned int nearest_dist = UINT_MAX;
-    foreach(s, globalconf.screens)
+    foreach(s, getGlobals().screens)
     {
         unsigned int dist_sq = screen_get_distance_squared(*s, x, y);
         if(dist_sq < nearest_dist)
@@ -1322,11 +1322,11 @@ void screen_update_workarea(screen_t *screen)
         } \
     }
 
-    foreach(c, globalconf.clients)
+    foreach(c, getGlobals().clients)
         if((*c)->screen == screen && client_isvisible(*c))
             COMPUTE_STRUT(*c)
 
-    foreach(drawin, globalconf.drawins)
+    foreach(drawin, getGlobals().drawins)
         if((*drawin)->visible)
         {
             screen_t *d_screen =
@@ -1371,7 +1371,7 @@ screen_client_moveto(client_t *c, screen_t *new_screen, bool doresize)
     if(new_screen == c->screen)
         return;
 
-    if (globalconf.focus.client == c)
+    if (getGlobals().focus.client == c)
         had_focus = true;
 
     c->screen = new_screen;
@@ -1437,7 +1437,7 @@ int
 screen_get_index(screen_t *s)
 {
     int res = 0;
-    foreach(screen, globalconf.screens)
+    foreach(screen, getGlobals().screens)
     {
         res++;
         if (*screen == s)
@@ -1450,19 +1450,19 @@ screen_get_index(screen_t *s)
 void
 screen_update_primary(void)
 {
-    if (!globalconf.have_randr_13)
+    if (!getGlobals().have_randr_13)
         return;
 
     screen_t *primary_screen = NULL;
     xcb_randr_get_output_primary_reply_t *primary =
-        xcb_randr_get_output_primary_reply(globalconf.connection,
-                xcb_randr_get_output_primary(globalconf.connection, globalconf.screen->root),
+        xcb_randr_get_output_primary_reply(getGlobals().connection,
+                xcb_randr_get_output_primary(getGlobals().connection, getGlobals().screen->root),
                 NULL);
 
     if (!primary)
         return;
 
-    foreach(screen, globalconf.screens)
+    foreach(screen, getGlobals().screens)
     {
         if ((*screen)->viewport)
             foreach(output, (*screen)->viewport->outputs)
@@ -1472,12 +1472,12 @@ screen_update_primary(void)
     }
     p_delete(&primary);
 
-    if (!primary_screen || primary_screen == globalconf.primary_screen)
+    if (!primary_screen || primary_screen == getGlobals().primary_screen)
         return;
 
     lua_State *L = globalconf_get_lua_State();
-    screen_t *old = globalconf.primary_screen;
-    globalconf.primary_screen = primary_screen;
+    screen_t *old = getGlobals().primary_screen;
+    getGlobals().primary_screen = primary_screen;
 
     if (old)
     {
@@ -1493,16 +1493,16 @@ screen_update_primary(void)
 screen_t *
 screen_get_primary(void)
 {
-    if (!globalconf.primary_screen && globalconf.screens.len > 0)
+    if (!getGlobals().primary_screen && getGlobals().screens.len > 0)
     {
-        globalconf.primary_screen = globalconf.screens.tab[0];
+        getGlobals().primary_screen = getGlobals().screens.tab[0];
 
         lua_State *L = globalconf_get_lua_State();
-        luaA_object_push(L, globalconf.primary_screen);
+        luaA_object_push(L, getGlobals().primary_screen);
         luaA_object_emit_signal(L, -1, "primary_changed", 0);
         lua_pop(L, 1);
     }
-    return globalconf.primary_screen;
+    return getGlobals().primary_screen;
 }
 
 /** Screen module.
@@ -1522,11 +1522,11 @@ luaA_screen_module_index(lua_State *L)
             return luaA_object_push(L, screen_get_primary());
         else if (A_STREQ(name, "automatic_factory"))
         {
-            lua_pushboolean(L, !globalconf.ignore_screens);
+            lua_pushboolean(L, !getGlobals().ignore_screens);
             return 1;
         }
 
-        foreach(screen, globalconf.screens)
+        foreach(screen, getGlobals().screens)
             if ((*screen)->name && A_STREQ(name, (*screen)->name))
                 return luaA_object_push(L, *screen);
             else if ((*screen)->viewport)
@@ -1549,12 +1549,12 @@ luaA_screen_module_newindex(lua_State *L)
 
     if (A_STREQ(buf, "automatic_factory"))
     {
-        globalconf.ignore_screens = !luaA_checkboolean(L, 3);
+        getGlobals().ignore_screens = !luaA_checkboolean(L, 3);
 
         /* It *can* be useful if screens are added/removed later, but generally,
          * setting this should be done before screens are added
          */
-        if (globalconf.ignore_screens && !globalconf.no_auto_screen)
+        if (getGlobals().ignore_screens && !getGlobals().no_auto_screen)
             luaA_warn(L,
                 "Setting automatic_factory only makes sense when AwesomeWM is"
                 " started with `--screen off`"
@@ -1581,9 +1581,9 @@ luaA_screen_module_call(lua_State *L)
         idx = 0;
     else
         idx = screen_get_index(luaA_checkscreen(L, 3));
-    if (idx >= 0 && idx < globalconf.screens.len)
+    if (idx >= 0 && idx < getGlobals().screens.len)
         /* No +1 needed, index starts at 1, C array at 0 */
-        luaA_object_push(L, globalconf.screens.tab[idx]);
+        luaA_object_push(L, getGlobals().screens.tab[idx]);
     else
         lua_pushnil(L);
     return 1;
@@ -1662,7 +1662,7 @@ luaA_screen_get_name(lua_State *L, screen_t *s)
 static int
 luaA_screen_count(lua_State *L)
 {
-    lua_pushinteger(L, globalconf.screens.len);
+    lua_pushinteger(L, getGlobals().screens.len);
     return 1;
 }
 
@@ -1706,7 +1706,7 @@ luaA_screen_fake_add(lua_State *L)
 
     screen_t *s;
 
-    s = screen_add(L, &globalconf.screens);
+    s = screen_add(L, &getGlobals().screens);
     s->lifecycle = (screen_lifecycle_t)(s->lifecycle | (managed ? SCREEN_LIFECYCLE_LUA : SCREEN_LIFECYCLE_USER));
     s->geometry.x = x;
     s->geometry.y = y;
@@ -1718,7 +1718,7 @@ luaA_screen_fake_add(lua_State *L)
     luaA_class_emit_signal(L, &screen_class, "list", 0);
     luaA_object_push(L, s);
 
-    foreach(c, globalconf.clients) {
+    foreach(c, getGlobals().clients) {
         screen_client_moveto(*c, screen_getbycoord(
                     (*c)->geometry.x, (*c)->geometry.y), false);
     }
@@ -1742,12 +1742,12 @@ luaA_screen_fake_remove(lua_State *L)
         /* WTF? */
         return 0;
 
-    if (globalconf.screens.len == 1) {
+    if (getGlobals().screens.len == 1) {
         luaA_warn(L, "Removing last screen through fake_remove(). "
                 "This is a very, very, very bad idea!");
     }
 
-    screen_array_take(&globalconf.screens, idx);
+    screen_array_take(&getGlobals().screens, idx);
     luaA_object_push(L, s);
     screen_removed(L, -1);
     lua_pop(L, 1);
@@ -1819,7 +1819,7 @@ luaA_screen_swap(lua_State *L)
     if(s != swap)
     {
         screen_t **ref_s = NULL, **ref_swap = NULL;
-        foreach(item, globalconf.screens)
+        foreach(item, getGlobals().screens)
         {
             if(*item == s)
                 ref_s = item;

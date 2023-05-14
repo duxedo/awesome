@@ -23,19 +23,21 @@
 #include "common/atoms.h"
 #include "common/xutil.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/client.h"
 #include "objects/drawin.h"
 #include "objects/selection_getter.h"
 #include "objects/selection_transfer.h"
 #include "xwindow.h"
 
+#include <algorithm>
 #include <xcb/xcb_atom.h>
 
 #define HANDLE_TEXT_PROPERTY(funcname, atom, setfunc) \
     xcb_get_property_cookie_t \
     property_get_##funcname(client_t *c) \
     { \
-        return xcb_get_property(globalconf.connection, \
+        return xcb_get_property(getGlobals().connection, \
                                 false, \
                                 c->window, \
                                 atom, \
@@ -48,7 +50,7 @@
     { \
         lua_State *L = globalconf_get_lua_State(); \
         xcb_get_property_reply_t * reply = \
-                    xcb_get_property_reply(globalconf.connection, cookie, NULL); \
+                    xcb_get_property_reply(getGlobals().connection, cookie, NULL); \
         luaA_object_push(L, c); \
         setfunc(L, -1, xutil_get_text_property_from_reply(reply)); \
         lua_pop(L, 1); \
@@ -98,7 +100,7 @@ HANDLE_PROPERTY(motif_wm_hints)
 xcb_get_property_cookie_t
 property_get_wm_transient_for(client_t *c)
 {
-    return xcb_icccm_get_wm_transient_for_unchecked(globalconf.connection, c->window);
+    return xcb_icccm_get_wm_transient_for_unchecked(getGlobals().connection, c->window);
 }
 
 void
@@ -107,7 +109,7 @@ property_update_wm_transient_for(client_t *c, xcb_get_property_cookie_t cookie)
     lua_State *L = globalconf_get_lua_State();
     xcb_window_t trans;
 
-    if(!xcb_icccm_get_wm_transient_for_reply(globalconf.connection,
+    if(!xcb_icccm_get_wm_transient_for_reply(getGlobals().connection,
                                              cookie,
                                              &trans, NULL))
     {
@@ -130,7 +132,7 @@ property_update_wm_transient_for(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_wm_client_leader(client_t *c)
 {
-    return xcb_get_property_unchecked(globalconf.connection, false, c->window,
+    return xcb_get_property_unchecked(getGlobals().connection, false, c->window,
                                       WM_CLIENT_LEADER, XCB_ATOM_WINDOW, 0, 32);
 }
 
@@ -144,7 +146,7 @@ property_update_wm_client_leader(client_t *c, xcb_get_property_cookie_t cookie)
     xcb_get_property_reply_t *reply;
     void *data;
 
-    reply = xcb_get_property_reply(globalconf.connection, cookie, NULL);
+    reply = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
 
     if(reply && reply->value_len && (data = xcb_get_property_value(reply)))
         c->leader_window = *(xcb_window_t *) data;
@@ -155,7 +157,7 @@ property_update_wm_client_leader(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_wm_normal_hints(client_t *c)
 {
-    return xcb_icccm_get_wm_normal_hints_unchecked(globalconf.connection, c->window);
+    return xcb_icccm_get_wm_normal_hints_unchecked(getGlobals().connection, c->window);
 }
 
 /** Update the size hints of a client.
@@ -167,7 +169,7 @@ property_update_wm_normal_hints(client_t *c, xcb_get_property_cookie_t cookie)
 {
     lua_State *L = globalconf_get_lua_State();
 
-    xcb_icccm_get_wm_normal_hints_reply(globalconf.connection,
+    xcb_icccm_get_wm_normal_hints_reply(getGlobals().connection,
 					cookie,
 					&c->size_hints, NULL);
 
@@ -179,7 +181,7 @@ property_update_wm_normal_hints(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_wm_hints(client_t *c)
 {
-    return xcb_icccm_get_wm_hints_unchecked(globalconf.connection, c->window);
+    return xcb_icccm_get_wm_hints_unchecked(getGlobals().connection, c->window);
 }
 
 /** Update the WM hints of a client.
@@ -192,7 +194,7 @@ property_update_wm_hints(client_t *c, xcb_get_property_cookie_t cookie)
     lua_State *L = globalconf_get_lua_State();
     xcb_icccm_wm_hints_t wmh;
 
-    if(!xcb_icccm_get_wm_hints_reply(globalconf.connection,
+    if(!xcb_icccm_get_wm_hints_reply(getGlobals().connection,
 				     cookie,
 				     &wmh, NULL))
         return;
@@ -226,7 +228,7 @@ property_update_wm_hints(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_wm_class(client_t *c)
 {
-    return xcb_icccm_get_wm_class_unchecked(globalconf.connection, c->window);
+    return xcb_icccm_get_wm_class_unchecked(getGlobals().connection, c->window);
 }
 
 /** Update WM_CLASS of a client.
@@ -239,7 +241,7 @@ property_update_wm_class(client_t *c, xcb_get_property_cookie_t cookie)
     lua_State *L = globalconf_get_lua_State();
     xcb_icccm_get_wm_class_reply_t hint;
 
-    if(!xcb_icccm_get_wm_class_reply(globalconf.connection,
+    if(!xcb_icccm_get_wm_class_reply(getGlobals().connection,
 				     cookie,
 				     &hint, NULL))
         return;
@@ -283,7 +285,7 @@ property_update_net_wm_icon(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_net_wm_pid(client_t *c)
 {
-    return xcb_get_property_unchecked(globalconf.connection, false, c->window, _NET_WM_PID, XCB_ATOM_CARDINAL, 0L, 1L);
+    return xcb_get_property_unchecked(getGlobals().connection, false, c->window, _NET_WM_PID, XCB_ATOM_CARDINAL, 0L, 1L);
 }
 
 void
@@ -291,7 +293,7 @@ property_update_net_wm_pid(client_t *c, xcb_get_property_cookie_t cookie)
 {
     xcb_get_property_reply_t *reply;
 
-    reply = xcb_get_property_reply(globalconf.connection, cookie, NULL);
+    reply = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
 
     if(reply && reply->value_len)
     {
@@ -311,7 +313,7 @@ property_update_net_wm_pid(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_motif_wm_hints(client_t *c)
 {
-    return xcb_get_property_unchecked(globalconf.connection, false, c->window, _MOTIF_WM_HINTS, _MOTIF_WM_HINTS, 0L, 5L);
+    return xcb_get_property_unchecked(getGlobals().connection, false, c->window, _MOTIF_WM_HINTS, _MOTIF_WM_HINTS, 0L, 5L);
 }
 
 void
@@ -324,7 +326,7 @@ property_update_motif_wm_hints(client_t *c, xcb_get_property_cookie_t cookie)
     /* Clear the hints */
     p_clear(&hints, 1);
 
-    reply = xcb_get_property_reply(globalconf.connection, cookie, NULL);
+    reply = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
 
     if(reply && reply->value_len == 5)
     {
@@ -346,7 +348,7 @@ property_update_motif_wm_hints(client_t *c, xcb_get_property_cookie_t cookie)
 xcb_get_property_cookie_t
 property_get_wm_protocols(client_t *c)
 {
-    return xcb_icccm_get_wm_protocols_unchecked(globalconf.connection,
+    return xcb_icccm_get_wm_protocols_unchecked(getGlobals().connection,
 						c->window, WM_PROTOCOLS);
 }
 
@@ -360,7 +362,7 @@ property_update_wm_protocols(client_t *c, xcb_get_property_cookie_t cookie)
     xcb_icccm_get_wm_protocols_reply_t protocols;
 
     /* If this fails for any reason, we still got the old value */
-    if(!xcb_icccm_get_wm_protocols_reply(globalconf.connection,
+    if(!xcb_icccm_get_wm_protocols_reply(getGlobals().connection,
 					 cookie,
 					 &protocols, NULL))
         return;
@@ -377,17 +379,19 @@ static void
 property_handle_xembed_info(uint8_t state,
                             xcb_window_t window)
 {
-    xembed_window_t *emwin = xembed_getbywin(&globalconf.embedded, window);
-
-    if(emwin)
+    //XEmbed::window *emwin = xembed_getbywin(&getGlobals().embedded, window);
+    auto emwinIt = std::find_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [window](const auto & w) {
+            return w.win == window;
+            });
+    if(emwinIt != getGlobals().embedded.end())
     {
         xcb_get_property_cookie_t cookie =
-            xcb_get_property(globalconf.connection, 0, window, _XEMBED_INFO,
+            xcb_get_property(getGlobals().connection, 0, window, _XEMBED_INFO,
                              XCB_GET_PROPERTY_TYPE_ANY, 0, 3);
         xcb_get_property_reply_t *propr =
-            xcb_get_property_reply(globalconf.connection, cookie, 0);
-        xembed_property_update(globalconf.connection, emwin,
-                               globalconf.timestamp, propr);
+            xcb_get_property_reply(getGlobals().connection, cookie, 0);
+        xembed_property_update(getGlobals().connection, *emwinIt,
+                               getGlobals().timestamp, propr);
         p_delete(&propr);
     }
 }
@@ -438,12 +442,12 @@ property_handle_propertynotify_xproperty(xcb_property_notify_event_t *ev)
     buffer_t buf;
     void *obj;
 
-    prop = xproperty_array_lookup(&globalconf.xproperties, &lookup);
+    prop = xproperty_array_lookup(&getGlobals().xproperties, &lookup);
     if(!prop)
         /* Property is not registered */
         return;
 
-    if (ev->window != globalconf.screen->root)
+    if (ev->window != getGlobals().screen->root)
     {
         obj = client_getbywin(ev->window);
         if(!obj)
@@ -477,7 +481,7 @@ property_handle_propertynotify(xcb_property_notify_event_t *ev)
     void (*handler)(uint8_t state,
                    xcb_window_t window) = NULL;
 
-    globalconf.timestamp = ev->time;
+    getGlobals().timestamp = ev->time;
 
     property_handle_propertynotify_xproperty(ev);
     selection_transfer_handle_propertynotify(ev);
@@ -557,8 +561,8 @@ luaA_register_xproperty(lua_State *L)
     else
         property.type = xproperty::PROP_BOOLEAN;
 
-    atom_r = xcb_intern_atom_reply(globalconf.connection,
-                                   xcb_intern_atom_unchecked(globalconf.connection, false,
+    atom_r = xcb_intern_atom_reply(getGlobals().connection,
+                                   xcb_intern_atom_unchecked(getGlobals().connection, false,
                                                              a_strlen(name), name),
                                    NULL);
     if(!atom_r)
@@ -567,7 +571,7 @@ luaA_register_xproperty(lua_State *L)
     property.atom = atom_r->atom;
     p_delete(&atom_r);
 
-    found = xproperty_array_lookup(&globalconf.xproperties, &property);
+    found = xproperty_array_lookup(&getGlobals().xproperties, &property);
     if(found)
     {
         /* Property already registered */
@@ -577,7 +581,7 @@ luaA_register_xproperty(lua_State *L)
     else
     {
         property.name = a_strdup(name);
-        xproperty_array_insert(&globalconf.xproperties, property);
+        xproperty_array_insert(&getGlobals().xproperties, property);
     }
 
     return 0;
@@ -590,7 +594,7 @@ luaA_register_xproperty(lua_State *L)
 int
 luaA_set_xproperty(lua_State *L)
 {
-    return window_set_xproperty(L, globalconf.screen->root, 1, 2);
+    return window_set_xproperty(L, getGlobals().screen->root, 1, 2);
 }
 
 /** Get an xproperty.
@@ -600,7 +604,7 @@ luaA_set_xproperty(lua_State *L)
 int
 luaA_get_xproperty(lua_State *L)
 {
-    return window_get_xproperty(L, globalconf.screen->root, 1);
+    return window_get_xproperty(L, getGlobals().screen->root, 1);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -291,10 +291,10 @@ spawn_start_notify(client_t *c, const char * startup_id)
 void
 spawn_init(void)
 {
-    globalconf.sndisplay = sn_xcb_display_new(globalconf.connection, NULL, NULL);
+    getGlobals().sndisplay = sn_xcb_display_new(getGlobals().connection, NULL, NULL);
 
-    globalconf.snmonitor = sn_monitor_context_new(globalconf.sndisplay,
-                                                  globalconf.default_screen,
+    getGlobals().snmonitor = sn_monitor_context_new(getGlobals().sndisplay,
+                                                  getGlobals().default_screen,
                                                   spawn_monitor_event,
                                                   NULL, NULL);
 }
@@ -569,11 +569,11 @@ luaA_spawn(lua_State *L)
     SnLauncherContext *context = NULL;
     if(use_sn)
     {
-        context = sn_launcher_context_new(globalconf.sndisplay, globalconf.default_screen);
+        context = sn_launcher_context_new(getGlobals().sndisplay, getGlobals().default_screen);
         sn_launcher_context_set_name(context, "awesome");
         sn_launcher_context_set_description(context, "awesome spawn");
         sn_launcher_context_set_binary_name(context, argv[0]);
-        sn_launcher_context_initiate(context, "awesome", argv[0], globalconf.timestamp);
+        sn_launcher_context_initiate(context, "awesome", argv[0], getGlobals().timestamp);
 
         /* app will have AWESOME_SPAWN_TIMEOUT seconds to complete,
          * or the timeout function will terminate the launch sequence anyway */
