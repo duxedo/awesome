@@ -52,7 +52,7 @@ static DBusConnection *dbus_connection_system = NULL;
 static GSource *session_source = NULL;
 static GSource *system_source = NULL;
 
-static signal_array_t dbus_signals;
+static Signals dbus_signals;
 
 /** Clean up the D-Bus connection data members
  * \param dbus_connection The D-Bus connection to clean up

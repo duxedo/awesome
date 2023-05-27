@@ -27,7 +27,7 @@
 #include "common/array.h"
 
 #define LUA_OBJECT_HEADER \
-        signal_array_t signals;
+        Signals signals;
 
 /** Generic type for all objects.
  * All Lua objects can be casted to this type.
@@ -65,7 +65,7 @@ struct lua_class_t
     /** Class name */
     const char *name;
     /** Class signals */
-    signal_array_t signals;
+    Signals signals;
     /** Parent class */
     lua_class_t *parent;
     /** Allocator for creating new objects of that class */
