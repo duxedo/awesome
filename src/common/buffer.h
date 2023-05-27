@@ -42,6 +42,8 @@ typedef struct buffer_t
 
 extern char buffer_slop[1];
 
+#define ZERO_BUFFER { nullptr, 0, 0, 0, 0 }
+
 #define BUFFER_INIT (buffer_t) { .s = buffer_slop, .size = 1 }
 
 #define buffer_inita(b, sz)                                                 \

@@ -41,6 +41,7 @@
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#include "common/signal.h"
 #endif
 
 #include "luaa.h"
@@ -79,7 +80,9 @@
 #include "xkb_utf32_to_keysym_compat.cpp"
 
 #include <unistd.h> /* for gethostname() */
-signal_array_t global_signals;
+#include <filesystem>
+#include <format>
+Signals global_signals;
 
 /** A call into the Lua code aborted with an error.
  *
@@ -175,7 +178,7 @@ signal_array_t global_signals;
  */
 
 /** Path to config file */
-static char *conffile;
+std::filesystem::path conffile;
 
 /** Check whether a composite manager is running.
  * \return True if such a manager is running.
@@ -716,7 +719,7 @@ luaA_awesome_index(lua_State *L)
 
     if(A_STREQ(buf, "conffile"))
     {
-        lua_pushstring(L, conffile);
+        lua_pushstring(L, conffile.c_str());
         return 1;
     }
 
@@ -758,9 +761,9 @@ luaA_awesome_index(lua_State *L)
 
     if(A_STREQ(buf, "startup_errors"))
     {
-        if (getGlobals().startup_errors.len == 0)
+        if (getGlobals().startup_errors.size() == 0)
             return 0;
-        lua_pushstring(L, getGlobals().startup_errors.s);
+        lua_pushstring(L, getGlobals().startup_errors.c_str());
         return 1;
     }
 
@@ -1022,7 +1025,7 @@ setup_awesome_signals(lua_State *L)
 
 /* Add things to the string on top of the stack */
 static void
-add_to_search_path(lua_State *L, string_array_t *searchpath, bool for_lua)
+add_to_search_path(lua_State *L, const Paths &searchpath, bool for_lua)
 {
     if (LUA_TSTRING != lua_type(L, -1))
     {
@@ -1030,12 +1033,11 @@ add_to_search_path(lua_State *L, string_array_t *searchpath, bool for_lua)
         return;
     }
 
-    foreach(entry, *searchpath)
+    for(const auto & each : searchpath)
     {
         int components;
-        size_t len = a_strlen(*entry);
         lua_pushliteral(L, ";");
-        lua_pushlstring(L, *entry, len);
+        lua_pushlstring(L, each.c_str(), each.native().size());
         if (for_lua)
             lua_pushliteral(L, "/?.lua");
         else
@@ -1045,7 +1047,7 @@ add_to_search_path(lua_State *L, string_array_t *searchpath, bool for_lua)
         if (for_lua)
         {
             lua_pushliteral(L, ";");
-            lua_pushlstring(L, *entry, len);
+            lua_pushlstring(L, each.c_str(), each.native().size());
             lua_pushliteral(L, "/?/init.lua");
             lua_concat(L, 3);
 
@@ -1071,8 +1073,7 @@ add_to_search_path(lua_State *L, string_array_t *searchpath, bool for_lua)
 /** Initialize the Lua VM
  * \param xdg An xdg handle to use to get XDG basedir.
  */
-void
-luaA_init(xdgHandle* xdg, string_array_t *searchpath)
+void luaA_init(xdgHandle* xdg, const Paths & searchpath)
 {
     lua_State *L;
     static const struct luaL_Reg awesome_lib[] =
@@ -1201,16 +1202,18 @@ luaA_init(xdgHandle* xdg, string_array_t *searchpath)
 static void
 luaA_startup_error(const char *err)
 {
-    if (getGlobals().startup_errors.len > 0)
-        buffer_addsl(&getGlobals().startup_errors, "\n\n");
-    buffer_adds(&getGlobals().startup_errors, err);
+    if (getGlobals().startup_errors.size() > 0) {
+        getGlobals().startup_errors += "\n\n";
+    }
+
+    getGlobals().startup_errors += std::format("Startup:{}", err);
 }
 
 static bool
-luaA_loadrc(const char *confpath)
+luaA_loadrc(const std::filesystem::path& path)
 {
     lua_State *L = globalconf_get_lua_State();
-    if(luaL_loadfile(L, confpath))
+    if(luaL_loadfile(L, path.c_str()))
     {
         const char *err = lua_tostring(L, -1);
         luaA_startup_error(err);
@@ -1221,7 +1224,7 @@ luaA_loadrc(const char *confpath)
 
     /* Set the conffile right now so it can be used inside the
      * configuration file. */
-    conffile = a_strdup(confpath);
+    conffile = path;
     /* Move error handling function before function */
     lua_pushcfunction(L, luaA_dofunction_on_error);
     lua_insert(L, -2);
@@ -1236,7 +1239,7 @@ luaA_loadrc(const char *confpath)
     luaA_startup_error(err);
     fprintf(stderr, "%s\n", err);
     /* An error happened, so reset this. */
-    conffile = NULL;
+    conffile.clear();
     /* Pop luaA_dofunction_on_error() and the error message */
     lua_pop(L, 2);
 
@@ -1249,13 +1252,11 @@ luaA_loadrc(const char *confpath)
  * \param run Run the configuration file.
  */
 bool
-luaA_parserc(xdgHandle* xdg, const char *confpatharg)
+luaA_parserc(xdgHandle* xdg, std::optional<std::filesystem::path> path)
 {
-    const char *confpath = luaA_find_config(xdg, confpatharg, luaA_loadrc);
-    bool ret = confpath != NULL;
-    p_delete(&confpath);
+    auto pathopt = luaA_find_config(xdg, path, luaA_loadrc);
 
-    return ret;
+    return pathopt.has_value();
 }
 
 /** Find a config file for which the given callback returns true.
@@ -1263,14 +1264,14 @@ luaA_parserc(xdgHandle* xdg, const char *confpatharg)
  * \param confpatharg The configuration file to load.
  * \param callback The callback to call.
  */
-const char *
-luaA_find_config(xdgHandle* xdg, const char *confpatharg, luaA_config_callback *callback)
+std::optional<std::filesystem::path>
+luaA_find_config(xdgHandle* xdg, std::optional<std::filesystem::path> path, luaA_config_callback *callback)
 {
     char *confpath = NULL;
 
-    if(confpatharg && callback(confpatharg))
+    if(path && callback(*path))
     {
-        return a_strdup(confpatharg);
+        return path;
     }
 
     confpath = xdgConfigFind("awesome/rc.lua", xdg);
@@ -1280,11 +1281,11 @@ luaA_find_config(xdgHandle* xdg, const char *confpatharg, luaA_config_callback *
     /* confpath is "string1\0string2\0string3\0\0" */
     while(*tmp)
     {
-        if(callback(tmp))
+        path = tmp;
+        if(callback(*path))
         {
-            const char *ret = a_strdup(tmp);
             p_delete(&confpath);
-            return ret;
+            return path;
         }
         tmp += a_strlen(tmp) + 1;
     }
@@ -1295,7 +1296,7 @@ luaA_find_config(xdgHandle* xdg, const char *confpatharg, luaA_config_callback *
         return a_strdup(AWESOME_DEFAULT_CONF);
     }
 
-    return NULL;
+    return {};
 }
 
 int

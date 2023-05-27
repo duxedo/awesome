@@ -33,7 +33,7 @@ struct signal_t
     std::vector<const void*> functions;
 };
 
-using signal_array_t = std::unordered_map<std::string, signal_t> ;
+using Signals = std::unordered_map<std::string, signal_t> ;
 /** Connect a signal inside a signal array.
  * You are in charge of reference counting.
  * \param arr The signal array.
@@ -41,7 +41,7 @@ using signal_array_t = std::unordered_map<std::string, signal_t> ;
  * \param ref The reference to add.
  */
 static inline void
-signal_connect(signal_array_t *arr, const char *name, const void *ref)
+signal_connect(Signals *arr, const char *name, const void *ref)
 {
     auto [it, inserted] = arr->try_emplace(name, signal_t{});
     it->second.functions.push_back(ref);
@@ -54,7 +54,7 @@ signal_connect(signal_array_t *arr, const char *name, const void *ref)
  * \param ref The reference to remove.
  */
 static inline bool
-signal_disconnect(signal_array_t *arr, const char *name, const void *ref)
+signal_disconnect(Signals *arr, const char *name, const void *ref)
 {
     if(auto it = arr->find(name); it != arr->end()) {
         auto funIt = std::remove(it->second.functions.begin(), it->second.functions.end(), ref);
@@ -69,4 +69,3 @@ signal_disconnect(signal_array_t *arr, const char *name, const void *ref)
 
 #endif
 
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
