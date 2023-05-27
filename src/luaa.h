@@ -27,9 +27,15 @@
 #include "common/lualib.h"
 #include "common/luaclass.h"
 
+#include <vector>
+#include <optional>
+#include <filesystem>
+
 #if !(501 <= LUA_VERSION_NUM && LUA_VERSION_NUM < 505)
 #error "Awesome only supports Lua versions 5.1-5.4 and LuaJIT2, please refer to https://awesomewm.org/apidoc/documentation/10-building-and-testing.md.html#Building"
 #endif
+
+using Paths = std::vector<std::filesystem::path>;
 
 #define luaA_deprecate(L, repl) \
     do { \
@@ -43,8 +49,6 @@ static inline void free_string(char **c)
 {
     p_delete(c);
 }
-
-DO_ARRAY(char*, string, free_string)
 
 /** Print a warning about some Lua code.
  * This is less mean than luaL_error() which setjmp via lua_error() and kills
@@ -310,14 +314,14 @@ luaA_registerfct(lua_State *L, int idx, int *fct)
     return luaA_register(L, idx, fct);
 }
 
-typedef bool luaA_config_callback(const char *);
+typedef bool luaA_config_callback(const std::filesystem::path&);
 
-void luaA_init(xdgHandle *, string_array_t *);
-extern "C" const char *luaA_find_config(xdgHandle *, const char *, luaA_config_callback *);
-extern "C" bool luaA_parserc(xdgHandle *, const char *);
+void luaA_init(xdgHandle *, const Paths & searchPaths);
+std::optional<std::filesystem::path> luaA_find_config(xdgHandle *, std::optional<std::filesystem::path>, luaA_config_callback *);
+bool luaA_parserc(xdgHandle *, std::optional<std::filesystem::path>);
 
 /** Global signals */
-extern signal_array_t global_signals;
+extern Signals global_signals;
 
 extern "C" int luaA_class_index_miss_property(lua_State *, lua_object_t *);
 extern "C" int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);

@@ -20,6 +20,7 @@
  */
 
 #include "options.h"
+#include "common/util.h"
 #include "common/version.h"
 
 #include <unistd.h>
@@ -28,9 +29,13 @@
 #include <sys/stat.h>
 #include <getopt.h>
 #include <basedir_fs.h>
+#include <filesystem>
+#include <vector>
 
 #define KEY_VALUE_BUF_MAX 64
 #define READ_BUF_MAX 127
+
+namespace Options {
 
 static void
 set_api_level(char *value)
@@ -61,10 +66,10 @@ set_api_level(char *value)
 }
 
 static void
-push_arg(string_array_t *args, char *value, size_t *len)
+push_arg(std::vector<char*>& args, char *value, size_t *len)
 {
     value[*len] = '\0';
-    string_array_append(args, a_strdup(value));
+    args.push_back(strdup(value));
     (*len) = 0;
 }
 
@@ -72,7 +77,7 @@ push_arg(string_array_t *args, char *value, size_t *len)
  * Support both shebang and modeline modes.
  */
 bool
-options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_flags, string_array_t *paths)
+options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int *init_flags, Paths& paths)
 {
     /* The different state the parser can have. */
     enum {
@@ -102,9 +107,8 @@ options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_
     static char file_buf[READ_BUF_MAX+1     ] = {'\0'};
     size_t pos = 0;
 
-    string_array_t argv;
-    string_array_init(&argv);
-    string_array_append(&argv, a_strdup(execpath));
+    std::vector<char*> argv;
+    argv.push_back(a_strdup(execpath));
 
     FILE *fp = NULL;
 
@@ -234,11 +238,11 @@ options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_
             case MODELINE_STATE_KEY:
                 switch (c) {
                     case '=':
-                        push_arg(&argv, key_buf, &pos);
+                        push_arg(argv, key_buf, &pos);
                         state = MODELINE_STATE_VALUE_DELIM;
                         break;
                     case ' ': case '\t': case ':':
-                        push_arg(&argv, key_buf, &pos);
+                        push_arg(argv, key_buf, &pos);
                         state = MODELINE_STATE_KEY_DELIM;
                         break;
                     default:
@@ -263,7 +267,7 @@ options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_
             case MODELINE_STATE_VALUE:
                 switch(c) {
                     case ',': case ' ': case ':': case '\t':
-                        push_arg(&argv, key_buf, &pos);
+                        push_arg(argv, key_buf, &pos);
                         state = MODELINE_STATE_KEY_DELIM;
                         break;
                     case '\n': case '\r':
@@ -294,14 +298,14 @@ options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_
         /* Try the next line */
         if (((i == READ_BUF_MAX || file_buf[i] == '\0') && !feof(fp)) || state == MODELINE_STATE_INVALID) {
             if (state == MODELINE_STATE_KEY || state == MODELINE_STATE_VALUE)
-                push_arg(&argv, key_buf, &pos);
+                push_arg(argv, key_buf, &pos);
 
             /* Skip empty lines */
             do {
                 if (fgets(file_buf, READ_BUF_MAX, fp))
                     state = MODELINE_STATE_NEWLINE;
                 else {
-                    state = argv.len ? MODELINE_STATE_COMPLETE : MODELINE_STATE_ERROR;
+                    state = argv.size() ? MODELINE_STATE_COMPLETE : MODELINE_STATE_ERROR;
                     break;
                 }
 
@@ -318,10 +322,12 @@ options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_
     /* Be future proof, allow let unknown keys live, let the Lua code decide */
     (*init_flags) |= INIT_FLAG_ALLOW_FALLBACK;
 
-    options_check_args(argv.len, argv.tab, init_flags, paths);
-
+    auto opts = options_check_args(argv.size(), argv.data(), init_flags);
+    paths.insert(paths.end(), opts.searchPaths.begin(), opts.searchPaths.end());
     /* Cleanup */
-    string_array_wipe(&argv);
+    for(auto & each: argv) {
+        free(each);
+    }
 
     return state == MODELINE_STATE_COMPLETE;
 }
@@ -401,8 +407,8 @@ exit_help(int exit_code)
 #define ARG 1
 #define NO_ARG 0
 
-char *
-options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths)
+ConfigResult
+options_check_args(int argc, char **argv, int *init_flags)
 {
 
     static struct option long_options[] =
@@ -421,7 +427,7 @@ options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths
         { NULL        , NO_ARG, NULL, 0    }
     };
 
-    char *confpath = NULL;
+    ConfigResult ret;
     int opt;
 
     while((opt = getopt_long(argc, argv, "vhfkc:arms:l:",
@@ -442,17 +448,19 @@ options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths
             (*init_flags) |= INIT_FLAG_RUN_TEST;
             break;
           case 'c':
-            if (confpath != NULL)
+            if (ret.configPath) {
                 fatal("--config may only be specified once");
-            confpath = a_strdup(optarg);
+            }
+            ret.configPath = optarg;
 
             /* Make sure multi-file config works */
-            string_array_append(paths, g_path_get_dirname(optarg));
+            ret.searchPaths.push_back(ret.configPath.value().parent_path());
             break;
           case 'm':
             /* Validation */
-            if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on")))
+            if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on"))) {
                 fatal("The possible values of -m/--screen are \"on\" or \"off\"");
+            }
 
             getGlobals().no_auto_screen = A_STREQ(optarg, "off");
 
@@ -461,7 +469,7 @@ options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths
             break;
           case 's':
             getGlobals().have_searchpaths = true;
-            string_array_append(paths, a_strdup(optarg));
+            ret.searchPaths.push_back(optarg);
             break;
           case 'a':
             getGlobals().had_overriden_depth = true;
@@ -482,9 +490,9 @@ options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths
             break;
         }}
 
-    return confpath;
+    return ret;
 }
-
+} // namespace Options
 #undef AR
 #undef NO_ARG
 #undef KEY_VALUE_BUF_MAX
