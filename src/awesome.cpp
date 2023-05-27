@@ -59,10 +59,13 @@
 
 #include <glib-unix.h>
 
+#include <filesystem>
+
+static Globals * gGlobals = nullptr;
 Globals & getGlobals() {
-    static Globals g;
-    return g;
+    return *gGlobals;
 }
+
 
 /** argv used to run awesome */
 static char **awesome_argv;
@@ -555,12 +558,6 @@ restart_on_signal(gpointer data)
     return TRUE;
 }
 
-static bool
-true_config_callback(const char *unused)
-{
-    return true;
-}
-
 /** Hello, this is main.
  * \param argc Who knows.
  * \param argv Who knows.
@@ -569,28 +566,23 @@ true_config_callback(const char *unused)
 int
 main(int argc, char **argv)
 {
-    string_array_t searchpath;
+    std::vector<std::filesystem::path> searchpath;
     int xfd;
     xdgHandle xdg;
     xcb_query_tree_cookie_t tree_c;
 
     /* The default values for the init flags */
-    int default_init_flags = INIT_FLAG_NONE
-        | INIT_FLAG_ARGB
-        | INIT_FLAG_AUTO_SCREEN;
+    int default_init_flags = Options::INIT_FLAG_NONE
+        | Options::INIT_FLAG_ARGB
+        | Options::INIT_FLAG_AUTO_SCREEN;
 
     /* Make stdout/stderr line buffered. */
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
 
     /* clear the globalconf structure */
-    p_clear(&getGlobals(), 1);
-    getGlobals().keygrabber = LUA_REFNIL;
-    getGlobals().mousegrabber = LUA_REFNIL;
-    getGlobals().exit_code = EXIT_SUCCESS;
+    gGlobals = new Globals;
     getGlobals().api_level = awesome_default_api_level();
-    buffer_init(&getGlobals().startup_errors);
-    string_array_init(&searchpath);
 
     /* save argv */
     awesome_argv = argv;
@@ -598,11 +590,10 @@ main(int argc, char **argv)
     /* Text won't be printed correctly otherwise */
     setlocale(LC_ALL, "");
 
-    char *confpath = options_detect_shebang(argc, argv);
+    //char *confpath = options_detect_shebang(argc, argv);
 
     /* if no shebang is detected, check the args. Shebang (#!) args are parsed later */
-    if (!confpath)
-        confpath = options_check_args(argc, argv, &default_init_flags, &searchpath);
+    auto opts = Options::options_check_args(argc, argv, &default_init_flags);
 
     /* Get XDG basedir data */
     if(!xdgInitHandle(&xdg))
@@ -612,32 +603,29 @@ main(int argc, char **argv)
     const char * const *xdgconfigdirs = xdgSearchableConfigDirectories(&xdg);
     for(; *xdgconfigdirs; xdgconfigdirs++)
     {
-        /* Append /awesome to *xdgconfigdirs */
-        const char *suffix = "/awesome";
-        size_t len = a_strlen(*xdgconfigdirs) + a_strlen(suffix) + 1;
-        char *entry = p_new(char, len);
-        a_strcat(entry, len, *xdgconfigdirs);
-        a_strcat(entry, len, suffix);
-        string_array_append(&searchpath, entry);
+        opts.searchPaths.push_back(std::filesystem::path(*xdgconfigdirs) / "awesome");
     }
 
     /* Check the configfile syntax and exit */
-    if (default_init_flags & INIT_FLAG_RUN_TEST)
+    if (default_init_flags & Options::INIT_FLAG_RUN_TEST)
     {
         bool success = true;
         /* Get the first config that will be tried */
-        const char *config = luaA_find_config(&xdg, confpath, true_config_callback);
-        fprintf(stdout, "Checking config '%s'... ", config);
+        auto config = luaA_find_config(&xdg, opts.configPath, [](const std::filesystem::path&) { return true; });
+        if(!config) {
+            fprintf(stderr, "Config not found");
+            return 1;
+        }
+        fprintf(stdout, "Checking config '%s'... ", config->c_str());
 
         /* Try to parse it */
         lua_State *L = luaL_newstate();
-        if(luaL_loadfile(L, config))
+        if(luaL_loadfile(L, config->c_str()))
         {
             const char *err = lua_tostring(L, -1);
             fprintf(stdout, "\nERROR: %s\n", err);
             success = false;
         }
-        p_delete(&config);
         lua_close(L);
 
         if(!success)
@@ -652,8 +640,9 @@ main(int argc, char **argv)
     }
 
     /* Parse `rc.lua` to see if it has an AwesomeWM modeline */
-    if (!(default_init_flags & INIT_FLAG_FORCE_CMD_ARGS))
-        options_init_config(&xdg, awesome_argv[0], confpath, &default_init_flags, &searchpath);
+    if (!(default_init_flags & Options::INIT_FLAG_FORCE_CMD_ARGS)) {
+        Options::options_init_config(&xdg, awesome_argv[0], opts.configPath ? opts.configPath->c_str() : nullptr, &default_init_flags, opts.searchPaths);
+    }
 
     /* Setup pipe for SIGCHLD processing */
     {
@@ -697,7 +686,7 @@ main(int argc, char **argv)
 
     getGlobals().screen = xcb_aux_get_screen(getGlobals().connection, getGlobals().default_screen);
     getGlobals().default_visual = draw_default_visual(getGlobals().screen);
-    if(default_init_flags & INIT_FLAG_ARGB)
+    if(default_init_flags & Options::INIT_FLAG_ARGB)
         getGlobals().visual = draw_argb_visual(getGlobals().screen);
     if(!getGlobals().visual)
         getGlobals().visual = getGlobals().default_visual;
@@ -740,7 +729,7 @@ main(int argc, char **argv)
     draw_test_cairo_xcb();
 
     /* Acquire the WM_Sn selection */
-    acquire_WM_Sn(default_init_flags & INIT_FLAG_REPLACE_WM);
+    acquire_WM_Sn(default_init_flags & Options::INIT_FLAG_REPLACE_WM);
 
     /* initialize dbus */
     a_dbus_init();
@@ -853,8 +842,7 @@ main(int argc, char **argv)
     root_update_wallpaper();
 
     /* init lua */
-    luaA_init(&xdg, &searchpath);
-    string_array_wipe(&searchpath);
+    luaA_init(&xdg, opts.searchPaths);
     init_rng();
 
     ewmh_init_lua();
@@ -865,7 +853,7 @@ main(int argc, char **argv)
         /* Disable automatic screen creation, awful.screen has a fallback */
         getGlobals().ignore_screens = true;
 
-        if(!luaA_parserc(&xdg, confpath))
+        if(!opts.configPath || !luaA_parserc(&xdg, opts.configPath->c_str()))
             fatal("couldn't find any rc file");
     }
 
@@ -873,10 +861,9 @@ main(int argc, char **argv)
     screen_scan();
 
     /* Parse and run configuration file after adding the screens */
-    if (((!getGlobals().no_auto_screen) && !luaA_parserc(&xdg, confpath)))
+    if (((!getGlobals().no_auto_screen) && !luaA_parserc(&xdg, opts.configPath)))
         fatal("couldn't find any rc file");
 
-    p_delete(&confpath);
 
     xdgWipeHandle(&xdg);
 

@@ -20,7 +20,10 @@
  */
 #include "common/array.h"
 #include "globalconf.h"
-
+#include <filesystem>
+#include <optional>
+#include <vector>
+namespace Options {
 /**
  * Initialization values extracted from the command line or modeline.
  */
@@ -34,6 +37,14 @@ typedef enum {
     INIT_FLAG_FORCE_CMD_ARGS = 0x1 << 5,
 } awesome_init_config_t;
 
+using Paths = std::vector<std::filesystem::path>;
+
+struct ConfigResult {
+    std::optional<std::filesystem::path> configPath;
+    Paths searchPaths;
+};
+
 char *options_detect_shebang(int argc, char **argv);
-bool options_init_config(xdgHandle *xdg, char *execpath, char *configpath, int *init_flags, string_array_t *paths);
-char *options_check_args(int argc, char **argv, int *init_flags, string_array_t *paths);
+bool options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int *init_flags, Paths & paths);
+ConfigResult options_check_args(int argc, char **argv, int *init_flags);
+}

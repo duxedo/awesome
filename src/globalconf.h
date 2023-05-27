@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include <cstdlib>
 #define SN_API_NOT_YET_FROZEN
 #include <libsn/sn.h>
 
@@ -74,161 +75,161 @@ ARRAY_TYPE(drawin_t *, drawin)
 ARRAY_TYPE(xproperty_t, xproperty)
 DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
-
+#define ZERO_ARRAY { nullptr, 0, 0}
 /** Main configuration structure */
 class Globals
 {
     public:
     /** Connection ref */
-    xcb_connection_t *connection;
+    xcb_connection_t *connection = nullptr;
     /** X Resources DB */
-    xcb_xrm_database_t *xrmdb;
+    xcb_xrm_database_t *xrmdb = nullptr;
     /** Default screen number */
-    int default_screen;
+    int default_screen = 0;
     /** xcb-cursor context */
-    xcb_cursor_context_t *cursor_ctx;
+    xcb_cursor_context_t *cursor_ctx = nullptr;
 #ifdef WITH_XCB_ERRORS
     /** xcb-errors context */
     xcb_errors_context_t *errors_ctx;
 #endif
     /** Keys symbol table */
-    xcb_key_symbols_t *keysyms;
+    xcb_key_symbols_t *keysyms = nullptr;
     /** Logical screens */
-    screen_array_t screens;
+    screen_array_t screens = ZERO_ARRAY;
     /** The primary screen, access through screen_get_primary() */
-    screen_t *primary_screen;
+    screen_t *primary_screen = nullptr;
     /** Root window key bindings */
-    key_array_t keys;
+    key_array_t keys = ZERO_ARRAY;
     /** Root window mouse bindings */
-    button_array_t buttons;
+    button_array_t buttons = ZERO_ARRAY;
     /** Atom for WM_Sn */
-    xcb_atom_t selection_atom;
+    xcb_atom_t selection_atom = 0;
     /** Window owning the WM_Sn selection */
-    xcb_window_t selection_owner_window;
+    xcb_window_t selection_owner_window = 0;
     /** Do we have RandR 1.3 or newer? */
-    bool have_randr_13;
+    bool have_randr_13 = false;
     /** Do we have RandR 1.5 or newer? */
-    bool have_randr_15;
+    bool have_randr_15 = false;
     /** Do we have a RandR screen update pending? */
-    bool screen_refresh_pending;
+    bool screen_refresh_pending = false;
     /** Should screens be created before rc.lua is loaded? */
-    bool no_auto_screen;
+    bool no_auto_screen = false;
     /** Should the screen be created automatically? */
-    bool ignore_screens;
+    bool ignore_screens = false;
     /** Check for XTest extension */
-    bool have_xtest;
+    bool have_xtest = false;
     /** Check for SHAPE extension */
-    bool have_shape;
+    bool have_shape = false;
     /** Check for SHAPE extension with input shape support */
-    bool have_input_shape;
+    bool have_input_shape = false;
     /** Check for XKB extension */
-    bool have_xkb;
+    bool have_xkb = false;
     /** Check for XFixes extension */
-    bool have_xfixes;
+    bool have_xfixes = false;
     /** Custom searchpaths are present, the runtime is tinted */
-    bool have_searchpaths;
+    bool have_searchpaths = false;
     /** When --no-argb is used in the modeline or command line */
-    bool had_overriden_depth;
-    uint8_t event_base_shape;
-    uint8_t event_base_xkb;
-    uint8_t event_base_randr;
-    uint8_t event_base_xfixes;
+    bool had_overriden_depth = false;
+    uint8_t event_base_shape = 0;
+    uint8_t event_base_xkb = 0;
+    uint8_t event_base_randr = 0;
+    uint8_t event_base_xfixes = 0;
     /** Clients list */
-    client_array_t clients;
+    client_array_t clients = ZERO_ARRAY;
     /** Embedded windows */
     std::vector<XEmbed::window> embedded;
     /** Stack client history */
-    client_array_t stack;
+    client_array_t stack = ZERO_ARRAY;
     /** Lua VM state (opaque to avoid mis-use, see globalconf_get_lua_State()) */
     struct {
-        lua_State *real_L_dont_use_directly;
+        lua_State *real_L_dont_use_directly = nullptr;
     } L;
     /** All errors messages from loading config files */
-    buffer_t startup_errors;
+    std::string startup_errors;
     /** main loop that awesome is running on */
-    GMainLoop *loop;
+    GMainLoop *loop = nullptr;
     /** The key grabber function */
-    int keygrabber;
+    int keygrabber = LUA_REFNIL;
     /** The mouse pointer grabber function */
-    int mousegrabber;
+    int mousegrabber = LUA_REFNIL;
     /** The drawable that currently contains the pointer */
-    drawable_t *drawable_under_mouse;
+    drawable_t *drawable_under_mouse = nullptr;
     /** Input focus information */
     struct
     {
         /** Focused client */
-        client_t *client;
+        client_t *client = nullptr;
         /** Is there a focus change pending? */
-        bool need_update;
+        bool need_update = false;
         /** When nothing has the input focus, this window actually is focused */
-        xcb_window_t window_no_focus;
+        xcb_window_t window_no_focus = 0;
     } focus;
     /** Drawins */
-    drawin_array_t drawins;
+    drawin_array_t drawins = ZERO_ARRAY;
     /** The startup notification display struct */
-    SnDisplay *sndisplay;
+    SnDisplay *sndisplay = nullptr;
     /** Latest timestamp we got from the X server */
-    xcb_timestamp_t timestamp;
+    xcb_timestamp_t timestamp = 0;
     /** Window that contains the systray */
     struct
     {
-        xcb_window_t window;
+        xcb_window_t window = 0;
         /** Atom for _NET_SYSTEM_TRAY_%d */
-        xcb_atom_t atom;
+        xcb_atom_t atom = 0;
         /** Do we own the systray selection? */
-        bool registered;
+        bool registered = false;
         /** Systray window parent */
-        drawin_t *parent;
+        drawin_t *parent = nullptr;
         /** Background color */
-        uint32_t background_pixel;
+        uint32_t background_pixel = 0;
     } systray;
     /** The monitor of startup notifications */
-    SnMonitorContext *snmonitor;
+    SnMonitorContext *snmonitor = nullptr;
     /** The visual, used to draw */
-    xcb_visualtype_t *visual;
+    xcb_visualtype_t *visual = nullptr;
     /** The screen's default visual */
-    xcb_visualtype_t *default_visual;
+    xcb_visualtype_t *default_visual = nullptr;
     /** The screen's information */
-    xcb_screen_t *screen;
+    xcb_screen_t *screen = nullptr;
     /** A graphic context. */
-    xcb_gcontext_t gc;
+    xcb_gcontext_t gc = 0;
     /** Our default depth */
-    uint8_t default_depth;
+    uint8_t default_depth = 0;
     /** Our default color map */
-    xcb_colormap_t default_cmap;
+    xcb_colormap_t default_cmap = 0;
     /** Do we have to reban clients? */
-    bool need_lazy_banning;
+    bool need_lazy_banning = false;
     /** Tag list */
-    tag_array_t tags;
+    tag_array_t tags = ZERO_ARRAY;
     /** List of registered xproperties */
-    xproperty_array_t xproperties;
+    xproperty_array_t xproperties = ZERO_ARRAY;
     /* xkb context */
-    struct xkb_context *xkb_ctx;
+    struct xkb_context *xkb_ctx = nullptr;
     /* xkb state of dead keys on keyboard */
-    struct xkb_state *xkb_state;
+    struct xkb_state *xkb_state = nullptr;
     /* Do we have a pending xkb update call? */
-    bool xkb_update_pending;
+    bool xkb_update_pending = false;
     /* Do we have a pending reload? */
-    bool xkb_reload_keymap;
+    bool xkb_reload_keymap = false;
     /* Do we have a pending map change? */
-    bool xkb_map_changed;
+    bool xkb_map_changed = false;
     /* Do we have a pending group change? */
-    bool xkb_group_changed;
+    bool xkb_group_changed = false;
     /** The preferred size of client icons for this screen */
-    uint32_t preferred_icon_size;
+    uint32_t preferred_icon_size = 0;
     /** Cached wallpaper information */
-    cairo_surface_t *wallpaper;
+    cairo_surface_t *wallpaper = nullptr;
     /** List of enter/leave events to ignore */
-    sequence_pair_array_t ignore_enter_leave_events;
-    xcb_void_cookie_t pending_enter_leave_begin;
+    sequence_pair_array_t ignore_enter_leave_events = ZERO_ARRAY;
+    xcb_void_cookie_t pending_enter_leave_begin = { 0 };
     /** List of windows to be destroyed later */
-    window_array_t destroy_later_windows;
+    window_array_t destroy_later_windows = ZERO_ARRAY;
     /** Pending event that still needs to be handled */
-    xcb_generic_event_t *pending_event;
+    xcb_generic_event_t *pending_event = nullptr;
     /** The exit code that main() will return with */
-    int exit_code;
+    int exit_code = EXIT_SUCCESS;
     /** The Global API level */
-    int api_level;
+    int api_level = 0;
 };
 
 Globals & getGlobals();

@@ -30,14 +30,14 @@
 #include <xcb/xcb.h>
 
 /** Mouse buttons bindings */
-typedef struct button_t
+struct button_t
 {
     LUA_OBJECT_HEADER
     /** Key modifiers */
     uint16_t modifiers;
     /** Mouse button number */
     xcb_button_t button;
-} button_t;
+};
 
 extern lua_class_t button_class;
 LUA_OBJECT_FUNCS(button_class, button_t, button)
