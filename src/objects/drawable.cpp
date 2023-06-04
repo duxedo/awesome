@@ -234,7 +234,7 @@ drawable_class_setup(lua_State *L)
                      (lua_class_collector_t) drawable_wipe, NULL,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      drawable_methods, drawable_meta);
-    luaA_class_add_property(&drawable_class, "surface",
+    drawable_class.add_property("surface",
                             NULL,
                             (lua_class_propfunc_t) luaA_drawable_get_surface,
                             NULL);

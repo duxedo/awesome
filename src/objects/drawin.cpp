@@ -785,54 +785,53 @@ drawin_class_setup(lua_State *L)
                      NULL,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      drawin_methods, drawin_meta);
-    luaA_class_add_property(&drawin_class, "drawable",
+    drawin_class.add_property("drawable",
                             NULL,
                             (lua_class_propfunc_t) luaA_drawin_get_drawable,
                             NULL);
-    luaA_class_add_property(&drawin_class, "visible",
+    drawin_class.add_property("visible",
                             (lua_class_propfunc_t) luaA_drawin_set_visible,
                             (lua_class_propfunc_t) luaA_drawin_get_visible,
                             (lua_class_propfunc_t) luaA_drawin_set_visible);
-    luaA_class_add_property(&drawin_class, "ontop",
+    drawin_class.add_property("ontop",
                             (lua_class_propfunc_t) luaA_drawin_set_ontop,
                             (lua_class_propfunc_t) luaA_drawin_get_ontop,
                             (lua_class_propfunc_t) luaA_drawin_set_ontop);
-    luaA_class_add_property(&drawin_class, "cursor",
+    drawin_class.add_property("cursor",
                             (lua_class_propfunc_t) luaA_drawin_set_cursor,
                             (lua_class_propfunc_t) luaA_drawin_get_cursor,
                             (lua_class_propfunc_t) luaA_drawin_set_cursor);
-    luaA_class_add_property(&drawin_class, "x",
+    drawin_class.add_property("x",
                             (lua_class_propfunc_t) luaA_drawin_set_x,
                             (lua_class_propfunc_t) luaA_drawin_get_x,
                             (lua_class_propfunc_t) luaA_drawin_set_x);
-    luaA_class_add_property(&drawin_class, "y",
+    drawin_class.add_property("y",
                             (lua_class_propfunc_t) luaA_drawin_set_y,
                             (lua_class_propfunc_t) luaA_drawin_get_y,
                             (lua_class_propfunc_t) luaA_drawin_set_y);
-    luaA_class_add_property(&drawin_class, "width",
+    drawin_class.add_property("width",
                             (lua_class_propfunc_t) luaA_drawin_set_width,
                             (lua_class_propfunc_t) luaA_drawin_get_width,
                             (lua_class_propfunc_t) luaA_drawin_set_width);
-    luaA_class_add_property(&drawin_class, "height",
+    drawin_class.add_property("height",
                             (lua_class_propfunc_t) luaA_drawin_set_height,
                             (lua_class_propfunc_t) luaA_drawin_get_height,
                             (lua_class_propfunc_t) luaA_drawin_set_height);
-    luaA_class_add_property(&drawin_class, "type",
+    drawin_class.add_property("type",
                             (lua_class_propfunc_t) luaA_window_set_type,
                             (lua_class_propfunc_t) luaA_window_get_type,
                             (lua_class_propfunc_t) luaA_window_set_type);
-    luaA_class_add_property(&drawin_class, "shape_bounding",
+    drawin_class.add_property("shape_bounding",
                             (lua_class_propfunc_t) luaA_drawin_set_shape_bounding,
                             (lua_class_propfunc_t) luaA_drawin_get_shape_bounding,
                             (lua_class_propfunc_t) luaA_drawin_set_shape_bounding);
-    luaA_class_add_property(&drawin_class, "shape_clip",
+    drawin_class.add_property("shape_clip",
                             (lua_class_propfunc_t) luaA_drawin_set_shape_clip,
                             (lua_class_propfunc_t) luaA_drawin_get_shape_clip,
                             (lua_class_propfunc_t) luaA_drawin_set_shape_clip);
-    luaA_class_add_property(&drawin_class, "shape_input",
+    drawin_class.add_property("shape_input",
                             (lua_class_propfunc_t) luaA_drawin_set_shape_input,
                             (lua_class_propfunc_t) luaA_drawin_get_shape_input,
                             (lua_class_propfunc_t) luaA_drawin_set_shape_input);
 }
 
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -1882,27 +1882,27 @@ screen_class_setup(lua_State *L)
                      (lua_class_checker_t) screen_checker,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      screen_methods, screen_meta);
-    luaA_class_add_property(&screen_class, "geometry",
+    screen_class.add_property("geometry",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_geometry,
                             NULL);
-    luaA_class_add_property(&screen_class, "index",
+    screen_class.add_property("index",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_index,
                             NULL);
-    luaA_class_add_property(&screen_class, "_outputs",
+    screen_class.add_property("_outputs",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_outputs,
                             NULL);
-    luaA_class_add_property(&screen_class, "_managed",
+    screen_class.add_property("_managed",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_managed,
                             NULL);
-    luaA_class_add_property(&screen_class, "workarea",
+    screen_class.add_property("workarea",
                             NULL,
                             (lua_class_propfunc_t) luaA_screen_get_workarea,
                             NULL);
-    luaA_class_add_property(&screen_class, "name",
+    screen_class.add_property("name",
                             (lua_class_propfunc_t) luaA_screen_set_name,
                             (lua_class_propfunc_t) luaA_screen_get_name,
                             (lua_class_propfunc_t) luaA_screen_set_name);

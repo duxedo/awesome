@@ -25,10 +25,10 @@
 #include "common/signal.h"
 #include "common/luahdr.h"
 #include "common/array.h"
+#include <cstddef>
+#include <string_view>
+#include <unordered_set>
 
-typedef struct lua_class_property lua_class_property_t;
-
-ARRAY_TYPE(lua_class_property_t, lua_class_property)
 
 #define LUA_OBJECT_HEADER \
         Signals signals;
@@ -48,7 +48,40 @@ typedef int (*lua_class_propfunc_t)(lua_State *, lua_object_t *);
 
 typedef bool (*lua_class_checker_t)(lua_object_t *);
 
-typedef struct lua_class_t lua_class_t;
+struct lua_class_property_t
+{
+    /** Name of the property */
+    const std::string_view name;
+    /** Callback function called when the property is found in object creation. */
+    lua_class_propfunc_t newobj;
+    /** Callback function called when the property is found in object __index. */
+    lua_class_propfunc_t index;
+    /** Callback function called when the property is found in object __newindex. */
+    lua_class_propfunc_t newindex;
+
+};
+
+namespace Detail {
+    struct PropertyHash {
+        using hash_type = std::hash<std::string_view>;
+        using is_transparent = void;
+        std::size_t operator()(const char* str) const        { return hash_type{}(str); }
+        std::size_t operator()(std::string_view str) const   { return hash_type{}(str); }
+        std::size_t operator()(std::string const& str) const { return hash_type{}(str); }
+        std::size_t operator()(const lua_class_property_t& prop) const { return hash_type{}(prop.name); }
+    };
+
+    struct PropertyEqual {
+        using is_transparent = void;
+        bool operator()(const char* lhs, const lua_class_property_t& rhs) const        { return rhs.name == lhs; }
+        bool operator()(const std::string_view& lhs, const lua_class_property_t& rhs) const   { return rhs.name == lhs; }
+        bool operator()(const std::string& lhs, const lua_class_property_t& rhs) const { return rhs.name == lhs; }
+        bool operator()(const lua_class_property_t& lhs, const lua_class_property_t& rhs) const { return lhs.name == rhs.name; }
+    };
+}
+
+using Properties = std::unordered_set<lua_class_property_t, Detail::PropertyHash, Detail::PropertyEqual>;
+
 struct lua_class_t
 {
     /** Class name */
@@ -62,7 +95,7 @@ struct lua_class_t
     /** Garbage collection function */
     lua_class_collector_t collector;
     /** Class properties */
-    lua_class_property_array_t properties;
+    Properties properties;
     /** Function to call when a indexing an unknown property */
     lua_class_propfunc_t index_miss_property;
     /** Function to call when a indexing an unknown property */
@@ -77,6 +110,17 @@ struct lua_class_t
     int index_miss_handler;
     /** Function to call on newindex misses */
     int newindex_miss_handler;
+
+    template<std::size_t N>
+    void add_property(const char (&name)[N], lua_class_propfunc_t cb_new, lua_class_propfunc_t cb_index, lua_class_propfunc_t cb_newindex)
+    {
+        properties.insert({
+                            .name = name,
+                            .newobj = cb_new,
+                            .index = cb_index,
+                            .newindex = cb_newindex
+                        });
+    }
 };
 
 const char * luaA_typename(lua_State *, int);
@@ -93,9 +137,6 @@ void luaA_class_setup(lua_State *, lua_class_t *, const char *, lua_class_t *,
                       lua_class_checker_t,
                       lua_class_propfunc_t, lua_class_propfunc_t,
                       const struct luaL_Reg[], const struct luaL_Reg[]);
-
-void luaA_class_add_property(lua_class_t *, const char *,
-                             lua_class_propfunc_t, lua_class_propfunc_t, lua_class_propfunc_t);
 
 int luaA_usemetatable(lua_State *, int, int);
 int luaA_class_index(lua_State *);
