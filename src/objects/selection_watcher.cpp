@@ -190,7 +190,7 @@ selection_watcher_class_setup(lua_State *L)
             (lua_class_allocator_t) selection_watcher_new, NULL, NULL,
             luaA_class_index_miss_property, luaA_class_newindex_miss_property,
             selection_watcher_methods, selection_watcher_meta);
-    luaA_class_add_property(&selection_watcher_class, "active",
+    selection_watcher_class.add_property("active",
             (lua_class_propfunc_t) luaA_selection_watcher_set_active,
             (lua_class_propfunc_t) luaA_selection_watcher_get_active,
             (lua_class_propfunc_t) luaA_selection_watcher_set_active);

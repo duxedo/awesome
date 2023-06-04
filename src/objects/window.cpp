@@ -527,19 +527,19 @@ window_class_setup(lua_State *L)
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      window_methods, window_meta);
 
-    luaA_class_add_property(&window_class, "window",
+    window_class.add_property("window",
                             NULL,
                             (lua_class_propfunc_t) luaA_window_get_window,
                             NULL);
-    luaA_class_add_property(&window_class, "_opacity",
+    window_class.add_property("_opacity",
                             (lua_class_propfunc_t) luaA_window_set_opacity,
                             (lua_class_propfunc_t) luaA_window_get_opacity,
                             (lua_class_propfunc_t) luaA_window_set_opacity);
-    luaA_class_add_property(&window_class, "_border_color",
+    window_class.add_property("_border_color",
                             (lua_class_propfunc_t) luaA_window_set_border_color,
                             (lua_class_propfunc_t) luaA_window_get_border_color,
                             (lua_class_propfunc_t) luaA_window_set_border_color);
-    luaA_class_add_property(&window_class, "_border_width",
+    window_class.add_property("_border_width",
                             (lua_class_propfunc_t) luaA_window_set_border_width,
                             (lua_class_propfunc_t) luaA_window_get_border_width,
                             (lua_class_propfunc_t) luaA_window_set_border_width);
