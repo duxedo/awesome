@@ -615,15 +615,15 @@ tag_class_setup(lua_State *L)
                      NULL,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      tag_methods, tag_meta);
-    luaA_class_add_property(&tag_class, "name",
+    tag_class.add_property("name",
                             (lua_class_propfunc_t) luaA_tag_set_name,
                             (lua_class_propfunc_t) luaA_tag_get_name,
                             (lua_class_propfunc_t) luaA_tag_set_name);
-    luaA_class_add_property(&tag_class, "selected",
+    tag_class.add_property("selected",
                             (lua_class_propfunc_t) luaA_tag_set_selected,
                             (lua_class_propfunc_t) luaA_tag_get_selected,
                             (lua_class_propfunc_t) luaA_tag_set_selected);
-    luaA_class_add_property(&tag_class, "activated",
+    tag_class.add_property("activated",
                             (lua_class_propfunc_t) luaA_tag_set_activated,
                             (lua_class_propfunc_t) luaA_tag_get_activated,
                             (lua_class_propfunc_t) luaA_tag_set_activated);

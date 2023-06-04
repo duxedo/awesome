@@ -24,21 +24,6 @@
 
 #define CONNECTED_SUFFIX "::connected"
 
-struct lua_class_property
-{
-    /** Name of the property */
-    const char *name;
-    /** Callback function called when the property is found in object creation. */
-    lua_class_propfunc_t newobj;
-    /** Callback function called when the property is found in object __index. */
-    lua_class_propfunc_t index;
-    /** Callback function called when the property is found in object __newindex. */
-    lua_class_propfunc_t newindex;
-};
-
-DO_ARRAY(lua_class_t *, lua_class, DO_NOTHING)
-
-static lua_class_array_t luaA_classes;
 
 /** Convert a object to a udata if possible.
  * \param L The Lua VM state.
@@ -49,8 +34,7 @@ static lua_class_array_t luaA_classes;
 void *
 luaA_toudata(lua_State *L, int ud, lua_class_t *cls)
 {
-    void *p = lua_touserdata(L, ud);
-    if(p && lua_getmetatable(L, ud)) /* does it have a metatable? */
+    if(void *p = lua_touserdata(L, ud); p && lua_getmetatable(L, ud)) /* does it have a metatable? */
     {
         /* Get the lua_class_t that matches this metatable */
         lua_rawget(L, LUA_REGISTRYINDEX);
@@ -61,11 +45,13 @@ luaA_toudata(lua_State *L, int ud, lua_class_t *cls)
 
         /* Now, check that the class given in argument is the same as the
          * metatable's object, or one of its parent (inheritance) */
-        for(; metatable_class; metatable_class = metatable_class->parent)
-            if(metatable_class == cls)
+        for(; metatable_class; metatable_class = metatable_class->parent) {
+            if(metatable_class == cls) {
                 return p;
+            }
+        }
     }
-    return NULL;
+    return nullptr;
 }
 
 /** Check for a udata class.
@@ -140,31 +126,6 @@ luaA_openlib(lua_State *L, const char *name,
     lua_pop(L, 2);
 }
 
-static int
-lua_class_property_cmp(const void *a, const void *b)
-{
-    const lua_class_property_t *x = reinterpret_cast<const lua_class_property*> (a),
-          *y = reinterpret_cast<const lua_class_property*>(b);
-    return a_strcmp(x->name, y->name);
-}
-
-BARRAY_FUNCS(lua_class_property_t, lua_class_property, DO_NOTHING, lua_class_property_cmp)
-
-void
-luaA_class_add_property(lua_class_t *lua_class,
-                        const char *name,
-                        lua_class_propfunc_t cb_new,
-                        lua_class_propfunc_t cb_index,
-                        lua_class_propfunc_t cb_newindex)
-{
-    lua_class_property_array_insert(&lua_class->properties, (lua_class_property_t)
-                                    {
-                                        .name = name,
-                                        .newobj = cb_new,
-                                        .index = cb_index,
-                                        .newindex = cb_newindex
-                                    });
-}
 
 /** Newindex meta function for objects after they were GC'd.
  * \param L The Lua VM state.
@@ -287,8 +248,6 @@ luaA_class_setup(lua_State *L, lua_class_t *cls,
     cls->instances = 0;
     cls->index_miss_handler = LUA_REFNIL;
     cls->newindex_miss_handler = LUA_REFNIL;
-
-    lua_class_array_append(&luaA_classes, cls);
 }
 
 void
@@ -377,13 +336,6 @@ luaA_usemetatable(lua_State *L, int idxobj, int idxfield)
     return 0;
 }
 
-static lua_class_property_t *
-lua_class_property_array_getbyname(lua_class_property_array_t *arr,
-                                   const char *name)
-{
-    lua_class_property_t lookup_prop = { .name = name };
-    return lua_class_property_array_lookup(arr, &lookup_prop);
-}
 
 /** Get a property of a object.
  * \param L The Lua VM state.
@@ -391,7 +343,7 @@ lua_class_property_array_getbyname(lua_class_property_array_t *arr,
  * \param fieldidx The index of the field name.
  * \return The object property if found, NULL otherwise.
  */
-static lua_class_property_t *
+static const lua_class_property_t *
 luaA_class_property_get(lua_State *L, lua_class_t *lua_class, int fieldidx)
 {
     /* Lookup the property using token */
@@ -400,11 +352,11 @@ luaA_class_property_get(lua_State *L, lua_class_t *lua_class, int fieldidx)
     /* Look for the property in the class; if not found, go in the parent class. */
     for(; lua_class; lua_class = lua_class->parent)
     {
-        lua_class_property_t *prop =
-            lua_class_property_array_getbyname(&lua_class->properties, attr);
+        Properties::iterator it = lua_class->properties.find(attr);
 
-        if(prop)
-            return prop;
+        if(it != lua_class->properties.end()) {
+            return &(*it);
+        }
     }
 
     return NULL;
@@ -436,7 +388,7 @@ luaA_class_index(lua_State *L)
         return 1;
     }
 
-    lua_class_property_t *prop = luaA_class_property_get(L, cls, 2);
+    auto prop = luaA_class_property_get(L, cls, 2);
 
     /* This is the table storing the object private variables.
      */
@@ -486,7 +438,7 @@ luaA_class_newindex(lua_State *L)
 
     lua_class_t *cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
-    lua_class_property_t *prop = luaA_class_property_get(L, cls, 2);
+    auto prop = luaA_class_property_get(L, cls, 2);
 
     /* Property does exist and has a newindex callback */
     if(prop)
@@ -528,7 +480,7 @@ luaA_class_new(lua_State *L, lua_class_t *lua_class)
          * number TO A STRING, confusing lua_next() */
         if(lua_isstring(L, -2))
         {
-            lua_class_property_t *prop = luaA_class_property_get(L, lua_class, -2);
+            auto prop = luaA_class_property_get(L, lua_class, -2);
 
             if(prop && prop->newobj)
                 prop->newobj(L, object);
