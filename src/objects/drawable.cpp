@@ -234,14 +234,10 @@ drawable_class_setup(lua_State *L)
                      (lua_class_collector_t) drawable_wipe, NULL,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      drawable_methods, drawable_meta);
-
-    const lua_class_property_t properties[] = {
-        {
-            .name = "surface",
-            .index = (lua_class_propfunc_t)luaA_drawable_get_surface,
-        },
-    };
-    luaA_class_add_properties(&drawable_class, properties, G_N_ELEMENTS(properties));
+    drawable_class.add_property("surface",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_drawable_get_surface,
+                            NULL);
 }
 
 /* @DOC_cobject_COMMON@ */

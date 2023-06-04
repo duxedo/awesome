@@ -527,31 +527,22 @@ window_class_setup(lua_State *L)
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      window_methods, window_meta);
 
-    const lua_class_property_t properties[] = {
-        {
-            .name = "window",
-            .index = (lua_class_propfunc_t)luaA_window_get_window,
-        },
-        {
-            .name = "_opacity",
-            .new = (lua_class_propfunc_t)luaA_window_set_opacity,
-            .index = (lua_class_propfunc_t)luaA_window_get_opacity,
-            .newindex = (lua_class_propfunc_t)luaA_window_set_opacity,
-        },
-        {
-            .name = "_border_color",
-            .new = (lua_class_propfunc_t)luaA_window_set_border_color,
-            .index = (lua_class_propfunc_t)luaA_window_get_border_color,
-            .newindex = (lua_class_propfunc_t)luaA_window_set_border_color,
-        },
-        {
-            .name = "_border_width",
-            .new = (lua_class_propfunc_t)luaA_window_set_border_width,
-            .index = (lua_class_propfunc_t)luaA_window_get_border_width,
-            .newindex = (lua_class_propfunc_t)luaA_window_set_border_width,
-        },
-    };
-    luaA_class_add_properties(&window_class, properties, G_N_ELEMENTS(properties));
+    window_class.add_property("window",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_window_get_window,
+                            NULL);
+    window_class.add_property("_opacity",
+                            (lua_class_propfunc_t) luaA_window_set_opacity,
+                            (lua_class_propfunc_t) luaA_window_get_opacity,
+                            (lua_class_propfunc_t) luaA_window_set_opacity);
+    window_class.add_property("_border_color",
+                            (lua_class_propfunc_t) luaA_window_set_border_color,
+                            (lua_class_propfunc_t) luaA_window_get_border_color,
+                            (lua_class_propfunc_t) luaA_window_set_border_color);
+    window_class.add_property("_border_width",
+                            (lua_class_propfunc_t) luaA_window_set_border_width,
+                            (lua_class_propfunc_t) luaA_window_get_border_width,
+                            (lua_class_propfunc_t) luaA_window_set_border_width);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

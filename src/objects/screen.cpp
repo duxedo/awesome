@@ -1880,36 +1880,30 @@ screen_class_setup(lua_State *L)
                      (lua_class_checker_t) screen_checker,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      screen_methods, screen_meta);
-
-    const lua_class_property_t properties[] = {
-        {
-            .name = "geometry",
-            .index = (lua_class_propfunc_t)luaA_screen_get_geometry,
-        },
-        {
-            .name = "index",
-            .index = (lua_class_propfunc_t)luaA_screen_get_index,
-        },
-        {
-            .name = "_outputs",
-            .index = (lua_class_propfunc_t)luaA_screen_get_outputs,
-        },
-        {
-            .name = "_managed",
-            .index = (lua_class_propfunc_t)luaA_screen_get_managed,
-        },
-        {
-            .name = "workarea",
-            .index = (lua_class_propfunc_t)luaA_screen_get_workarea,
-        },
-        {
-            .name = "name",
-            .new = (lua_class_propfunc_t)luaA_screen_set_name,
-            .index = (lua_class_propfunc_t)luaA_screen_get_name,
-            .newindex = (lua_class_propfunc_t)luaA_screen_set_name,
-        },
-    };
-    luaA_class_add_properties(&screen_class, properties, G_N_ELEMENTS(properties));
+    screen_class.add_property("geometry",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_screen_get_geometry,
+                            NULL);
+    screen_class.add_property("index",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_screen_get_index,
+                            NULL);
+    screen_class.add_property("_outputs",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_screen_get_outputs,
+                            NULL);
+    screen_class.add_property("_managed",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_screen_get_managed,
+                            NULL);
+    screen_class.add_property("workarea",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_screen_get_workarea,
+                            NULL);
+    screen_class.add_property("name",
+                            (lua_class_propfunc_t) luaA_screen_set_name,
+                            (lua_class_propfunc_t) luaA_screen_get_name,
+                            (lua_class_propfunc_t) luaA_screen_set_name);
 }
 
 /* @DOC_cobject_COMMON@ */

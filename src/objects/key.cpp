@@ -362,26 +362,18 @@ key_class_setup(lua_State *L)
                      (lua_class_allocator_t) key_new, NULL, NULL,
                      luaA_class_index_miss_property, luaA_class_newindex_miss_property,
                      key_methods, key_meta);
-
-    const lua_class_property_t properties[] = {
-        {
-            .name = "key",
-            .new = (lua_class_propfunc_t)luaA_key_set_key,
-            .index = (lua_class_propfunc_t)luaA_key_get_key,
-            .newindex = (lua_class_propfunc_t)luaA_key_set_key,
-        },
-        {
-            .name = "keysym",
-            .index = (lua_class_propfunc_t)luaA_key_get_keysym,
-        },
-        {
-            .name = "modifiers",
-            .new = (lua_class_propfunc_t)luaA_key_set_modifiers,
-            .index = (lua_class_propfunc_t)luaA_key_get_modifiers,
-            .newindex = (lua_class_propfunc_t)luaA_key_set_modifiers,
-        },
-    };
-    luaA_class_add_properties(&key_class, properties, G_N_ELEMENTS(properties));
+    key_class.add_property("key",
+                            (lua_class_propfunc_t) luaA_key_set_key,
+                            (lua_class_propfunc_t) luaA_key_get_key,
+                            (lua_class_propfunc_t) luaA_key_set_key);
+    key_class.add_property("keysym",
+                            NULL,
+                            (lua_class_propfunc_t) luaA_key_get_keysym,
+                            NULL);
+    key_class.add_property("modifiers",
+                            (lua_class_propfunc_t) luaA_key_set_modifiers,
+                            (lua_class_propfunc_t) luaA_key_get_modifiers,
+                            (lua_class_propfunc_t) luaA_key_set_modifiers);
 }
 
 /* @DOC_cobject_COMMON@ */
