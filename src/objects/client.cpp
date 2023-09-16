@@ -87,6 +87,7 @@
  */
 
 #include "objects/client.h"
+#include "common/array.h"
 #include "common/atoms.h"
 #include "common/xutil.h"
 #include "event.h"
@@ -104,6 +105,7 @@
 #include <xcb/xcb_atom.h>
 #include <xcb/shape.h>
 #include <cairo-xcb.h>
+#include <xcb/xproto.h>
 
 lua_class_t client_class;
 
@@ -2004,12 +2006,14 @@ client_geometry_refresh(void)
             ignored_enterleave = true;
         }
 
+        uint32_t values[] = { (uint32_t)geometry.x, (uint32_t)geometry.y, geometry.width, geometry.height };
         xcb_configure_window(getGlobals().connection, c->frame_window,
                 XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                (uint32_t[]) { (uint32_t)geometry.x, (uint32_t)geometry.y, geometry.width, geometry.height });
+                values);
+        uint32_t geo[] = { (uint32_t)real_geometry.x, (uint32_t)real_geometry.y, real_geometry.width, real_geometry.height };
         xcb_configure_window(getGlobals().connection, c->window,
                 XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                (uint32_t[]) { (uint32_t)real_geometry.x, (uint32_t)real_geometry.y, real_geometry.width, real_geometry.height });
+                geo);
 
         c->x11_frame_geometry = geometry;
         c->x11_client_geometry = real_geometry;
@@ -2146,20 +2150,21 @@ client_manage(xcb_window_t w, xcb_get_geometry_reply_t *wgeom, xcb_get_window_at
     c->window = w;
     c->visualtype = draw_find_visual(getGlobals().screen, wattr->visual);
     c->frame_window = xcb_generate_id(getGlobals().connection);
+    const uint32_t values[] =
+    {
+        getGlobals().screen->black_pixel,
+        XCB_GRAVITY_NORTH_WEST,
+        XCB_GRAVITY_NORTH_WEST,
+        1,
+        FRAME_SELECT_INPUT_EVENT_MASK,
+        getGlobals().default_cmap
+    };
     xcb_create_window(getGlobals().connection, getGlobals().default_depth, c->frame_window, s->root,
                       wgeom->x, wgeom->y, wgeom->width, wgeom->height,
                       wgeom->border_width, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
                       XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_WIN_GRAVITY
                       | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP,
-                      (const uint32_t [])
-                      {
-                          getGlobals().screen->black_pixel,
-                          XCB_GRAVITY_NORTH_WEST,
-                          XCB_GRAVITY_NORTH_WEST,
-                          1,
-                          FRAME_SELECT_INPUT_EVENT_MASK,
-                          getGlobals().default_cmap
-                      });
+                      values);
 
     /* The client may already be mapped, thus we must be sure that we don't send
      * ourselves an UnmapNotify due to the xcb_reparent_window().
@@ -2188,15 +2193,16 @@ client_manage(xcb_window_t w, xcb_get_geometry_reply_t *wgeom, xcb_get_window_at
     /* The frame window gets the border, not the real client window */
     xcb_configure_window(getGlobals().connection, w,
                          XCB_CONFIG_WINDOW_BORDER_WIDTH,
-                         (uint32_t[]) { 0 });
+                         makeArray<0>());
 
     /* Move this window to the bottom of the stack. Without this we would force
      * other windows which will be above this one to redraw themselves because
      * this window occludes them for a tiny moment. The next stack_refresh()
      * will fix this up and move the window to its correct place. */
+
     xcb_configure_window(getGlobals().connection, c->frame_window,
                          XCB_CONFIG_WINDOW_STACK_MODE,
-                         (uint32_t[]) { XCB_STACK_MODE_BELOW});
+                         makeArray<XCB_STACK_MODE_BELOW>());
 
     /* Duplicate client and push it in client list */
     lua_pushvalue(L, -1);
@@ -3003,11 +3009,11 @@ client_unmanage(client_t *c, client_unmanage_t reason)
         xcb_change_window_attributes(getGlobals().connection,
                                      c->window,
                                      XCB_CW_EVENT_MASK,
-                                     (const uint32_t []) { 0 });
+                                     makeArray<0>());
     xcb_change_window_attributes(getGlobals().connection,
                                  c->frame_window,
                                  XCB_CW_EVENT_MASK,
-                                 (const uint32_t []) { 0 });
+                                 makeArray<0>());
 
     if(reason != CLIENT_UNMANAGE_DESTROYED)
     {

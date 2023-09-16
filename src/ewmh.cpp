@@ -527,9 +527,10 @@ ewmh_client_update_desktop(client_t *c)
 
     if(c->sticky)
     {
+        static uint32_t desktops = ALL_DESKTOPS;
         xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                             c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, 32, 1,
-                            (uint32_t[]) { ALL_DESKTOPS });
+                            &desktops);
         return;
     }
     for(i = 0; i < getGlobals().tags.len; i++)

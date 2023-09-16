@@ -20,9 +20,11 @@
  */
 
 #include "objects/selection_transfer.h"
+#include "common/array.h"
 #include "common/luaobject.h"
 #include "common/atoms.h"
 #include "globalconf.h"
+#include <cstdint>
 
 #define REGISTRY_TRANSFER_TABLE_INDEX "awesome_selection_transfers"
 #define TRANSFER_DATA_INDEX "data_for_next_chunk"
@@ -133,7 +135,7 @@ transfer_continue_incremental(lua_State *L, int ud)
                 0, NULL);
         xcb_change_window_attributes(getGlobals().connection,
                 transfer->requestor, XCB_CW_EVENT_MASK,
-                (uint32_t[]) { 0 });
+                makeArray<0>());
         transfer_done(L, transfer);
     } else {
         /* Send next piece of data */
@@ -199,7 +201,7 @@ luaA_selection_transfer_send(lua_State *L)
 {
     size_t data_length;
     bool incr = false;
-    size_t incr_size = 0;
+    uint32_t incr_size = 0;
 
     selection_transfer_t *transfer = reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, 1, &selection_transfer_class));
     if (transfer->state != TRANSFER_WAIT_FOR_DATA && transfer->state != TRANSFER_INCREMENTAL_DONE)
@@ -288,11 +290,11 @@ luaA_selection_transfer_send(lua_State *L)
         if (incr) {
             xcb_change_window_attributes(getGlobals().connection,
                     transfer->requestor, XCB_CW_EVENT_MASK,
-                    (uint32_t[]) { XCB_EVENT_MASK_PROPERTY_CHANGE });
+                    makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>() );
 
             xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
                     transfer->requestor, transfer->property, INCR, 32, 1,
-                    (const uint32_t[]) { (uint32_t)incr_size });
+                    &incr_size );
 
             /* Save the data on the transfer object */
             luaA_getuservalue(L, 1);

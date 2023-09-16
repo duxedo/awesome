@@ -81,10 +81,10 @@ stack_window_above(xcb_window_t w, xcb_window_t previous)
          * changed the stacking order of all windows, they'd all have to redraw
          * themselves. Doing it like this is better. */
         return;
-
+    uint32_t values[] = { previous, XCB_STACK_MODE_ABOVE };
     xcb_configure_window(getGlobals().connection, w,
                          XCB_CONFIG_WINDOW_SIBLING | XCB_CONFIG_WINDOW_STACK_MODE,
-                         (uint32_t[]) { previous, XCB_STACK_MODE_ABOVE });
+                         values);
 }
 
 /** Stack a client above.
