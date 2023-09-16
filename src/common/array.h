@@ -23,10 +23,16 @@
 #ifndef AWESOME_COMMON_ARRAY_H
 #define AWESOME_COMMON_ARRAY_H
 
+#include <cstdint>
 #include <stdlib.h>
 
 #include "common/util.h"
 
+template<uint32_t ... values>
+const uint32_t* makeArray() {
+    static uint32_t vals[] = {values...};
+    return vals;
+}
 /** Common array type */
 #define ARRAY_TYPE(type_t, pfx)                                             \
     typedef struct pfx##_array_t {                                          \
