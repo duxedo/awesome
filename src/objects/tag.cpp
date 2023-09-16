@@ -312,7 +312,7 @@ static void
 tag_wipe(tag_t *tag)
 {
     client_array_wipe(&tag->clients);
-    p_delete(&tag->name);
+    p_delete(&(tag->name));
 }
 
 OBJECT_EXPORT_PROPERTY(tag, tag_t, selected)

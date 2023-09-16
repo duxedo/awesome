@@ -23,6 +23,7 @@
 #ifndef AWESOME_COMMON_UTIL_H
 #define AWESOME_COMMON_UTIL_H
 
+#include <type_traits>
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -84,12 +85,19 @@
         }                                            \
     } while (0)
 
-#define p_delete(mem_p)                              \
-    do {                                             \
-        void **__ptr = (void **) (mem_p);            \
-        free(*__ptr);                                \
-        *(void **)__ptr = NULL;                      \
-    } while (0)
+template<typename PtrT>
+requires(!std::is_const_v<PtrT>)
+void p_delete(PtrT** ptr) {
+    free(*ptr);
+    *ptr = nullptr;
+}
+
+template<typename PtrT>
+requires(std::is_const_v<PtrT>)
+void p_delete(PtrT** ptr) {
+    free(*const_cast<std::remove_const_t<PtrT>**>(ptr));
+    *ptr = nullptr;
+}
 
 #ifdef __GNUC__
 #define likely(expr)    __builtin_expect(!!(expr), 1)
