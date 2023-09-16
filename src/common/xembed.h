@@ -40,7 +40,7 @@ struct info
 struct window
 {
     xcb_window_t win;
-    info info;
+    struct info info;
 };
 
 
