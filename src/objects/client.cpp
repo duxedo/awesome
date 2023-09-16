@@ -1932,7 +1932,7 @@ client_focus_refresh(void)
      * new client gets the input focus.
      */
     xcb_set_input_focus(getGlobals().connection, XCB_INPUT_FOCUS_PARENT,
-                        win, getGlobals().timestamp);
+                        win, getGlobals().get_timestamp());
 
     /* Do this last, because client_unban() might set it to true */
     getGlobals().focus.need_update = false;
@@ -3065,7 +3065,7 @@ client_kill(client_t *c)
         ev.response_type = XCB_CLIENT_MESSAGE;
         ev.window = c->window;
         ev.format = 32;
-        ev.data.data32[1] = getGlobals().timestamp;
+        ev.data.data32[1] = getGlobals().get_timestamp();
         ev.type = WM_PROTOCOLS;
         ev.data.data32[0] = WM_DELETE_WINDOW;
 
