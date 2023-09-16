@@ -20,25 +20,6 @@
  */
 
 #include "common/xcursor.h"
-#include "common/util.h"
-
-struct cursor_cache_entry_t {
-    char const * name;
-    xcb_cursor_t cursor;
-};
-
-static int
-cursor_cache_entry_cmp(const void *a, const void *b) {
-    return a_strcmp(((cursor_cache_entry_t *) a)->name, ((cursor_cache_entry_t *) b)->name);
-}
-
-static void
-cursor_cache_entry_wipe(cursor_cache_entry_t *entry)
-{
-    p_delete(&entry->name);
-}
-
-BARRAY_FUNCS(cursor_cache_entry_t, cursors, cursor_cache_entry_wipe, cursor_cache_entry_cmp)
 
 /** Equivalent to 'XCreateFontCursor()', error are handled by the
  * default current error handler.
@@ -47,20 +28,19 @@ BARRAY_FUNCS(cursor_cache_entry_t, cursors, cursor_cache_entry_wipe, cursor_cach
  * \return Allocated cursor font.
  */
 xcb_cursor_t
-xcursor_new(cursors_array_t *array, xcb_cursor_context_t *ctx, const char *cursor_name)
+xcursor_new(CursorMap *map, xcb_cursor_context_t *ctx, const char *cursor_name)
 {
-    cursor_cache_entry_t entry;
-    entry.name = cursor_name;
+    auto it = map->find(cursor_name);
 
-    cursor_cache_entry_t *found = cursors_array_lookup(array, &entry);
-    if (NULL == found) {
-        entry.name = a_strdup(cursor_name);
-        entry.cursor = xcb_cursor_load_cursor(ctx, cursor_name);
-        cursors_array_insert(array, entry);
-        found = &entry;
+    if (it!=map->end())
+    {
+        return it->second;
     }
 
-    return found->cursor;
+    auto cursor = xcb_cursor_load_cursor(ctx, cursor_name);
+    map->insert_or_assign(cursor_name, cursor);
+
+    return cursor;
 }
 
 

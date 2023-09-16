@@ -22,14 +22,14 @@
 #ifndef AWESOME_COMMON_XCURSORS_H
 #define AWESOME_COMMON_XCURSORS_H
 
+#include <unordered_map>
+#include <string>
 #include <xcb/xcb.h>
 #include <xcb/xcb_cursor.h>
-#include "common/array.h"
 
-typedef struct cursor_cache_entry_t cursor_cache_entry_t;
-ARRAY_TYPE(cursor_cache_entry_t, cursors)
+using CursorMap = std::unordered_map<std::string, xcb_cursor_t>;
 
-xcb_cursor_t xcursor_new(cursors_array_t *, xcb_cursor_context_t *, const char *);
+xcb_cursor_t xcursor_new(CursorMap *, xcb_cursor_context_t *, const char *);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

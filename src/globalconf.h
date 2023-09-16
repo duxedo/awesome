@@ -91,7 +91,7 @@ class Globals
     /** xcb-cursor context */
     xcb_cursor_context_t *cursor_ctx = nullptr;
     /** cache of already loaded cursors */
-    cursors_array_t cursor_cache = ZERO_ARRAY;
+    CursorMap cursor_cache;
 #ifdef WITH_XCB_ERRORS
     /** xcb-errors context */
     xcb_errors_context_t *errors_ctx;
