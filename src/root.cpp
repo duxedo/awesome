@@ -105,8 +105,15 @@ root_set_wallpaper(cairo_pattern_t *pattern)
     cairo_surface_t *surface;
     cairo_t *cr;
 
-    if (xcb_connection_has_error(c))
-        goto disconnect;
+    auto disconnect = [c]() {
+        xcb_aux_sync(c);
+        xcb_disconnect(c);
+    };
+
+    if (xcb_connection_has_error(c)) {
+        disconnect();
+        return false;
+    }
 
     /* Create a pixmap and make sure it is already created, because we are going
      * to use it from the other X11 connection (Juggling with X11 connections
@@ -151,9 +158,7 @@ root_set_wallpaper(cairo_pattern_t *pattern)
     signal_object_emit(L, &global_signals, "wallpaper_changed", 0);
 
     result = true;
-disconnect:
-    xcb_aux_sync(c);
-    xcb_disconnect(c);
+    disconnect();
     return result;
 }
 
