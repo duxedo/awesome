@@ -31,8 +31,10 @@
 #include <xcb/xcb_cursor.h>
 #include <xcb/xcb_xrm.h>
 #include <X11/Xresource.h>
+#include <set>
 
 #include "config.h"
+#include "property.h"
 #ifdef WITH_XCB_ERRORS
 #include <xcb/xcb_errors.h>
 #endif
@@ -72,7 +74,6 @@ ARRAY_TYPE(tag_t *, tag)
 ARRAY_TYPE(screen_t *, screen)
 ARRAY_TYPE(client_t *, client)
 ARRAY_TYPE(drawin_t *, drawin)
-ARRAY_TYPE(xproperty_t, xproperty)
 DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
 #define ZERO_ARRAY { nullptr, 0, 0}
@@ -202,7 +203,7 @@ class Globals
     /** Tag list */
     tag_array_t tags = ZERO_ARRAY;
     /** List of registered xproperties */
-    xproperty_array_t xproperties = ZERO_ARRAY;
+    std::set<xproperty> xproperties;
     /* xkb context */
     struct xkb_context *xkb_ctx = nullptr;
     /* xkb state of dead keys on keyboard */

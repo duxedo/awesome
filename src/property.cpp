@@ -437,13 +437,13 @@ static void
 property_handle_propertynotify_xproperty(xcb_property_notify_event_t *ev)
 {
     lua_State *L = globalconf_get_lua_State();
-    xproperty_t *prop;
     xproperty_t lookup = { .atom = ev->atom };
     buffer_t buf;
     void *obj;
 
-    prop = xproperty_array_lookup(&getGlobals().xproperties, &lookup);
-    if(!prop)
+    auto it = getGlobals().xproperties.find(lookup);
+
+    if(it == getGlobals().xproperties.end())
         /* Property is not registered */
         return;
 
@@ -458,8 +458,8 @@ property_handle_propertynotify_xproperty(xcb_property_notify_event_t *ev)
         obj = NULL;
 
     /* Get us the name of the property */
-    buffer_inita(&buf, a_strlen(prop->name) + a_strlen("xproperty::") + 1);
-    buffer_addf(&buf, "xproperty::%s", prop->name);
+    buffer_inita(&buf, it->name.size() + a_strlen("xproperty::") + 1);
+    buffer_addf(&buf, "xproperty::%s", it->name.c_str());
 
     /* And emit the right signal */
     if (obj)
@@ -547,7 +547,6 @@ luaA_register_xproperty(lua_State *L)
 {
     const char *name;
     struct xproperty property;
-    struct xproperty *found;
     const char *const args[] = { "string", "number", "boolean" };
     xcb_intern_atom_reply_t *atom_r;
     int type;
@@ -571,17 +570,18 @@ luaA_register_xproperty(lua_State *L)
     property.atom = atom_r->atom;
     p_delete(&atom_r);
 
-    found = xproperty_array_lookup(&getGlobals().xproperties, &property);
-    if(found)
+    auto found = getGlobals().xproperties.find(property);
+    if(found != getGlobals().xproperties.end())
     {
         /* Property already registered */
-        if(found->type != property.type)
+        if(found->type != property.type) {
             return luaL_error(L, "xproperty '%s' already registered with different type", name);
+        }
     }
     else
     {
-        property.name = a_strdup(name);
-        xproperty_array_insert(&getGlobals().xproperties, property);
+        property.name = name;
+        getGlobals().xproperties.insert(property);
     }
 
     return 0;
