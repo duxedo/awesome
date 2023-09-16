@@ -69,7 +69,7 @@ luaA_selection_get(lua_State *L)
     }
 
     xcb_convert_selection(getGlobals().connection, selection_window,
-                          XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, getGlobals().timestamp);
+                          XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, getGlobals().get_timestamp());
     xcb_flush(getGlobals().connection);
 
     xcb_generic_event_t *event;

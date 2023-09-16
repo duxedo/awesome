@@ -391,7 +391,7 @@ property_handle_xembed_info(uint8_t state,
         xcb_get_property_reply_t *propr =
             xcb_get_property_reply(getGlobals().connection, cookie, 0);
         xembed_property_update(getGlobals().connection, *emwinIt,
-                               getGlobals().timestamp, propr);
+                               getGlobals().get_timestamp(), propr);
         p_delete(&propr);
     }
 }
@@ -481,7 +481,7 @@ property_handle_propertynotify(xcb_property_notify_event_t *ev)
     void (*handler)(uint8_t state,
                    xcb_window_t window) = NULL;
 
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     property_handle_propertynotify_xproperty(ev);
     selection_transfer_handle_propertynotify(ev);

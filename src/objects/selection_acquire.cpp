@@ -154,7 +154,7 @@ luaA_selection_acquire_new(lua_State *L)
     /* Create a selection object */
     selection = (selection_acquire_t *) selection_acquire_class.allocator(L);
     selection->selection = name_atom;
-    selection->timestamp = getGlobals().timestamp;
+    selection->timestamp = getGlobals().get_timestamp();
     selection->window = xcb_generate_id(getGlobals().connection);
     xcb_create_window(getGlobals().connection, getGlobals().screen->root_depth,
             selection->window, getGlobals().screen->root, -1, -1, 1, 1, 0,
