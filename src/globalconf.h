@@ -170,7 +170,19 @@ class Globals
     /** The startup notification display struct */
     SnDisplay *sndisplay = nullptr;
     /** Latest timestamp we got from the X server */
+    private:
     xcb_timestamp_t timestamp = 0;
+    public:
+    xcb_timestamp_t get_timestamp() const {
+        return timestamp;
+    }
+
+    template<typename EventT>
+    requires(std::is_same_v<decltype(timestamp), decltype(std::declval<EventT>().time)>)
+    void update_timestamp(const EventT* ev) {
+        timestamp = ev->time;
+    }
+
     /** Window that contains the systray */
     struct
     {
