@@ -19,10 +19,15 @@
  *
  */
 
-#ifndef AWESOME_PROPERTY_H
-#define AWESOME_PROPERTY_H
+#pragma once
 
-#include "objects/client.h"
+#include <xcb/xproto.h>
+extern "C" {
+#include <lua.h>
+}
+#include <compare>
+#include <string>
+struct client_t;
 
 #define PROPERTY(funcname) \
     xcb_get_property_cookie_t property_get_##funcname(client_t *c); \
@@ -53,7 +58,7 @@ int luaA_get_xproperty(lua_State *L);
 
 struct xproperty {
     xcb_atom_t atom;
-    const char *name;
+    std::string name;
     enum {
         /* UTF8_STRING */
         PROP_STRING,
@@ -62,17 +67,8 @@ struct xproperty {
         /* CARDINAL with values 0 and 1 (or "0 and != 0") */
         PROP_BOOLEAN
     } type;
+    auto operator<=>(const xproperty & rhs) const {
+        return atom <=> rhs.atom;
+    }
 };
 
-static inline int
-xproperty_cmp(const void *a, const void *b)
-{
-    const xproperty_t *x = (const xproperty*)a,
-          *y = (const xproperty*)b;
-    return x->atom - y->atom;
-}
-
-BARRAY_FUNCS(xproperty_t, xproperty, DO_NOTHING, xproperty_cmp)
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

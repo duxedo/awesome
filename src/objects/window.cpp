@@ -55,9 +55,11 @@
 #include "common/atoms.h"
 #include "common/xutil.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/screen.h"
 #include "property.h"
 #include "xwindow.h"
+#include <algorithm>
 
 lua_class_t window_class;
 LUA_CLASS_FUNCS(window, window_class)
@@ -343,13 +345,17 @@ luaA_window_set_type(lua_State *L, window_t *w)
     return 0;
 }
 
-static xproperty_t *
+static const xproperty_t *
 luaA_find_xproperty(lua_State *L, int idx)
 {
     const char *name = luaL_checkstring(L, idx);
-    foreach(prop, getGlobals().xproperties)
-        if (A_STREQ(prop->name, name))
-            return prop;
+
+    auto it = std::ranges::find_if(getGlobals().xproperties, [name](const auto & prop) {
+            return prop.name == name;
+            });
+    if(it != getGlobals().xproperties.end()) {
+        return &(*it);
+    }
     luaL_argerror(L, idx, "Unknown xproperty");
     return NULL;
 }
@@ -357,7 +363,7 @@ luaA_find_xproperty(lua_State *L, int idx)
 int
 window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_idx)
 {
-    xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
+    const xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
     xcb_atom_t type;
     size_t len;
     uint32_t number;
@@ -395,7 +401,7 @@ window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_
 int
 window_get_xproperty(lua_State *L, xcb_window_t window, int prop_idx)
 {
-    xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
+    const xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
     xcb_atom_t type;
     const char *data;
     xcb_get_property_reply_t *reply;
