@@ -166,10 +166,8 @@ int luaA_object_emit_signal_simple(lua_State *);
     static inline type *                                                       \
     prefix##_new(lua_State *L)                                                 \
     {                                                                          \
-        type *mem = reinterpret_cast<type*>(lua_newuserdata(L, sizeof(type)));                            \
-        p_clear(mem, 1);                                                         \
-        new(mem) type {};\
-        auto p = std::launder(mem);\
+        void *mem = lua_newuserdata(L, sizeof(type));                          \
+        auto p = new(mem) type {};\
         (lua_class).instances++;                                               \
         luaA_settype(L, &(lua_class));                                         \
         lua_newtable(L);                                                       \
