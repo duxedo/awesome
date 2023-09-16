@@ -22,6 +22,7 @@
 #include "awesome.h"
 
 #include "banning.h"
+#include "common/array.h"
 #include "common/atoms.h"
 #include "common/backtrace.h"
 #include "common/version.h"
@@ -359,11 +360,11 @@ acquire_timestamp(void)
 
     xcb_grab_server(getGlobals().connection);
     xcb_change_window_attributes(getGlobals().connection, win,
-            XCB_CW_EVENT_MASK, (uint32_t[]) { XCB_EVENT_MASK_PROPERTY_CHANGE });
+            XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
     xcb_change_property(getGlobals().connection, XCB_PROP_MODE_APPEND, win,
             atom, type, 8, 0, "");
     xcb_change_window_attributes(getGlobals().connection, win,
-            XCB_CW_EVENT_MASK, (uint32_t[]) { 0 });
+            XCB_CW_EVENT_MASK, makeArray<0>());
     xutil_ungrab_server(getGlobals().connection);
 
     /* Now wait for the event */
@@ -806,25 +807,27 @@ main(int argc, char **argv)
      * The window_no_focus is used for "nothing has the input focus". */
     getGlobals().focus.window_no_focus = xcb_generate_id(getGlobals().connection);
     getGlobals().gc = xcb_generate_id(getGlobals().connection);
+    uint32_t create_window_values[] = {
+                          getGlobals().screen->black_pixel,
+                          getGlobals().screen->black_pixel,
+                          1,
+                          getGlobals().default_cmap
+                      };
     xcb_create_window(getGlobals().connection, getGlobals().default_depth,
                       getGlobals().focus.window_no_focus, getGlobals().screen->root,
                       -1, -1, 1, 1, 0,
                       XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
                       XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL |
                       XCB_CW_OVERRIDE_REDIRECT | XCB_CW_COLORMAP,
-                      (const uint32_t [])
-                      {
-                          getGlobals().screen->black_pixel,
-                          getGlobals().screen->black_pixel,
-                          1,
-                          getGlobals().default_cmap
-                      });
+                      create_window_values
+                      );
     xwindow_set_class_instance(getGlobals().focus.window_no_focus);
     xwindow_set_name_static(getGlobals().focus.window_no_focus, "Awesome no input window");
     xcb_map_window(getGlobals().connection, getGlobals().focus.window_no_focus);
+    uint32_t create_gc_flags[] = { getGlobals().screen->black_pixel, getGlobals().screen->white_pixel };
     xcb_create_gc(getGlobals().connection, getGlobals().gc, getGlobals().focus.window_no_focus,
                   XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
-                  (const uint32_t[]) { getGlobals().screen->black_pixel, getGlobals().screen->white_pixel });
+                  create_gc_flags );
 
     /* Get the window tree associated to this screen */
     tree_c = xcb_query_tree_unchecked(getGlobals().connection,

@@ -216,16 +216,17 @@ drawin_apply_moveresize(drawin_t *w)
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
-    xcb_configure_window(getGlobals().connection, w->window,
-                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
-                         | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                         (const uint32_t [])
+    const uint32_t values[] =
                          {
                              (uint32_t)w->geometry.x,
                              (uint32_t)w->geometry.y,
                              (uint32_t)w->geometry.width,
                              (uint32_t)w->geometry.height
-                         });
+                         };
+    xcb_configure_window(getGlobals().connection, w->window,
+                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
+                         | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
+                         values);
     client_restore_enterleave_events();
 }
 
@@ -430,14 +431,7 @@ drawin_allocator(lua_State *L)
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);
 
     w->window = xcb_generate_id(getGlobals().connection);
-    xcb_create_window(getGlobals().connection, getGlobals().default_depth, w->window, s->root,
-                      w->geometry.x, w->geometry.y,
-                      w->geometry.width, w->geometry.height,
-                      w->border_width, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
-                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY
-                      | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP
-                      | XCB_CW_CURSOR,
-                      (const uint32_t [])
+    const uint32_t values[] =
                       {
                           w->border_color.pixel,
                           XCB_GRAVITY_NORTH_WEST,
@@ -450,7 +444,15 @@ drawin_allocator(lua_State *L)
                           | XCB_EVENT_MASK_PROPERTY_CHANGE,
                           getGlobals().default_cmap,
                           xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor))
-                      });
+                      };
+    xcb_create_window(getGlobals().connection, getGlobals().default_depth, w->window, s->root,
+                      w->geometry.x, w->geometry.y,
+                      w->geometry.width, w->geometry.height,
+                      w->border_width, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
+                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY
+                      | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP
+                      | XCB_CW_CURSOR,
+                      values);
     xwindow_set_class_instance(w->window);
     xwindow_set_name_static(w->window, "Awesome drawin");
 

@@ -34,6 +34,7 @@
  * @coreclassmod root
  */
 
+#include "common/array.h"
 #include "globalconf.h"
 
 #include "common/atoms.h"
@@ -133,7 +134,7 @@ root_set_wallpaper(cairo_pattern_t *pattern)
     xcb_change_window_attributes(getGlobals().connection,
                                  getGlobals().screen->root,
                                  XCB_CW_EVENT_MASK,
-                                 (uint32_t[]) { 0 });
+                                 makeArray<0>());
     root_set_wallpaper_pixmap(getGlobals().connection, p);
     xcb_change_window_attributes(getGlobals().connection,
                                  getGlobals().screen->root,
