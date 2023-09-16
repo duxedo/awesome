@@ -46,13 +46,14 @@ systray_init(void)
 
     getGlobals().systray.window = xcb_generate_id(getGlobals().connection);
     getGlobals().systray.background_pixel = xscreen->black_pixel;
+    const uint32_t values[] = { xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT };
     xcb_create_window(getGlobals().connection, xscreen->root_depth,
                       getGlobals().systray.window,
                       xscreen->root,
                       -1, -1, 1, 1, 0,
                       XCB_COPY_FROM_PARENT, xscreen->root_visual,
-                      XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK, (const uint32_t [])
-                      { xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT });
+                      XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
+                      values);
     xwindow_set_class_instance(getGlobals().systray.window);
     xwindow_set_name_static(getGlobals().systray.window, "Awesome systray window");
 
@@ -321,7 +322,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
         xcb_map_window(getGlobals().connection, em->win);
         if (force_redraw)
             xcb_clear_area(getGlobals().connection, 1, em->win, 0, 0, 0, 0);
-        if (i % rows == rows - 1) {
+        if (int(i % rows) == rows - 1) {
             if (horizontal) {
                 config_vals[0] += base_size + spacing;
                 config_vals[1] = 0;
