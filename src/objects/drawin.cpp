@@ -178,7 +178,7 @@ drawin_wipe(drawin_t *w)
 {
     /* The drawin must already be unmapped, else it
      * couldn't be garbage collected -> no unmap needed */
-    p_delete(&w->cursor);
+    p_delete(&(w->cursor));
     if(w->window)
     {
         /* Make sure we don't accidentally kill the systray window */
@@ -614,7 +614,7 @@ luaA_drawin_set_cursor(lua_State *L, drawin_t *drawin)
         if(cursor_font)
         {
             xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
-            p_delete(&drawin->cursor);
+            p_delete(&(drawin->cursor));
             drawin->cursor = a_strdup(buf);
             xwindow_set_cursor(drawin->window, cursor);
             luaA_object_emit_signal(L, -3, "property::cursor", 0);
