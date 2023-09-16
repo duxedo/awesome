@@ -80,6 +80,7 @@ static void
 systray_register(void)
 {
     xcb_client_message_event_t ev;
+
     xcb_screen_t *xscreen = getGlobals().screen;
 
     if(getGlobals().systray.registered)
@@ -93,7 +94,7 @@ systray_register(void)
     ev.window = xscreen->root;
     ev.format = 32;
     ev.type = MANAGER;
-    ev.data.data32[0] = getGlobals().timestamp;
+    ev.data.data32[0] = getGlobals().get_timestamp();
     ev.data.data32[1] = getGlobals().systray.atom;
     ev.data.data32[2] = getGlobals().systray.window;
     ev.data.data32[3] = ev.data.data32[4] = 0;
@@ -101,9 +102,9 @@ systray_register(void)
     xcb_set_selection_owner(getGlobals().connection,
                             getGlobals().systray.window,
                             getGlobals().systray.atom,
-                            getGlobals().timestamp);
+                            getGlobals().get_timestamp());
 
-    xcb_send_event(getGlobals().connection, false, xscreen->root, 0xFFFFFF, (char *) &ev);
+    xcb_send_event(getGlobals().connection, false, xscreen->root, 0xFFFFFF, reinterpret_cast<const char *>(&ev));
 }
 
 /** Remove systray information in X.
@@ -119,7 +120,7 @@ systray_cleanup(void)
     xcb_set_selection_owner(getGlobals().connection,
                             XCB_NONE,
                             getGlobals().systray.atom,
-                            getGlobals().timestamp);
+                            getGlobals().get_timestamp());
 
     xcb_unmap_window(getGlobals().connection,
                      getGlobals().systray.window);
@@ -172,7 +173,7 @@ systray_request_handle(xcb_window_t embed_win)
     }
 
     XEmbed::xembed_embedded_notify(getGlobals().connection, em.win,
-                           getGlobals().timestamp, getGlobals().systray.window,
+                           getGlobals().get_timestamp(), getGlobals().systray.window,
                            MIN(XEMBED_VERSION, em.info.version));
 
     getGlobals().embedded.push_back(em);
@@ -248,7 +249,7 @@ xembed_process_client_message(xcb_client_message_event_t *ev)
     {
         case XEmbed::Message::REQUEST_FOCUS:
         xembed_focus_in(getGlobals().connection, ev->window,
-                        getGlobals().timestamp, XEmbed::Focus::CURRENT);
+                        getGlobals().get_timestamp(), XEmbed::Focus::CURRENT);
         default:
         break;
     }
@@ -258,7 +259,7 @@ xembed_process_client_message(xcb_client_message_event_t *ev)
 static int
 systray_num_visible_entries(void)
 {
-    return std::count_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [](const auto & em) {
+    return std::ranges::count_if(getGlobals().embedded, [](const auto & em) {
                 return em.info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
             });
 }
@@ -301,7 +302,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
     /* Now resize each embedded window */
     config_vals[0] = config_vals[1] = 0;
     config_vals[2] = config_vals[3] = base_size;
-    for(int i = 0; i < getGlobals().embedded.size(); i++)
+    for(size_t i = 0; i < getGlobals().embedded.size(); i++)
     {
         decltype(getGlobals().embedded)::iterator em;
 

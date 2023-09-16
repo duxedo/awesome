@@ -155,7 +155,7 @@ extern "C" void awesome_atexit(bool restart)
      * Work around this by placing the focus where we like it to be.
      */
     xcb_set_input_focus(getGlobals().connection, XCB_INPUT_FOCUS_POINTER_ROOT,
-            XCB_NONE, getGlobals().timestamp);
+            XCB_NONE, getGlobals().get_timestamp());
     xcb_aux_sync(getGlobals().connection);
 
     xkb_free();
@@ -319,7 +319,7 @@ acquire_WM_Sn(bool replace)
 
     /* Acquire the selection */
     xcb_set_selection_owner(getGlobals().connection, getGlobals().selection_owner_window,
-                            getGlobals().selection_atom, getGlobals().timestamp);
+                            getGlobals().selection_atom, getGlobals().get_timestamp());
     if (get_sel_reply->owner != XCB_NONE)
     {
         /* Wait for the old owner to go away */
@@ -339,7 +339,7 @@ acquire_WM_Sn(bool replace)
     ev.window = getGlobals().screen->root;
     ev.format = 32;
     ev.type = MANAGER;
-    ev.data.data32[0] = getGlobals().timestamp;
+    ev.data.data32[0] = getGlobals().get_timestamp();
     ev.data.data32[1] = getGlobals().selection_atom;
     ev.data.data32[2] = getGlobals().selection_owner_window;
     ev.data.data32[3] = ev.data.data32[4] = 0;
@@ -374,7 +374,7 @@ acquire_timestamp(void)
         if(XCB_EVENT_RESPONSE_TYPE(event) == XCB_PROPERTY_NOTIFY)
         {
             xcb_property_notify_event_t *ev = (xcb_property_notify_event_t *) event;
-            getGlobals().timestamp = ev->time;
+            getGlobals().update_timestamp(ev);
             p_delete(&event);
             break;
         }

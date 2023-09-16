@@ -190,7 +190,7 @@ event_handle_button(xcb_button_press_event_t *ev)
     client_t *c;
     drawin_t *drawin;
 
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     {
         /* ev->state contains the state before the event. Compute the state
@@ -548,7 +548,7 @@ event_handle_motionnotify(xcb_motion_notify_event_t *ev)
     drawin_t *w;
     client_t *c;
 
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     if(event_handle_mousegrabber(ev->root_x, ev->root_y, ev->state))
         return;
@@ -596,7 +596,7 @@ event_handle_leavenotify(xcb_leave_notify_event_t *ev)
     lua_State *L = globalconf_get_lua_State();
     client_t *c;
 
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     /*
      * Ignore events with non-normal modes. Those are because a grab
@@ -646,7 +646,7 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
     client_t *c;
     drawin_t *drawin;
 
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     /*
      * Ignore events with non-normal modes. Those are because a grab
@@ -770,7 +770,7 @@ static void
 event_handle_key(xcb_key_press_event_t *ev)
 {
     lua_State *L = globalconf_get_lua_State();
-    getGlobals().timestamp = ev->time;
+    getGlobals().update_timestamp(ev);
 
     if(getGlobals().keygrabber != LUA_REFNIL)
     {
@@ -823,7 +823,7 @@ event_handle_maprequest(xcb_map_request_event_t *ev)
     if(auto em = std::ranges::find_if(getGlobals().embedded, [xwin = ev->window](const auto & win){ return win.win == xwin; }); em != getGlobals().embedded.end())
     {
         xcb_map_window(getGlobals().connection, ev->window);
-        XEmbed::xembed_window_activate(getGlobals().connection, ev->window, getGlobals().timestamp);
+        XEmbed::xembed_window_activate(getGlobals().connection, ev->window, getGlobals().get_timestamp());
         /* The correct way to set this is via the _XEMBED_INFO property. Neither
          * of the XEMBED not the systray spec talk about mapping windows.
          * Apparently, Qt doesn't care and does not set an _XEMBED_INFO

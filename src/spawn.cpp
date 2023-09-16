@@ -573,7 +573,7 @@ luaA_spawn(lua_State *L)
         sn_launcher_context_set_name(context, "awesome");
         sn_launcher_context_set_description(context, "awesome spawn");
         sn_launcher_context_set_binary_name(context, argv[0]);
-        sn_launcher_context_initiate(context, "awesome", argv[0], getGlobals().timestamp);
+        sn_launcher_context_initiate(context, "awesome", argv[0], getGlobals().get_timestamp());
 
         /* app will have AWESOME_SPAWN_TIMEOUT seconds to complete,
          * or the timeout function will terminate the launch sequence anyway */

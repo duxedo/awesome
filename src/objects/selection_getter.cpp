@@ -91,7 +91,7 @@ luaA_selection_getter_new(lua_State *L)
     p_delete(&reply);
 
     xcb_convert_selection(getGlobals().connection, selection->window, name_atom,
-            target_atom, AWESOME_SELECTION_ATOM, getGlobals().timestamp);
+            target_atom, AWESOME_SELECTION_ATOM, getGlobals().get_timestamp());
 
     return 1;
 }
