@@ -149,8 +149,7 @@ selection_handle_selectionnotify(lua_State *L, int ud, xcb_atom_t property)
 
     if (property != XCB_NONE)
     {
-        xcb_change_window_attributes(getGlobals().connection, selection->window,
-            XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+        getGlobals()._connection.change_attributes(selection->window, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
 
         xcb_get_property_reply_t *property_r = xcb_get_property_reply(getGlobals().connection,
                 xcb_get_property(getGlobals().connection, true, selection->window, AWESOME_SELECTION_ATOM,

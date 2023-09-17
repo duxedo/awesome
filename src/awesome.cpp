@@ -73,6 +73,9 @@ Globals & getGlobals() {
     return *gGlobals;
 }
 
+XCB::Connection & getConnection() {
+    return getGlobals()._connection;
+}
 
 /** argv used to run awesome */
 static char **awesome_argv;
@@ -131,7 +134,7 @@ extern "C" void awesome_atexit(bool restart)
     foreach(c, getGlobals().stack)
     {
         area_t geometry = client_get_undecorated_geometry(*c);
-        getGlobals()._connection.reparent_window(
+        getConnection().reparent_window(
                 (*c)->window, getGlobals().screen->root, geometry.x, geometry.y);
     }
 
@@ -363,11 +366,9 @@ acquire_timestamp(void)
     xcb_atom_t type = XCB_ATOM_STRING; /* Equally random */
 
     xcb_grab_server(getGlobals().connection);
-    xcb_change_window_attributes(getGlobals().connection, win,
-            XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+    getGlobals()._connection.change_attributes(win, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
     getGlobals()._connection.append_property(win, atom, type, std::span{"", 0});
-    xcb_change_window_attributes(getGlobals().connection, win,
-            XCB_CW_EVENT_MASK, makeArray<0>());
+    getGlobals()._connection.clear_attributes(win, XCB_CW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Now wait for the event */

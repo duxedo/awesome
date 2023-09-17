@@ -28,6 +28,8 @@
 #include "globalconf.h"
 
 #include <algorithm>
+#include <array>
+#include <cstdint>
 #include <xcb/xcb.h>
 #include <xcb/xcb_icccm.h>
 #include <xcb/xcb_atom.h>
@@ -286,7 +288,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
     /* Give the systray window the correct size */
     int num_entries = systray_num_visible_entries();
     int cols = (num_entries + rows - 1) / rows;
-    uint32_t config_vals[4] = { 0, 0, 0, 0 };
+    std::array<uint32_t, 4> config_vals = { 0, 0, 0, 0 };
     if(horizontal) {
         config_vals[0] = base_size * cols + spacing * (cols - 1);
         config_vals[1] = base_size * rows + spacing * (rows - 1);
@@ -294,10 +296,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
         config_vals[0] = base_size * rows + spacing * (rows - 1);
         config_vals[1] = base_size * cols + spacing * (cols - 1);
     }
-    xcb_configure_window(getGlobals().connection,
-                         getGlobals().systray.window,
-                         XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                         config_vals);
+    getGlobals()._connection.configure_window(getGlobals().systray.window, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, config_vals);
 
     /* Now resize each embedded window */
     config_vals[0] = config_vals[1] = 0;
@@ -317,7 +316,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
             continue;
         }
 
-        xcb_configure_window(getGlobals().connection, em->win,
+        getGlobals()._connection.configure_window(em->win,
                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                              config_vals);
         xcb_map_window(getGlobals().connection, em->win);
@@ -381,11 +380,8 @@ luaA_systray(lua_State *L)
         if(color_init_reply(color_init_unchecked(&bg_color, bg, bg_len, getGlobals().default_visual))
                 && getGlobals().systray.background_pixel != bg_color.pixel)
         {
-            uint32_t config_back[] = { bg_color.pixel };
             getGlobals().systray.background_pixel = bg_color.pixel;
-            xcb_change_window_attributes(getGlobals().connection,
-                                         getGlobals().systray.window,
-                                         XCB_CW_BACK_PIXEL, config_back);
+            getGlobals()._connection.change_attributes( getGlobals().systray.window, XCB_CW_BACK_PIXEL, std::array{ bg_color.pixel });
             xcb_clear_area(getGlobals().connection, 1, getGlobals().systray.window, 0, 0, 0, 0);
             force_redraw = true;
         }
@@ -397,11 +393,9 @@ luaA_systray(lua_State *L)
                                 x, y);
         else
         {
-            uint32_t config_vals[2] = { (uint32_t)x, (uint32_t)y };
-            xcb_configure_window(getGlobals().connection,
-                                 getGlobals().systray.window,
-                                 XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
-                                 config_vals);
+            getGlobals()._connection.configure_window(getGlobals().systray.window,
+                    XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
+                    std::array<uint32_t, 2>{ (uint32_t)x, (uint32_t)y});
         }
 
         getGlobals().systray.parent = w;

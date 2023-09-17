@@ -243,6 +243,7 @@ class Globals
 };
 
 Globals & getGlobals();
+XCB::Connection & getConnection();
 
 /** You should always use this as lua_State *L = globalconf_get_lua_State().
  * That way it becomes harder to introduce coroutine-related problems.

@@ -181,10 +181,7 @@ window_border_refresh(window_t *window)
     window->border_need_update = false;
     xwindow_set_border_color(window_get(window), &window->border_color);
     if(window->window) {
-        uint32_t values[] = { window->border_width };
-        xcb_configure_window(getGlobals().connection, window_get(window),
-                             XCB_CONFIG_WINDOW_BORDER_WIDTH,
-                             values);
+        getGlobals()._connection.configure_window(window_get(window), XCB_CONFIG_WINDOW_BORDER_WIDTH, window->border_width);
     }
 }
 
