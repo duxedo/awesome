@@ -66,7 +66,7 @@ root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p)
     /* We now have the pattern painted to the pixmap p. Now turn p into the root
      * window's background pixmap.
      */
-    xcb_change_window_attributes(c.getConnection(), screen->root, XCB_CW_BACK_PIXMAP, &p);
+    c.change_attributes(screen->root, XCB_CW_BACK_PIXMAP, &p);
     xcb_clear_area(c.getConnection(), 0, screen->root, 0, 0, 0, 0);
 
     prop_c = xcb_get_property_unchecked(c.connection, false,
@@ -139,15 +139,9 @@ root_set_wallpaper(cairo_pattern_t *pattern)
 
     /* Change the wallpaper, without sending us a PropertyNotify event */
     xcb_grab_server(getGlobals().connection);
-    xcb_change_window_attributes(getGlobals().connection,
-                                 getGlobals().screen->root,
-                                 XCB_CW_EVENT_MASK,
-                                 makeArray<0>());
+    getGlobals()._connection.clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
     root_set_wallpaper_pixmap(getGlobals()._connection, p);
-    xcb_change_window_attributes(getGlobals().connection,
-                                 getGlobals().screen->root,
-                                 XCB_CW_EVENT_MASK,
-                                 ROOT_WINDOW_EVENT_MASK);
+    getGlobals()._connection.change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Make sure our pixmap is not destroyed when we disconnect. */
