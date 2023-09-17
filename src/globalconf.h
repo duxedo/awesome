@@ -25,11 +25,7 @@
 #include <libsn/sn.h>
 
 #include <glib.h>
-
-#include <xcb/xcb_icccm.h>
-#include <xcb/xcb_keysyms.h>
-#include <xcb/xcb_cursor.h>
-#include <xcb/xcb_xrm.h>
+#include "xcbcpp/xcb.h"
 #include <X11/Xresource.h>
 #include <set>
 
@@ -82,7 +78,8 @@ class Globals
 {
     public:
     /** Connection ref */
-    xcb_connection_t *connection = nullptr;
+    XCB::Connection _connection;
+    xcb_connection_t*& connection = _connection.connection;
     /** X Resources DB */
     xcb_xrm_database_t *xrmdb = nullptr;
     /** Default screen number */

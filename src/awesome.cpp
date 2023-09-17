@@ -38,6 +38,8 @@
 #include "systray.h"
 #include "xwindow.h"
 #include "options.h"
+#include <cassert>
+#include <cstddef>
 #include <getopt.h>
 
 #include <locale.h>
@@ -54,6 +56,7 @@
 #include <xcb/xcb_aux.h>
 #include <xcb/xcb_event.h>
 #include <xcb/xinerama.h>
+#include <xcb/xproto.h>
 #include <xcb/xtest.h>
 #include <xcb/shape.h>
 #include <xcb/xfixes.h>
@@ -62,8 +65,11 @@
 
 #include <filesystem>
 
+#include "xcbcpp/xcb.h"
+
 static Globals * gGlobals = nullptr;
 Globals & getGlobals() {
+    assert(gGlobals != nullptr);
     return *gGlobals;
 }
 
@@ -125,19 +131,17 @@ extern "C" void awesome_atexit(bool restart)
     foreach(c, getGlobals().stack)
     {
         area_t geometry = client_get_undecorated_geometry(*c);
-        xcb_reparent_window(getGlobals().connection, (*c)->window, getGlobals().screen->root,
-                geometry.x, geometry.y);
+        getGlobals()._connection.reparent_window(
+                (*c)->window, getGlobals().screen->root, geometry.x, geometry.y);
     }
 
     /* Save the client order.  This is useful also for "hard" restarts. */
     xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().clients.len);
-    int n = 0;
+    size_t n = 0;
     foreach(client, getGlobals().clients)
         wins[n++] = (*client)->window;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        getGlobals().screen->root,
-                        AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 32, n, wins);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, n});
 
     a_dbus_cleanup();
 
@@ -361,8 +365,7 @@ acquire_timestamp(void)
     xcb_grab_server(getGlobals().connection);
     xcb_change_window_attributes(getGlobals().connection, win,
             XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_APPEND, win,
-            atom, type, 8, 0, "");
+    getGlobals()._connection.append_property(win, atom, type, std::span{"", 0});
     xcb_change_window_attributes(getGlobals().connection, win,
             XCB_CW_EVENT_MASK, makeArray<0>());
     xutil_ungrab_server(getGlobals().connection);
