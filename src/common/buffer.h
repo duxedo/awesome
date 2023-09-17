@@ -31,6 +31,7 @@
 #define AWESOME_COMMON_BUFFER_H
 
 #include "common/util.h"
+#include <span>
 
 typedef struct buffer_t
 {
@@ -38,6 +39,9 @@ typedef struct buffer_t
     int len, size;
     unsigned alloced: 1;
     unsigned offs   :31;
+    std::span<char, std::dynamic_extent> span() {
+        return std::span { s, size_t(len) };
+    }
 } buffer_t;
 
 extern char buffer_slop[1];

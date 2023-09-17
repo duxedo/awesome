@@ -60,6 +60,7 @@
 #include "property.h"
 #include "xwindow.h"
 #include <algorithm>
+#include <span>
 
 lua_class_t window_class;
 LUA_CLASS_FUNCS(window, window_class)
@@ -364,36 +365,25 @@ int
 window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_idx)
 {
     const xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
-    xcb_atom_t type;
-    size_t len;
-    uint32_t number;
-    const void *data;
 
     if(lua_isnil(L, value_idx))
     {
         xcb_delete_property(getGlobals().connection, window, prop->atom);
+        return 0;
+    }
+    if(prop->type == xproperty::PROP_STRING)
+    {
+        size_t len = 0;
+        const char *data = luaL_checklstring(L, value_idx, &len);
+        getGlobals()._connection.replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
+    } else if(prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN)
+    {
+        uint32_t data = (prop->type == xproperty::PROP_NUMBER) ?
+            luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX)
+            : luaA_checkboolean(L, value_idx);
+        getGlobals()._connection.replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
     } else {
-        uint8_t format;
-        if(prop->type == xproperty::PROP_STRING)
-        {
-            data = luaL_checklstring(L, value_idx, &len);
-            type = UTF8_STRING;
-            format = 8;
-        } else if(prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN)
-        {
-            if (prop->type == xproperty::PROP_NUMBER)
-                number = luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX);
-            else
-                number = luaA_checkboolean(L, value_idx);
-            data = &number;
-            len = 1;
-            type = XCB_ATOM_CARDINAL;
-            format = 32;
-        } else
-            fatal("Got an xproperty with invalid type");
-
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, window,
-                            prop->atom, type, format, len, data);
+        fatal("Got an xproperty with invalid type");
     }
     return 0;
 }
