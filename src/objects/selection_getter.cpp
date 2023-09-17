@@ -147,31 +147,35 @@ selection_handle_selectionnotify(lua_State *L, int ud, xcb_atom_t property)
     ud = luaA_absindex(L, ud);
     selection = (selection_getter_t*)lua_touserdata(L, ud);
 
-    if (property != XCB_NONE)
-    {
-        getConnection().change_attributes(selection->window, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
-
-        xcb_get_property_reply_t *property_r = xcb_get_property_reply(getGlobals().connection,
-                xcb_get_property(getGlobals().connection, true, selection->window, AWESOME_SELECTION_ATOM,
-                    XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff), NULL);
-
-        if (property_r)
-        {
-            if (property_r->type == INCR)
-            {
-                /* This is an incremental transfer. The above GetProperty had
-                 * delete=true. This indicates to the other end that the
-                 * transfer should start now. Right now we only get an estimate
-                 * of the size of the data to be transferred, which we ignore.
-                 */
-                p_delete(&property_r);
-                return;
-            }
-            selection_push_data(L, property_r);
-            luaA_object_emit_signal(L, ud, "data", 1);
-            p_delete(&property_r);
-        }
+    if (property != XCB_NONE) {
+        selection_transfer_finished(L, ud);
+        return;
     }
+
+    getConnection().change_attributes(selection->window, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+
+    xcb_get_property_reply_t *property_r = xcb_get_property_reply(getGlobals().connection,
+            xcb_get_property(getGlobals().connection, true, selection->window, AWESOME_SELECTION_ATOM,
+                XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff), NULL);
+
+    if(!property_r) {
+        selection_transfer_finished(L, ud);
+        return;
+    }
+
+    if (property_r->type == INCR)
+    {
+        /* This is an incremental transfer. The above GetProperty had
+         * delete=true. This indicates to the other end that the
+         * transfer should start now. Right now we only get an estimate
+         * of the size of the data to be transferred, which we ignore.
+         */
+        p_delete(&property_r);
+        return;
+    }
+    selection_push_data(L, property_r);
+    luaA_object_emit_signal(L, ud, "data", 1);
+    p_delete(&property_r);
 
     selection_transfer_finished(L, ud);
 }
