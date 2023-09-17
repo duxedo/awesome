@@ -507,7 +507,7 @@ ewmh_client_update_desktop(client_t *c)
         getGlobals()._connection.replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
         return;
     }
-    for(i = 0; i < getGlobals().tags.len; i++) {
+    for(i = 0; i < (size_t)getGlobals().tags.len; i++) {
         if(is_client_tagged(c, getGlobals().tags.tab[i])) {
             getGlobals()._connection.replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
             return;
