@@ -131,14 +131,14 @@ transfer_continue_incremental(lua_State *L, int ud)
             }
         }
         /* End of transfer */
-        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span("",0));
-        getGlobals()._connection.clear_attributes(transfer->requestor, XCB_CW_EVENT_MASK);
+        getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span("",0));
+        getConnection().clear_attributes(transfer->requestor, XCB_CW_EVENT_MASK);
         transfer_done(L, transfer);
     } else {
         /* Send next piece of data */
         assert(transfer->offset < data_length);
         size_t next_length = MIN(data_length - transfer->offset, max_property_length());
-        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data + transfer->offset, next_length));
+        getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data + transfer->offset, next_length));
         transfer->offset += next_length;
     }
     lua_pop(L, 1);
@@ -268,7 +268,7 @@ luaA_selection_transfer_send(lua_State *L)
             atoms[i] = reply ? reply->atom : XCB_NONE;
             p_delete(&reply);
         }
-        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
+        getConnection().replace_property(transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
     } else {
         /* 'data' is a string with the data to transfer */
         const char *data = luaL_checklstring(L, -1, &data_length);
@@ -280,8 +280,8 @@ luaA_selection_transfer_send(lua_State *L)
             incr = true;
 
         if (incr) {
-            getGlobals()._connection.change_attributes(transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
-            getGlobals()._connection.replace_property(transfer->requestor, transfer->property, INCR, incr_size);
+            getConnection().change_attributes(transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
+            getConnection().replace_property(transfer->requestor, transfer->property, INCR, incr_size);
 
             /* Save the data on the transfer object */
             luaA_getuservalue(L, 1);
@@ -293,7 +293,7 @@ luaA_selection_transfer_send(lua_State *L)
             transfer->state = TRANSFER_INCREMENTAL_SENDING;
             transfer->offset = 0;
         } else {
-            getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
+            getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
         }
     }
 

@@ -181,7 +181,7 @@ window_border_refresh(window_t *window)
     window->border_need_update = false;
     xwindow_set_border_color(window_get(window), &window->border_color);
     if(window->window) {
-        getGlobals()._connection.configure_window(window_get(window), XCB_CONFIG_WINDOW_BORDER_WIDTH, window->border_width);
+        getConnection().configure_window(window_get(window), XCB_CONFIG_WINDOW_BORDER_WIDTH, window->border_width);
     }
 }
 
@@ -372,13 +372,13 @@ window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_
     {
         size_t len = 0;
         const char *data = luaL_checklstring(L, value_idx, &len);
-        getGlobals()._connection.replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
+        getConnection().replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
     } else if(prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN)
     {
         uint32_t data = (prop->type == xproperty::PROP_NUMBER) ?
             luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX)
             : luaA_checkboolean(L, value_idx);
-        getGlobals()._connection.replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
+        getConnection().replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
     } else {
         fatal("Got an xproperty with invalid type");
     }

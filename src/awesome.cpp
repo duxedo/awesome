@@ -144,7 +144,7 @@ extern "C" void awesome_atexit(bool restart)
     foreach(client, getGlobals().clients)
         wins[n++] = (*client)->window;
 
-    getGlobals()._connection.replace_property(getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, n});
+    getConnection().replace_property(getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, n});
 
     a_dbus_cleanup();
 
@@ -366,9 +366,9 @@ acquire_timestamp(void)
     xcb_atom_t type = XCB_ATOM_STRING; /* Equally random */
 
     xcb_grab_server(getGlobals().connection);
-    getGlobals()._connection.change_attributes(win, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
-    getGlobals()._connection.append_property(win, atom, type, std::span{"", 0});
-    getGlobals()._connection.clear_attributes(win, XCB_CW_EVENT_MASK);
+    getConnection().change_attributes(win, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+    getConnection().append_property(win, atom, type, std::span{"", 0});
+    getConnection().clear_attributes(win, XCB_CW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Now wait for the event */
