@@ -92,6 +92,7 @@
 #include "common/xutil.h"
 #include "event.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/drawable.h"
 #include "objects/screen.h"
 #include "objects/tag.h"
@@ -102,6 +103,7 @@
 
 #include "math.h"
 
+#include <cstdint>
 #include <xcb/xcb_atom.h>
 #include <xcb/shape.h>
 #include <cairo-xcb.h>
@@ -2006,14 +2008,9 @@ client_geometry_refresh(void)
             ignored_enterleave = true;
         }
 
-        uint32_t values[] = { (uint32_t)geometry.x, (uint32_t)geometry.y, geometry.width, geometry.height };
-        xcb_configure_window(getGlobals().connection, c->frame_window,
-                XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                values);
-        uint32_t geo[] = { (uint32_t)real_geometry.x, (uint32_t)real_geometry.y, real_geometry.width, real_geometry.height };
-        xcb_configure_window(getGlobals().connection, c->window,
-                XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                geo);
+        getGlobals()._connection.configure_window(c->frame_window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, std::array<uint32_t, 4>{(uint32_t)geometry.x, (uint32_t)geometry.y, geometry.width, geometry.height });
+        std::array<uint32_t, 4> geo = { (uint32_t)real_geometry.x, (uint32_t)real_geometry.y, real_geometry.width, real_geometry.height };
+        getGlobals()._connection.configure_window(c->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, geo);
 
         c->x11_frame_geometry = geometry;
         c->x11_client_geometry = real_geometry;
@@ -2171,38 +2168,27 @@ client_manage(xcb_window_t w, xcb_get_geometry_reply_t *wgeom, xcb_get_window_at
      *
      * Grab the server to make sure we don't lose any events.
      */
-    uint32_t no_event[] = { 0 };
     xcb_grab_server(getGlobals().connection);
 
-    xcb_change_window_attributes(getGlobals().connection,
-                                 getGlobals().screen->root,
-                                 XCB_CW_EVENT_MASK,
-                                 no_event);
+    getGlobals()._connection.clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
     reparent_cookie = xcb_reparent_window_checked(getGlobals().connection, w, c->frame_window, 0, 0);
     xcb_map_window(getGlobals().connection, w);
-    xcb_change_window_attributes(getGlobals().connection,
-                                 getGlobals().screen->root,
-                                 XCB_CW_EVENT_MASK,
-                                 ROOT_WINDOW_EVENT_MASK);
+    getGlobals()._connection.change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Do this now so that we don't get any events for the above
      * (Else, reparent could cause an UnmapNotify) */
-    xcb_change_window_attributes(getGlobals().connection, w, XCB_CW_EVENT_MASK, select_input_val);
+    getGlobals()._connection.change_attributes(w, XCB_CW_EVENT_MASK, select_input_val);
 
     /* The frame window gets the border, not the real client window */
-    xcb_configure_window(getGlobals().connection, w,
-                         XCB_CONFIG_WINDOW_BORDER_WIDTH,
-                         makeArray<0>());
+    getGlobals()._connection.configure_window(w, XCB_CONFIG_WINDOW_BORDER_WIDTH, std::array<uint32_t, 1>{0});
 
     /* Move this window to the bottom of the stack. Without this we would force
      * other windows which will be above this one to redraw themselves because
      * this window occludes them for a tiny moment. The next stack_refresh()
      * will fix this up and move the window to its correct place. */
 
-    xcb_configure_window(getGlobals().connection, c->frame_window,
-                         XCB_CONFIG_WINDOW_STACK_MODE,
-                         makeArray<XCB_STACK_MODE_BELOW>());
+    getGlobals()._connection.configure_window(c->frame_window, XCB_CONFIG_WINDOW_STACK_MODE, std::array<uint32_t, 1>{XCB_STACK_MODE_BELOW});
 
     /* Duplicate client and push it in client list */
     lua_pushvalue(L, -1);
@@ -2580,35 +2566,16 @@ client_set_minimized(lua_State *L, int cidx, bool s)
              */
             xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_ICONIC);
 
-            uint32_t no_event[] = { 0 };
             const uint32_t client_select_input_val[] = { CLIENT_SELECT_INPUT_EVENT_MASK };
             const uint32_t frame_select_input_val[] = { FRAME_SELECT_INPUT_EVENT_MASK };
             xcb_grab_server(getGlobals().connection);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         getGlobals().screen->root,
-                                         XCB_CW_EVENT_MASK,
-                                         no_event);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         c->frame_window,
-                                         XCB_CW_EVENT_MASK,
-                                         no_event);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         c->window,
-                                         XCB_CW_EVENT_MASK,
-                                         no_event);
+            getGlobals()._connection.clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
+            getGlobals()._connection.clear_attributes(c->frame_window, XCB_CW_EVENT_MASK);
+            getGlobals()._connection.clear_attributes(c->window, XCB_CW_EVENT_MASK);
             xcb_unmap_window(getGlobals().connection, c->window);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         getGlobals().screen->root,
-                                         XCB_CW_EVENT_MASK,
-                                         ROOT_WINDOW_EVENT_MASK);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         c->frame_window,
-                                         XCB_CW_EVENT_MASK,
-                                         frame_select_input_val);
-            xcb_change_window_attributes(getGlobals().connection,
-                                         c->window,
-                                         XCB_CW_EVENT_MASK,
-                                         client_select_input_val);
+            getGlobals()._connection.change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
+            getGlobals()._connection.change_attributes(c->frame_window, XCB_CW_EVENT_MASK, frame_select_input_val);
+            getGlobals()._connection.change_attributes(c->window, XCB_CW_EVENT_MASK, client_select_input_val);
             xutil_ungrab_server(getGlobals().connection);
         }
         else
@@ -3005,37 +2972,35 @@ client_unmanage(client_t *c, client_unmanage_t reason)
 
     /* Clear our event mask so that we don't receive any events from now on,
      * especially not for the following requests. */
-    if(reason != CLIENT_UNMANAGE_DESTROYED)
-        xcb_change_window_attributes(getGlobals().connection,
-                                     c->window,
-                                     XCB_CW_EVENT_MASK,
-                                     makeArray<0>());
-    xcb_change_window_attributes(getGlobals().connection,
-                                 c->frame_window,
-                                 XCB_CW_EVENT_MASK,
-                                 makeArray<0>());
+    if(reason != CLIENT_UNMANAGE_DESTROYED) {
+        getGlobals()._connection.clear_attributes(c->window, XCB_CW_EVENT_MASK);
+    }
+    getGlobals()._connection.clear_attributes(c->frame_window, XCB_CW_EVENT_MASK);
 
     if(reason != CLIENT_UNMANAGE_DESTROYED)
     {
-        xwindow_buttons_grab(c->window, &(button_array_t){ .len = 0 });
-        xwindow_grabkeys(c->window, &(key_array_t){ .len = 0 });
+        button_array_t ba { .len = 0 };
+        key_array_t ka { .len = 0 };
+        xwindow_buttons_grab(c->window, &ba);
+        xwindow_grabkeys(c->window, &ka);
         area_t geometry = client_get_undecorated_geometry(c);
         xcb_unmap_window(getGlobals().connection, c->window);
         xcb_reparent_window(getGlobals().connection, c->window, getGlobals().screen->root,
                 geometry.x, geometry.y);
     }
 
-    if (c->nofocus_window != XCB_NONE)
+    if (c->nofocus_window != XCB_NONE) {
         window_array_append(&getGlobals().destroy_later_windows, c->nofocus_window);
+    }
     window_array_append(&getGlobals().destroy_later_windows, c->frame_window);
 
-    if(reason != CLIENT_UNMANAGE_DESTROYED)
-    {
+    if(reason != CLIENT_UNMANAGE_DESTROYED) {
         /* Remove this window from the save set since this shouldn't be made visible
          * after a restart anymore. */
         xcb_change_save_set(getGlobals().connection, XCB_SET_MODE_DELETE, c->window);
-        if (getGlobals().have_shape)
+        if (getGlobals().have_shape) {
             xcb_shape_select_input(getGlobals().connection, c->window, 0);
+        }
 
         /* Do this last to avoid races with clients. According to ICCCM, clients
          * arent allowed to re-use the window until after this. */

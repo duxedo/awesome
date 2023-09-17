@@ -216,15 +216,14 @@ drawin_apply_moveresize(drawin_t *w)
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
-    const uint32_t values[] =
+    std::array values =
                          {
                              (uint32_t)w->geometry.x,
                              (uint32_t)w->geometry.y,
                              (uint32_t)w->geometry.width,
                              (uint32_t)w->geometry.height
                          };
-    xcb_configure_window(getGlobals().connection, w->window,
-                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
+    getGlobals()._connection.configure_window(w->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
                          | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                          values);
     client_restore_enterleave_events();

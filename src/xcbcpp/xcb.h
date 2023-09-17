@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <bits/iterator_concepts.h>
 #include <concepts>
 #include <cstddef>
@@ -101,6 +102,28 @@ public:
     xcb_void_cookie_t append_property(xcb_window_t window, xcb_atom_t property, xcb_atom_t type, const Data& data) {
         return change_property(XCB_PROP_MODE_APPEND, window, property, type, data);
     }
+
+    template<typename T, size_t N>
+    xcb_void_cookie_t change_attributes(xcb_window_t w, uint32_t mask, const std::array<T, N>& arr) {
+        return xcb_change_window_attributes(connection, w, mask, arr.data());
+    }
+
+    xcb_void_cookie_t change_attributes(xcb_window_t w, uint32_t mask, const void * data) {
+        return xcb_change_window_attributes(connection, w, mask, data);
+    }
+    xcb_void_cookie_t clear_attributes(xcb_window_t w, uint32_t mask) {
+        uint32_t none[] = { 0 };
+        return xcb_change_window_attributes(connection, w, mask, none);
+    }
+
+    template<size_t N>
+    xcb_void_cookie_t configure_window(xcb_window_t window, uint16_t value_mask, const std::array<uint32_t, N>& value_list){
+        return xcb_configure_window(connection, window, value_mask, &value_list[0]);
+    }
+    xcb_void_cookie_t configure_window(xcb_window_t window, uint16_t value_mask, uint32_t val){
+        return configure_window(window, value_mask, std::array<uint32_t, 1>{val});
+    }
+
 //private:
     xcb_connection_t * connection = nullptr;
 

@@ -295,7 +295,7 @@ static void
 event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev)
 {
     uint16_t config_win_mask = 0;
-    uint32_t config_win_vals[7];
+    std::array<uint32_t, 7> config_win_vals;
     unsigned short i = 0;
 
     if(ev->value_mask & XCB_CONFIG_WINDOW_X)
@@ -334,7 +334,7 @@ event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev
         config_win_vals[i++] = ev->stack_mode;
     }
 
-    xcb_configure_window(getGlobals().connection, ev->window, config_win_mask, config_win_vals);
+    getGlobals()._connection.configure_window(ev->window, config_win_mask, config_win_vals);
 }
 
 /** The configure event handler.

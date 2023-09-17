@@ -132,9 +132,7 @@ transfer_continue_incremental(lua_State *L, int ud)
         }
         /* End of transfer */
         getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span("",0));
-        xcb_change_window_attributes(getGlobals().connection,
-                transfer->requestor, XCB_CW_EVENT_MASK,
-                makeArray<0>());
+        getGlobals()._connection.clear_attributes(transfer->requestor, XCB_CW_EVENT_MASK);
         transfer_done(L, transfer);
     } else {
         /* Send next piece of data */
@@ -282,10 +280,7 @@ luaA_selection_transfer_send(lua_State *L)
             incr = true;
 
         if (incr) {
-            xcb_change_window_attributes(getGlobals().connection,
-                    transfer->requestor, XCB_CW_EVENT_MASK,
-                    makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>() );
-
+            getGlobals()._connection.change_attributes(transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
             getGlobals()._connection.replace_property(transfer->requestor, transfer->property, INCR, incr_size);
 
             /* Save the data on the transfer object */
