@@ -244,8 +244,7 @@ void
 xwindow_set_cursor(xcb_window_t w, xcb_cursor_t c)
 {
     const uint32_t values[] = { c };
-    xcb_change_window_attributes(getGlobals().connection, w, XCB_CW_CURSOR,
-                                 values);
+    getGlobals()._connection.change_attributes(w, XCB_CW_CURSOR, values);
 }
 
 /** Set a window border color.
@@ -256,7 +255,7 @@ void
 xwindow_set_border_color(xcb_window_t w, color_t *color)
 {
     if(w)
-        xcb_change_window_attributes(getGlobals().connection, w, XCB_CW_BORDER_PIXEL, &color->pixel);
+        getGlobals()._connection.change_attributes(w, XCB_CW_BORDER_PIXEL, &color->pixel);
 }
 
 /** Get one of a window's shapes as a cairo surface */
