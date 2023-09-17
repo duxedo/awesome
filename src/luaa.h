@@ -323,12 +323,12 @@ bool luaA_parserc(xdgHandle *, std::optional<std::filesystem::path>);
 /** Global signals */
 extern Signals global_signals;
 
-extern "C" int luaA_class_index_miss_property(lua_State *, lua_object_t *);
-extern "C" int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);
-extern "C" int luaA_default_index(lua_State *);
-extern "C" int luaA_default_newindex(lua_State *);
-extern "C" void luaA_emit_startup(void);
+int luaA_class_index_miss_property(lua_State *, lua_object_t *);
+int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);
+int luaA_default_index(lua_State *);
+int luaA_default_newindex(lua_State *);
+void luaA_emit_startup(void);
 
-extern "C" void luaA_systray_invalidate(void);
+void luaA_systray_invalidate(void);
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
