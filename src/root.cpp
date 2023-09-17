@@ -42,6 +42,7 @@
 #include "common/xutil.h"
 #include "objects/button.h"
 #include "common/luaclass.h"
+#include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
 #include "math.h"
@@ -56,7 +57,7 @@ static int miss_newindex_handler = LUA_REFNIL;
 static int miss_call_handler     = LUA_REFNIL;
 
 static void
-root_set_wallpaper_pixmap(xcb_connection_t *c, xcb_pixmap_t p)
+root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p)
 {
     xcb_get_property_cookie_t prop_c;
     xcb_get_property_reply_t *prop_r;
@@ -65,26 +66,26 @@ root_set_wallpaper_pixmap(xcb_connection_t *c, xcb_pixmap_t p)
     /* We now have the pattern painted to the pixmap p. Now turn p into the root
      * window's background pixmap.
      */
-    xcb_change_window_attributes(c, screen->root, XCB_CW_BACK_PIXMAP, &p);
-    xcb_clear_area(c, 0, screen->root, 0, 0, 0, 0);
+    xcb_change_window_attributes(c.getConnection(), screen->root, XCB_CW_BACK_PIXMAP, &p);
+    xcb_clear_area(c.getConnection(), 0, screen->root, 0, 0, 0, 0);
 
-    prop_c = xcb_get_property_unchecked(c, false,
+    prop_c = xcb_get_property_unchecked(c.connection, false,
             screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
 
     /* Theoretically, this should be enough to set the wallpaper. However, to
      * make pseudo-transparency work, clients need a way to get the wallpaper.
      * You can't query a window's back pixmap, so properties are (ab)used.
      */
-    xcb_change_property(c, XCB_PROP_MODE_REPLACE, screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, 32, 1, &p);
-    xcb_change_property(c, XCB_PROP_MODE_REPLACE, screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 32, 1, &p);
+    c.replace_property(screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, p);
+    c.replace_property(screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, p);
 
     /* Now make sure that the old wallpaper is freed (but only do this for ESETROOT_PMAP_ID) */
-    prop_r = xcb_get_property_reply(c, prop_c, NULL);
+    prop_r = xcb_get_property_reply(c.connection, prop_c, NULL);
     if (prop_r && prop_r->value_len)
     {
         xcb_pixmap_t *rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
         if (rootpix)
-            xcb_kill_client(c, *rootpix);
+            xcb_kill_client(c.getConnection(), *rootpix);
     }
     p_delete(&prop_r);
 }
@@ -142,7 +143,7 @@ root_set_wallpaper(cairo_pattern_t *pattern)
                                  getGlobals().screen->root,
                                  XCB_CW_EVENT_MASK,
                                  makeArray<0>());
-    root_set_wallpaper_pixmap(getGlobals().connection, p);
+    root_set_wallpaper_pixmap(getGlobals()._connection, p);
     xcb_change_window_attributes(getGlobals().connection,
                                  getGlobals().screen->root,
                                  XCB_CW_EVENT_MASK,
