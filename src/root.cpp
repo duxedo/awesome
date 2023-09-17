@@ -139,9 +139,9 @@ root_set_wallpaper(cairo_pattern_t *pattern)
 
     /* Change the wallpaper, without sending us a PropertyNotify event */
     xcb_grab_server(getGlobals().connection);
-    getGlobals()._connection.clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
-    root_set_wallpaper_pixmap(getGlobals()._connection, p);
-    getGlobals()._connection.change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
+    getConnection().clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
+    root_set_wallpaper_pixmap(getConnection(), p);
+    getConnection().change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Make sure our pixmap is not destroyed when we disconnect. */
