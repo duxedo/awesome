@@ -296,7 +296,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
         config_vals[0] = base_size * rows + spacing * (rows - 1);
         config_vals[1] = base_size * cols + spacing * (cols - 1);
     }
-    getGlobals()._connection.configure_window(getGlobals().systray.window, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, config_vals);
+    getConnection().configure_window(getGlobals().systray.window, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, config_vals);
 
     /* Now resize each embedded window */
     config_vals[0] = config_vals[1] = 0;
@@ -316,7 +316,7 @@ systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool f
             continue;
         }
 
-        getGlobals()._connection.configure_window(em->win,
+        getConnection().configure_window(em->win,
                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                              config_vals);
         xcb_map_window(getGlobals().connection, em->win);
@@ -381,7 +381,7 @@ luaA_systray(lua_State *L)
                 && getGlobals().systray.background_pixel != bg_color.pixel)
         {
             getGlobals().systray.background_pixel = bg_color.pixel;
-            getGlobals()._connection.change_attributes( getGlobals().systray.window, XCB_CW_BACK_PIXEL, std::array{ bg_color.pixel });
+            getConnection().change_attributes( getGlobals().systray.window, XCB_CW_BACK_PIXEL, std::array{ bg_color.pixel });
             xcb_clear_area(getGlobals().connection, 1, getGlobals().systray.window, 0, 0, 0, 0);
             force_redraw = true;
         }
@@ -393,7 +393,7 @@ luaA_systray(lua_State *L)
                                 x, y);
         else
         {
-            getGlobals()._connection.configure_window(getGlobals().systray.window,
+            getConnection().configure_window(getGlobals().systray.window,
                     XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
                     std::array<uint32_t, 2>{ (uint32_t)x, (uint32_t)y});
         }

@@ -40,7 +40,7 @@ void
 xwindow_set_state(xcb_window_t win, uint32_t state)
 {
     uint32_t data[] = { state, XCB_NONE };
-    getGlobals()._connection.replace_property(win, WM_STATE, WM_STATE, data);
+    getConnection().replace_property(win, WM_STATE, WM_STATE, data);
 }
 
 /** Send request to get a window state (WM_STATE).
@@ -206,7 +206,7 @@ xwindow_set_opacity(xcb_window_t win, double opacity)
     if(win) {
         if(opacity >= 0 && opacity <= 1) {
             uint32_t real_opacity = opacity * 0xffffffff;
-            getGlobals()._connection.replace_property(win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
+            getConnection().replace_property(win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
         }
         else {
             xcb_delete_property(getGlobals().connection, win, _NET_WM_WINDOW_OPACITY);
@@ -244,7 +244,7 @@ void
 xwindow_set_cursor(xcb_window_t w, xcb_cursor_t c)
 {
     const uint32_t values[] = { c };
-    getGlobals()._connection.change_attributes(w, XCB_CW_CURSOR, values);
+    getConnection().change_attributes(w, XCB_CW_CURSOR, values);
 }
 
 /** Set a window border color.
@@ -255,7 +255,7 @@ void
 xwindow_set_border_color(xcb_window_t w, color_t *color)
 {
     if(w)
-        getGlobals()._connection.change_attributes(w, XCB_CW_BORDER_PIXEL, &color->pixel);
+        getConnection().change_attributes(w, XCB_CW_BORDER_PIXEL, &color->pixel);
 }
 
 /** Get one of a window's shapes as a cairo surface */

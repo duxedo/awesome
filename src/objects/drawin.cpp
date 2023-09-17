@@ -223,7 +223,7 @@ drawin_apply_moveresize(drawin_t *w)
                              (uint32_t)w->geometry.width,
                              (uint32_t)w->geometry.height
                          };
-    getGlobals()._connection.configure_window(w->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
+    getConnection().configure_window(w->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
                          | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                          values);
     client_restore_enterleave_events();

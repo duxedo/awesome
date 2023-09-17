@@ -334,7 +334,7 @@ event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev
         config_win_vals[i++] = ev->stack_mode;
     }
 
-    getGlobals()._connection.configure_window(ev->window, config_win_mask, config_win_vals);
+    getConnection().configure_window(ev->window, config_win_mask, config_win_vals);
 }
 
 /** The configure event handler.
