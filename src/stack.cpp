@@ -21,6 +21,7 @@
 
 #include "stack.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/client.h"
 #include "objects/drawin.h"
 #include <array>
@@ -82,7 +83,7 @@ stack_window_above(xcb_window_t w, xcb_window_t previous)
          * changed the stacking order of all windows, they'd all have to redraw
          * themselves. Doing it like this is better. */
         return;
-    getGlobals()._connection.configure_window(w, XCB_CONFIG_WINDOW_SIBLING | XCB_CONFIG_WINDOW_STACK_MODE, std::array<uint32_t, 2>{ previous, XCB_STACK_MODE_ABOVE });
+    getConnection().configure_window(w, XCB_CONFIG_WINDOW_SIBLING | XCB_CONFIG_WINDOW_STACK_MODE, std::array<uint32_t, 2>{ previous, XCB_STACK_MODE_ABOVE });
 }
 
 /** Stack a client above.
