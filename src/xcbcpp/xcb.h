@@ -7,6 +7,7 @@
 #include <iterator>
 #include <memory>
 #include <span>
+#include <optional>
 #include <type_traits>
 #include <xcb/bigreq.h>
 #include <xcb/randr.h>
@@ -25,39 +26,6 @@
 #include <xcb/xcb_xrm.h>
 
 namespace XCB {
-/*
- *
-XCB_PROP_MODE_REPLACE AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 32, n, wins);
-XCB_PROP_MODE_REPLACE WM_STATE, WM_STATE, 32, 2, data);
-XCB_PROP_MODE_REPLACE _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 32, 1L, &real_opacity);
-XCB_PROP_MODE_REPLACE _XROOTPMAP_ID, XCB_ATOM_PIXMAP, 32, 1, &p);
-XCB_PROP_MODE_REPLACE ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 32, 1, &p);
-XCB_PROP_MODE_REPLACE _NET_WM_STATE, XCB_ATOM_ATOM, 32, i, state);
-XCB_PROP_MODE_REPLACE _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, 32, 1, &win);
-XCB_PROP_MODE_REPLACE _NET_CLIENT_LIST, XCB_ATOM_WINDOW, 32, n, wins);
-XCB_PROP_MODE_REPLACE _NET_FRAME_EXTENTS, XCB_ATOM_CARDINAL, 32, 4, extents);
-XCB_PROP_MODE_REPLACE _NET_SUPPORTED, XCB_ATOM_ATOM, 32, countof(atom), atom);
-XCB_PROP_MODE_REPLACE _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, 32, 1, &father);
-XCB_PROP_MODE_REPLACE _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, 32, 1, &father);
-XCB_PROP_MODE_REPLACE _NET_WM_NAME, UTF8_STRING, 8, 7, "awesome");
-XCB_PROP_MODE_REPLACE _NET_WM_PID, XCB_ATOM_CARDINAL, 32, 1, &i);
-XCB_PROP_MODE_REPLACE _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, 32, n, wins);
-XCB_PROP_MODE_REPLACE _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, 32, 1, &count);
-XCB_PROP_MODE_REPLACE _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, 32, 1, &idx);
-XCB_PROP_MODE_REPLACE _NET_DESKTOP_NAMES, UTF8_STRING, 8, buf.len, buf.s);
-XCB_PROP_MODE_REPLACE _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, 32, 1, &desktops);
-XCB_PROP_MODE_REPLACE _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, 32, 1, &i);
-XCB_PROP_MODE_REPLACE _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 32, countof(state), state);
-XCB_PROP_MODE_REPLACE _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 32, 1, &type);
-XCB_PROP_MODE_REPLACE XCB_ATOM_WM_NAME, XCB_ATOM_STRING, 8, strlen(name), name);
-XCB_PROP_MODE_REPLACE _XEMBED_INFO, _XEMBED_INFO, 32, 2, (uint32_t[]) { 0, 1 });
-XCB_PROP_MODE_REPLACE transfer->property, UTF8_STRING, 8, 0, NULL);
-XCB_PROP_MODE_REPLACE transfer->property, UTF8_STRING, 8, next_length, &data[transfer->offset]);
-XCB_PROP_MODE_REPLACE transfer->property, XCB_ATOM_ATOM, 32, len, &atoms[0]);
-XCB_PROP_MODE_REPLACE transfer->property, INCR, 32, 1, &incr_size );
-XCB_PROP_MODE_REPLACE transfer->property, UTF8_STRING, 8, data_length, data);
-XCB_PROP_MODE_REPLACE prop->atom, type, format, len, data);
-*/
 
 template<typename T>
 concept XCBDataBlock = requires(T a)
@@ -70,6 +38,9 @@ concept XCBDataVal = !std::is_pointer_v<T> && std::is_trivial_v<T> && !std::is_a
 
 template<typename T>
 concept XCBData = XCBDataBlock<T> || XCBDataVal<T> || std::is_array_v<T>;
+
+template<typename T>
+using reply = std::unique_ptr<T, decltype([](T*arg){ free(arg);})>;
 
 class Connection {
 public:
@@ -122,6 +93,23 @@ public:
     }
     xcb_void_cookie_t configure_window(xcb_window_t window, uint16_t value_mask, uint32_t val){
         return configure_window(window, value_mask, std::array<uint32_t, 1>{val});
+    }
+
+    xcb_query_tree_cookie_t query_tree_unckecked(xcb_window_t window) {
+        return xcb_query_tree_unchecked(connection, window);
+    }
+
+    reply<xcb_query_tree_reply_t> query_tree_reply(xcb_query_tree_cookie_t cookie) {
+        return reply<xcb_query_tree_reply_t>{xcb_query_tree_reply(connection, cookie, NULL)};
+    }
+
+    std::optional<std::span<xcb_window_t, std::dynamic_extent>> query_tree_children(const reply<xcb_query_tree_reply_t>& reply) {
+        auto wins = xcb_query_tree_children(reply.get());
+        if(!wins) {
+            return {};
+        }
+        size_t len = xcb_query_tree_children_length(reply.get());
+        return { std::span{wins, len}};
     }
 
 //private:
