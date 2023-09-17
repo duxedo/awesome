@@ -20,6 +20,7 @@
  */
 
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/client.h"
 #include "objects/tag.h"
 #include "common/atoms.h"
@@ -45,7 +46,7 @@ ewmh_client_update_hints(lua_State *L)
 {
     client_t *c = (client_t*)luaA_checkudata(L, 1, &client_class);
     xcb_atom_t state[10]; /* number of defined state atoms */
-    int i = 0;
+    size_t i = 0;
 
     if(c->modal)
         state[i++] = _NET_WM_STATE_MODAL;
@@ -68,8 +69,7 @@ ewmh_client_update_hints(lua_State *L)
     if(c->urgent)
         state[i++] = _NET_WM_STATE_DEMANDS_ATTENTION;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 32, i, state);
+    getGlobals()._connection.replace_property(c->window, _NET_WM_STATE, XCB_ATOM_ATOM, std::span{state, i});
 
     return 0;
 }
@@ -84,10 +84,7 @@ ewmh_update_net_active_window(lua_State *L)
     else
         win = XCB_NONE;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-			getGlobals().screen->root,
-			_NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, 32, 1, &win);
-
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
     return 0;
 }
 
@@ -100,9 +97,7 @@ ewmh_update_net_client_list(lua_State *L)
     foreach(client, getGlobals().clients)
         wins[n++] = (*client)->window;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        getGlobals().screen->root,
-                        _NET_CLIENT_LIST, XCB_ATOM_WINDOW, 32, n, wins);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
 
     return 0;
 }
@@ -118,8 +113,7 @@ ewmh_client_update_frame_extents(lua_State *L)
     extents[2] = c->border_width + c->titlebar[CLIENT_TITLEBAR_TOP].size;
     extents[3] = c->border_width + c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-            c->window, _NET_FRAME_EXTENTS, XCB_ATOM_CARDINAL, 32, 4, extents);
+    getGlobals()._connection.replace_property(c->window, _NET_FRAME_EXTENTS, XCB_ATOM_CARDINAL, extents);
 
     return 0;
 }
@@ -127,8 +121,6 @@ ewmh_client_update_frame_extents(lua_State *L)
 void
 ewmh_init(void)
 {
-    xcb_window_t father;
-    xcb_screen_t *xscreen = getGlobals().screen;
     xcb_atom_t atom[] =
     {
         _NET_SUPPORTED,
@@ -176,37 +168,31 @@ ewmh_init(void)
         _NET_WM_STATE_HIDDEN,
         _NET_WM_STATE_DEMANDS_ATTENTION
     };
-    int i;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        xscreen->root, _NET_SUPPORTED, XCB_ATOM_ATOM, 32,
-                        countof(atom), atom);
+    xcb_screen_t *xscreen = getGlobals().screen;
+
+    getGlobals()._connection.replace_property(xscreen->root, _NET_SUPPORTED, XCB_ATOM_ATOM, atom);
 
     /* create our own window */
-    father = xcb_generate_id(getGlobals().connection);
+    xcb_window_t father = xcb_generate_id(getGlobals().connection);
+
     xcb_create_window(getGlobals().connection, xscreen->root_depth,
                       father, xscreen->root, -1, -1, 1, 1, 0,
                       XCB_COPY_FROM_PARENT, xscreen->root_visual, 0, NULL);
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        xscreen->root, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, 32,
-                        1, &father);
+    getGlobals()._connection.replace_property(xscreen->root, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        father, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, 32,
-                        1, &father);
+    getGlobals()._connection.replace_property(father, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
 
     /* set the window manager name */
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        father, _NET_WM_NAME, UTF8_STRING, 8, 7, "awesome");
+    getGlobals()._connection.replace_property(father, _NET_WM_NAME, UTF8_STRING, "awesome");
 
     /* Set an instance, just because we can */
     xwindow_set_class_instance(father);
 
     /* set the window manager PID */
-    i = getpid();
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        father, _NET_WM_PID, XCB_ATOM_CARDINAL, 32, 1, &i);
+    int32_t i = getpid();
+    getGlobals()._connection.replace_property(father, _NET_WM_PID, XCB_ATOM_CARDINAL, i);
 }
 
 static void
@@ -270,15 +256,14 @@ ewmh_init_lua(void)
 void
 ewmh_update_net_client_list_stacking(void)
 {
-    int n = 0;
+    size_t n = 0;
     xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().stack.len);
 
-    foreach(client, getGlobals().stack)
+    foreach(client, getGlobals().stack) {
         wins[n++] = (*client)->window;
+    }
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-			getGlobals().screen->root,
-			_NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, 32, n, wins);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins, n});
 }
 
 void
@@ -286,9 +271,7 @@ ewmh_update_net_numbers_of_desktop(void)
 {
     uint32_t count = getGlobals().tags.len;
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-			getGlobals().screen->root,
-			_NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, 32, 1, &count);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
 }
 
 int
@@ -296,29 +279,22 @@ ewmh_update_net_current_desktop(lua_State *L)
 {
     uint32_t idx = tags_get_current_or_first_selected_index();
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        getGlobals().screen->root,
-                        _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, 32, 1, &idx);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, idx);
     return 0;
 }
 
 void
 ewmh_update_net_desktop_names(void)
 {
-    buffer_t buf;
-
-    buffer_inita(&buf, BUFSIZ);
+    std::vector<char> buf;
 
     foreach(tag, getGlobals().tags)
     {
-        buffer_adds(&buf, tag_get_name(*tag));
-        buffer_addc(&buf, '\0');
+        auto tagname = tag_get_name(*tag);
+        buf.insert(buf.begin() + buf.size(), tagname, tagname + strlen(tagname) + 1);
     }
 
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-			getGlobals().screen->root,
-			_NET_DESKTOP_NAMES, UTF8_STRING, 8, buf.len, buf.s);
-    buffer_wipe(&buf);
+    getGlobals()._connection.replace_property(getGlobals().screen->root, _NET_DESKTOP_NAMES, UTF8_STRING, buf);
 }
 
 static void
@@ -523,23 +499,20 @@ ewmh_process_client_message(xcb_client_message_event_t *ev)
 void
 ewmh_client_update_desktop(client_t *c)
 {
-    int i;
+    uint32_t i;
 
     if(c->sticky)
     {
         static uint32_t desktops = ALL_DESKTOPS;
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                            c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, 32, 1,
-                            &desktops);
+        getGlobals()._connection.replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
         return;
     }
-    for(i = 0; i < getGlobals().tags.len; i++)
-        if(is_client_tagged(c, getGlobals().tags.tab[i]))
-        {
-            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                                c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, 32, 1, &i);
+    for(i = 0; i < getGlobals().tags.len; i++) {
+        if(is_client_tagged(c, getGlobals().tags.tab[i])) {
+            getGlobals()._connection.replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
             return;
         }
+    }
     /* It doesn't have any tags, remove the property */
     xcb_delete_property(getGlobals().connection, c->window, _NET_WM_DESKTOP);
 }
@@ -569,8 +542,7 @@ ewmh_update_strut(xcb_window_t window, strut_t *strut)
             strut->bottom_end_x
         };
 
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                            window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 32, countof(state), state);
+        getGlobals()._connection.replace_property(window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, state);
     }
 }
 
@@ -581,8 +553,7 @@ ewmh_update_strut(xcb_window_t window, strut_t *strut)
 void
 ewmh_update_window_type(xcb_window_t window, uint32_t type)
 {
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                        window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 32, 1, &type);
+    getGlobals()._connection.replace_property(window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, type);
 }
 
 void

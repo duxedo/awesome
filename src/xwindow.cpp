@@ -21,11 +21,13 @@
 
 #include "xwindow.h"
 #include "common/atoms.h"
+#include "globalconf.h"
 #include "objects/button.h"
 
 #include <xcb/xcb.h>
 #include <xcb/shape.h>
 #include <cairo-xcb.h>
+#include <xcb/xproto.h>
 
 /** Mask shorthands */
 #define BUTTONMASK     (XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE)
@@ -38,8 +40,7 @@ void
 xwindow_set_state(xcb_window_t win, uint32_t state)
 {
     uint32_t data[] = { state, XCB_NONE };
-    xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, win,
-                        WM_STATE, WM_STATE, 32, 2, data);
+    getGlobals()._connection.replace_property(win, WM_STATE, WM_STATE, data);
 }
 
 /** Send request to get a window state (WM_STATE).
@@ -202,16 +203,14 @@ xwindow_get_opacity_from_cookie(xcb_get_property_cookie_t cookie)
 void
 xwindow_set_opacity(xcb_window_t win, double opacity)
 {
-    if(win)
-    {
-        if(opacity >= 0 && opacity <= 1)
-        {
+    if(win) {
+        if(opacity >= 0 && opacity <= 1) {
             uint32_t real_opacity = opacity * 0xffffffff;
-            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE, win,
-                                _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 32, 1L, &real_opacity);
+            getGlobals()._connection.replace_property(win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
         }
-        else
+        else {
             xcb_delete_property(getGlobals().connection, win, _NET_WM_WINDOW_OPACITY);
+        }
     }
 }
 

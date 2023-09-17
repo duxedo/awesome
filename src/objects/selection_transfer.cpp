@@ -23,6 +23,7 @@
 #include "common/array.h"
 #include "common/luaobject.h"
 #include "common/atoms.h"
+#include "common/util.h"
 #include "globalconf.h"
 #include <cstdint>
 
@@ -130,9 +131,7 @@ transfer_continue_incremental(lua_State *L, int ud)
             }
         }
         /* End of transfer */
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                transfer->requestor, transfer->property, UTF8_STRING, 8,
-                0, NULL);
+        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span("",0));
         xcb_change_window_attributes(getGlobals().connection,
                 transfer->requestor, XCB_CW_EVENT_MASK,
                 makeArray<0>());
@@ -141,9 +140,7 @@ transfer_continue_incremental(lua_State *L, int ud)
         /* Send next piece of data */
         assert(transfer->offset < data_length);
         size_t next_length = MIN(data_length - transfer->offset, max_property_length());
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                transfer->requestor, transfer->property, UTF8_STRING, 8,
-                next_length, &data[transfer->offset]);
+        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data + transfer->offset, next_length));
         transfer->offset += next_length;
     }
     lua_pop(L, 1);
@@ -253,16 +250,16 @@ luaA_selection_transfer_send(lua_State *L)
         size_t len = luaA_rawlen(L, -1);
 
         /* Get an array with atoms */
-        size_t atom_lengths[len];
-        const char *atom_strings[len];
+        auto *atom_lengths = p_alloca(size_t, len);
+        auto *atom_strings = p_alloca(const char *, len);
         for (size_t i = 0; i < len; i++) {
             lua_rawgeti(L, -1, i+1);
             atom_strings[i] = luaL_checklstring(L, -1, &atom_lengths[i]);
             lua_pop(L, 1);
         }
 
-        xcb_intern_atom_cookie_t cookies[len];
-        xcb_atom_t atoms[len];
+        auto *cookies = p_alloca(xcb_intern_atom_cookie_t, len);
+        auto *atoms = p_alloca(xcb_atom_t, len);
         for (size_t i = 0; i < len; i++) {
             cookies[i] = xcb_intern_atom_unchecked(getGlobals().connection, false,
                     atom_lengths[i], atom_strings[i]);
@@ -273,10 +270,7 @@ luaA_selection_transfer_send(lua_State *L)
             atoms[i] = reply ? reply->atom : XCB_NONE;
             p_delete(&reply);
         }
-
-        xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                transfer->requestor, transfer->property, XCB_ATOM_ATOM, 32,
-                len, &atoms[0]);
+        getGlobals()._connection.replace_property(transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
     } else {
         /* 'data' is a string with the data to transfer */
         const char *data = luaL_checklstring(L, -1, &data_length);
@@ -292,9 +286,7 @@ luaA_selection_transfer_send(lua_State *L)
                     transfer->requestor, XCB_CW_EVENT_MASK,
                     makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>() );
 
-            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                    transfer->requestor, transfer->property, INCR, 32, 1,
-                    &incr_size );
+            getGlobals()._connection.replace_property(transfer->requestor, transfer->property, INCR, incr_size);
 
             /* Save the data on the transfer object */
             luaA_getuservalue(L, 1);
@@ -306,9 +298,7 @@ luaA_selection_transfer_send(lua_State *L)
             transfer->state = TRANSFER_INCREMENTAL_SENDING;
             transfer->offset = 0;
         } else {
-            xcb_change_property(getGlobals().connection, XCB_PROP_MODE_REPLACE,
-                    transfer->requestor, transfer->property, UTF8_STRING, 8,
-                    data_length, data);
+            getGlobals()._connection.replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
         }
     }
 
