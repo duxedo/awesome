@@ -42,6 +42,7 @@
 #include <cstddef>
 #include <getopt.h>
 
+#include <iterator>
 #include <locale.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -64,6 +65,8 @@
 #include <glib-unix.h>
 
 #include <filesystem>
+#include <algorithm>
+#include <ranges>
 
 #include "xcbcpp/xcb.h"
 
@@ -213,16 +216,11 @@ restore_client_order(xcb_get_property_cookie_t prop_cookie)
 static void
 scan(xcb_query_tree_cookie_t tree_c)
 {
-    int i, tree_c_len;
-    xcb_query_tree_reply_t *tree_r;
-    xcb_window_t *wins = NULL;
     xcb_get_window_attributes_reply_t *attr_r;
     xcb_get_geometry_reply_t *geom_r;
     xcb_get_property_cookie_t prop_cookie;
 
-    tree_r = xcb_query_tree_reply(getGlobals().connection,
-                                  tree_c,
-                                  NULL);
+    auto tree_r = getConnection().query_tree_reply(tree_c);
 
     if(!tree_r)
         return;
@@ -231,33 +229,36 @@ scan(xcb_query_tree_cookie_t tree_c)
     prop_cookie = xcb_get_property_unchecked(getGlobals().connection, true,
                           getGlobals().screen->root, AWESOME_CLIENT_ORDER,
                           XCB_ATOM_WINDOW, 0, UINT_MAX);
-
+    auto wins = getConnection().query_tree_children(tree_r);
     /* Get the tree of the children windows of the current root window */
-    if(!(wins = xcb_query_tree_children(tree_r)))
+    if(!wins) {
         fatal("cannot get tree children");
-
-    tree_c_len = xcb_query_tree_children_length(tree_r);
-    xcb_get_window_attributes_cookie_t attr_wins[tree_c_len];
-    xcb_get_property_cookie_t state_wins[tree_c_len];
-    xcb_get_geometry_cookie_t geom_wins[tree_c_len];
-
-    for(i = 0; i < tree_c_len; i++)
-    {
-        attr_wins[i] = xcb_get_window_attributes_unchecked(getGlobals().connection,
-                                                           wins[i]);
-
-        state_wins[i] = xwindow_get_state_unchecked(wins[i]);
-        geom_wins[i] = xcb_get_geometry_unchecked(getGlobals().connection, wins[i]);
     }
 
-    for(i = 0; i < tree_c_len; i++)
-    {
-        attr_r = xcb_get_window_attributes_reply(getGlobals().connection,
-                                                 attr_wins[i],
-                                                 NULL);
-        geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_wins[i], NULL);
 
-        long state = xwindow_get_state_reply(state_wins[i]);
+    auto a_view = wins.value() | std::ranges::views::transform(
+            [](const auto& v) {
+            return std::make_tuple(
+                    v,
+                    xcb_get_window_attributes_unchecked(getGlobals().connection, v),
+                    xwindow_get_state_unchecked(v),
+                    xcb_get_geometry_unchecked(getGlobals().connection, v));
+            });
+
+    std::vector<
+        std::tuple<
+            xcb_window_t,
+            xcb_get_window_attributes_cookie_t,
+            xcb_get_property_cookie_t,
+            xcb_get_geometry_cookie_t
+            >
+    > cookies(a_view.begin(), a_view.end());
+
+    for(auto & [win, attr_c, state_c, geo_c] : cookies)
+    {
+        attr_r = xcb_get_window_attributes_reply(getGlobals().connection, attr_c, NULL);
+        geom_r = xcb_get_geometry_reply(getGlobals().connection, geo_c, NULL);
+        long state = xwindow_get_state_reply(state_c);
 
         if(!geom_r || !attr_r || attr_r->override_redirect
            || attr_r->map_state == XCB_MAP_STATE_UNMAPPED
@@ -268,13 +269,11 @@ scan(xcb_query_tree_cookie_t tree_c)
             continue;
         }
 
-        client_manage(wins[i], geom_r, attr_r);
+        client_manage(win, geom_r, attr_r);
 
         p_delete(&attr_r);
         p_delete(&geom_r);
     }
-
-    p_delete(&tree_r);
 
     restore_client_order(prop_cookie);
 }
@@ -834,13 +833,9 @@ main(int argc, char **argv)
                   create_gc_flags );
 
     /* Get the window tree associated to this screen */
-    tree_c = xcb_query_tree_unchecked(getGlobals().connection,
-                                      getGlobals().screen->root);
+    tree_c = getConnection().query_tree_unckecked(getGlobals().screen->root);
 
-    xcb_change_window_attributes(getGlobals().connection,
-                                 getGlobals().screen->root,
-                                 XCB_CW_EVENT_MASK,
-                                 ROOT_WINDOW_EVENT_MASK);
+    getConnection().change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
 
     /* we will receive events, stop grabbing server */
     xutil_ungrab_server(getGlobals().connection);
