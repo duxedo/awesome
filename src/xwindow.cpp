@@ -24,6 +24,7 @@
 #include "globalconf.h"
 #include "objects/button.h"
 
+#include <cstdint>
 #include <xcb/xcb.h>
 #include <xcb/shape.h>
 #include <cairo-xcb.h>
@@ -50,8 +51,7 @@ xwindow_set_state(xcb_window_t win, uint32_t state)
 xcb_get_property_cookie_t
 xwindow_get_state_unchecked(xcb_window_t w)
 {
-    return xcb_get_property_unchecked(getGlobals().connection, false, w, WM_STATE,
-                                      WM_STATE, 0L, 2L);
+    return getConnection().get_property_unchecked(false, w, WM_STATE, WM_STATE, 0L, 2L);
 }
 
 /** Get a window state (WM_STATE).
@@ -61,19 +61,15 @@ xwindow_get_state_unchecked(xcb_window_t w)
 uint32_t
 xwindow_get_state_reply(xcb_get_property_cookie_t cookie)
 {
-    /* If no property is set, we just assume a sane default. */
-    uint32_t result = XCB_ICCCM_WM_STATE_NORMAL;
-    xcb_get_property_reply_t *prop_r;
-
-    if((prop_r = xcb_get_property_reply(getGlobals().connection, cookie, NULL)))
+    auto & conn = getConnection();
+    if(auto prop_r = conn.get_property_reply(cookie, NULL))
     {
-        if(xcb_get_property_value_length(prop_r))
-            result = *(uint32_t *) xcb_get_property_value(prop_r);
-
-        p_delete(&prop_r);
+        if(auto res = conn.get_property_value<uint32_t>(prop_r)) {
+            return res.value();
+        }
     }
 
-    return result;
+    return XCB_ICCCM_WM_STATE_NORMAL;
 }
 
 /** Configure a window with its new geometry and border size.
