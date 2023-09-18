@@ -25,6 +25,9 @@
 #include <xcb/xcb_cursor.h>
 #include <xcb/xcb_xrm.h>
 
+
+#include <iostream>
+
 namespace XCB {
 
 template<typename T>
@@ -39,8 +42,15 @@ concept XCBDataVal = !std::is_pointer_v<T> && std::is_trivial_v<T> && !std::is_a
 template<typename T>
 concept XCBData = XCBDataBlock<T> || XCBDataVal<T> || std::is_array_v<T>;
 
+struct ReplyDeleter {
+    template<typename T>
+    void operator()(T * arg) {
+        free(arg);
+    }
+};
+
 template<typename T>
-using reply = std::unique_ptr<T, decltype([](T*arg){ free(arg);})>;
+using reply = std::unique_ptr<T, ReplyDeleter>;
 
 class Connection {
 public:
@@ -99,8 +109,8 @@ public:
         return xcb_query_tree_unchecked(connection, window);
     }
 
-    reply<xcb_query_tree_reply_t> query_tree_reply(xcb_query_tree_cookie_t cookie) {
-        return reply<xcb_query_tree_reply_t>{xcb_query_tree_reply(connection, cookie, NULL)};
+    reply<xcb_query_tree_reply_t> query_tree_reply(xcb_query_tree_cookie_t cookie, xcb_generic_error_t ** err = nullptr) {
+        return reply<xcb_query_tree_reply_t>{xcb_query_tree_reply(connection, cookie, err)};
     }
 
     std::optional<std::span<xcb_window_t, std::dynamic_extent>> query_tree_children(const reply<xcb_query_tree_reply_t>& reply) {
@@ -112,6 +122,49 @@ public:
         return { std::span{wins, len}};
     }
 
+
+    xcb_get_window_attributes_cookie_t get_window_attributes_unckecked(xcb_window_t window) {
+        return xcb_get_window_attributes_unchecked(connection, window);
+    }
+    xcb_get_geometry_cookie_t  get_geometry_unchecked(xcb_window_t window) {
+        return xcb_get_geometry_unchecked(connection, window);
+    }
+
+    xcb_get_property_cookie_t get_property_unchecked(bool _delete, xcb_window_t window,
+            xcb_atom_t property, xcb_atom_t type, uint32_t long_offset, uint32_t long_length) {
+        return xcb_get_property_unchecked(connection, _delete, window, property, type, long_offset, long_length);
+    }
+
+    reply<xcb_get_window_attributes_reply_t> get_window_attributes_reply(xcb_get_window_attributes_cookie_t cookie, xcb_generic_error_t ** err = nullptr) {
+        return reply<xcb_get_window_attributes_reply_t>{xcb_get_window_attributes_reply(connection, cookie, err)};
+    }
+    reply<xcb_get_geometry_reply_t> get_geometry_reply(xcb_get_geometry_cookie_t cookie, xcb_generic_error_t ** err = nullptr) {
+        return reply<xcb_get_geometry_reply_t>{xcb_get_geometry_reply(connection, cookie, err)};
+    }
+
+    reply<xcb_get_property_reply_t> get_property_reply(xcb_get_property_cookie_t cookie, xcb_generic_error_t ** err = nullptr) {
+        return reply<xcb_get_property_reply_t>{xcb_get_property_reply(connection, cookie, err)};
+    }
+
+    std::optional<std::span<uint8_t, std::dynamic_extent>> get_property_value(const reply<xcb_get_property_reply_t>& reply) {
+        if(size_t len = xcb_get_property_value_length(reply.get())) {
+            return std::span{(uint8_t*)xcb_get_property_value(reply.get()), len};
+        }
+        return {};
+    }
+    template<typename T>
+    std::optional<T> get_property_value(const reply<xcb_get_property_reply_t>& reply) {
+        if(size_t len = xcb_get_property_value_length(reply.get())) {
+            if(len > sizeof(T)) {
+                std::cerr << "wrong property length requested" << std::endl;
+                return {};
+            }
+            T ret;
+            memcpy(&ret, xcb_get_property_value(reply.get()), len);
+            return ret;
+        }
+        return {};
+    }
 //private:
     xcb_connection_t * connection = nullptr;
 
