@@ -56,6 +56,7 @@
 #include <xcb/xcb_atom.h>
 #include <xcb/xcb_aux.h>
 #include <xcb/xcb_event.h>
+#include <xcb/xcb_icccm.h>
 #include <xcb/xinerama.h>
 #include <xcb/xproto.h>
 #include <xcb/xtest.h>
@@ -187,15 +188,13 @@ restore_client_order(xcb_get_property_cookie_t prop_cookie)
 {
     int client_idx = 0;
     xcb_window_t *windows;
-    xcb_get_property_reply_t *reply;
 
-    reply = xcb_get_property_reply(getGlobals().connection, prop_cookie, NULL);
+    auto reply = getConnection().get_property_reply(prop_cookie);
     if (!reply || reply->format != 32 || reply->value_len == 0) {
-        p_delete(&reply);
         return;
     }
 
-    windows = (xcb_window_t*)xcb_get_property_value(reply);
+    windows = (xcb_window_t*)xcb_get_property_value(reply.get());
     for (uint32_t i = 0; i < reply->value_len; i++)
         /* Find windows[i] and swap it to where it belongs */
         foreach(c, getGlobals().clients)
@@ -208,71 +207,60 @@ restore_client_order(xcb_get_property_cookie_t prop_cookie)
             }
 
     luaA_class_emit_signal(globalconf_get_lua_State(), &client_class, "list", 0);
-    p_delete(&reply);
 }
-
 /** Scan X to find windows to manage.
  */
 static void
 scan(xcb_query_tree_cookie_t tree_c)
 {
-    xcb_get_window_attributes_reply_t *attr_r;
-    xcb_get_geometry_reply_t *geom_r;
-    xcb_get_property_cookie_t prop_cookie;
+    auto & conn = getConnection();
+    auto tree_r = conn.query_tree_reply(tree_c);
 
-    auto tree_r = getConnection().query_tree_reply(tree_c);
-
-    if(!tree_r)
+    if(!tree_r) {
         return;
+    }
 
     /* This gets the property and deletes it */
-    prop_cookie = xcb_get_property_unchecked(getGlobals().connection, true,
+    auto prop_cookie = conn.get_property_unchecked(true,
                           getGlobals().screen->root, AWESOME_CLIENT_ORDER,
                           XCB_ATOM_WINDOW, 0, UINT_MAX);
-    auto wins = getConnection().query_tree_children(tree_r);
+    auto wins = conn.query_tree_children(tree_r);
     /* Get the tree of the children windows of the current root window */
     if(!wins) {
         fatal("cannot get tree children");
     }
 
-
-    auto a_view = wins.value() | std::ranges::views::transform(
-            [](const auto& v) {
-            return std::make_tuple(
+    std::vector winparams = wins.value() | std::ranges::views::transform(
+            [&conn](const auto& v) {
+                return std::tuple {
                     v,
-                    xcb_get_window_attributes_unchecked(getGlobals().connection, v),
+                    conn.get_window_attributes_unckecked(v),
                     xwindow_get_state_unchecked(v),
-                    xcb_get_geometry_unchecked(getGlobals().connection, v));
-            });
+                    conn.get_geometry_unchecked(v)
+                };
+            }) | range::to<std::vector>{};
 
-    std::vector<
-        std::tuple<
-            xcb_window_t,
-            xcb_get_window_attributes_cookie_t,
-            xcb_get_property_cookie_t,
-            xcb_get_geometry_cookie_t
-            >
-    > cookies(a_view.begin(), a_view.end());
+    auto clients_to_manage = winparams | std::ranges::views::transform(
+            [&conn](const auto& v) {
+                auto & [win, attr_c, state_c, geo_c] = v;
+                return std::tuple {
+                    win,
+                    conn.get_window_attributes_reply(attr_c),
+                    conn.get_geometry_reply(geo_c),
+                    xwindow_get_state_reply(state_c),
+                };
+            }) | std::ranges::views::filter(
+                [](const auto & v) {
+                    auto & [win, attr_r, geom_r, state] = v;
+                    return geom_r && attr_r &&
+                        !attr_r->override_redirect &&
+                        attr_r->map_state != XCB_MAP_STATE_UNMAPPED &&
+                        state != XCB_ICCCM_WM_STATE_WITHDRAWN;
+                }) ;
 
-    for(auto & [win, attr_c, state_c, geo_c] : cookies)
+    for(const auto & [win, attr_r, geom_r, state] : clients_to_manage)
     {
-        attr_r = xcb_get_window_attributes_reply(getGlobals().connection, attr_c, NULL);
-        geom_r = xcb_get_geometry_reply(getGlobals().connection, geo_c, NULL);
-        long state = xwindow_get_state_reply(state_c);
-
-        if(!geom_r || !attr_r || attr_r->override_redirect
-           || attr_r->map_state == XCB_MAP_STATE_UNMAPPED
-           || state == XCB_ICCCM_WM_STATE_WITHDRAWN)
-        {
-            p_delete(&attr_r);
-            p_delete(&geom_r);
-            continue;
-        }
-
-        client_manage(win, geom_r, attr_r);
-
-        p_delete(&attr_r);
-        p_delete(&geom_r);
+        client_manage(win, geom_r.get(), attr_r.get());
     }
 
     restore_client_order(prop_cookie);
