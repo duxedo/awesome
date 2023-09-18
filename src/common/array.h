@@ -33,6 +33,15 @@ const uint32_t* makeArray() {
     static uint32_t vals[] = {values...};
     return vals;
 }
+namespace range {
+template<template<typename...> class Container>
+struct to {
+    template<typename Range>
+    friend auto operator|(Range && range, to && to) {
+        return Container(range.begin(), range.end());
+    }
+};
+}
 /** Common array type */
 #define ARRAY_TYPE(type_t, pfx)                                             \
     typedef struct pfx##_array_t {                                          \
