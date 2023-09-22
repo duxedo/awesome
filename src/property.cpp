@@ -21,6 +21,7 @@
 
 #include "property.h"
 #include "common/atoms.h"
+#include "common/buffer.h"
 #include "common/xutil.h"
 #include "ewmh.h"
 #include "globalconf.h"

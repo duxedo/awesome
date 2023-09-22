@@ -39,7 +39,6 @@
 #include "objects/key.h"
 #include "common/xembed.h"
 #include "common/xcursor.h"
-#include "common/buffer.h"
 
 #define ROOT_WINDOW_EVENT_MASK \
     (const uint32_t []) { \
@@ -75,7 +74,7 @@ struct TagDeleter {
 };
 
 using tag_ptr = std::unique_ptr<tag_t, TagDeleter>;
-#define ZERO_ARRAY { nullptr, 0, 0}
+
 /** Main configuration structure */
 class Globals
 {
