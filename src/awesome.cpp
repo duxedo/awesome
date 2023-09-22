@@ -604,7 +604,7 @@ main(int argc, char **argv)
     {
         bool success = true;
         /* Get the first config that will be tried */
-        auto config = luaA_find_config(&xdg, opts.configPath, [](const std::filesystem::path&) { return true; });
+        auto config = Lua::find_config(&xdg, opts.configPath, [](const std::filesystem::path&) { return true; });
         if(!config) {
             fprintf(stderr, "Config not found");
             return 1;
@@ -833,7 +833,8 @@ main(int argc, char **argv)
     root_update_wallpaper();
 
     /* init lua */
-    luaA_init(&xdg, opts.searchPaths);
+    Lua::init(&xdg, opts.searchPaths);
+
     init_rng();
 
     ewmh_init_lua();
@@ -844,7 +845,7 @@ main(int argc, char **argv)
         /* Disable automatic screen creation, awful.screen has a fallback */
         getGlobals().ignore_screens = true;
 
-        if(!opts.configPath || !luaA_parserc(&xdg, opts.configPath->c_str()))
+        if(!opts.configPath || !Lua::parserc(&xdg, opts.configPath->c_str()))
             fatal("couldn't find any rc file");
     }
 
@@ -852,7 +853,7 @@ main(int argc, char **argv)
     screen_scan();
 
     /* Parse and run configuration file after adding the screens */
-    if (((!getGlobals().no_auto_screen) && !luaA_parserc(&xdg, opts.configPath)))
+    if (((!getGlobals().no_auto_screen) && !Lua::parserc(&xdg, opts.configPath)))
         fatal("couldn't find any rc file");
 
 
@@ -875,7 +876,7 @@ main(int argc, char **argv)
 
     client_emit_scanned();
 
-    luaA_emit_startup();
+    Lua::emit_startup();
 
     /* Setup the main context */
     g_main_context_set_poll_func(g_main_context_default(), &a_glib_poll);

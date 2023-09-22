@@ -781,7 +781,7 @@ drawin_class_setup(lua_State *L)
                      (lua_class_allocator_t) drawin_allocator,
                      (lua_class_collector_t) drawin_wipe,
                      NULL,
-                     luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
                      drawin_methods, drawin_meta);
     drawin_class.add_property("drawable",
                             NULL,

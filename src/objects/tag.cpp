@@ -622,7 +622,7 @@ tag_class_setup(lua_State *L)
                      (lua_class_allocator_t) tag_new,
                      (lua_class_collector_t) tag_wipe,
                      NULL,
-                     luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
                      tag_methods, tag_meta);
     tag_class.add_property("name",
                             (lua_class_propfunc_t) luaA_tag_set_name,

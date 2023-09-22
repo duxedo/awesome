@@ -278,7 +278,7 @@ selection_getter_class_setup(lua_State *L)
     luaA_class_setup(L, &selection_getter_class, "selection_getter", NULL,
             (lua_class_allocator_t) selection_getter_new,
             (lua_class_collector_t) selection_getter_wipe, NULL,
-            luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+            Lua::class_index_miss_property, Lua::class_newindex_miss_property,
             selection_getter_methods, selection_getter_metha);
 }
 

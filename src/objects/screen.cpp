@@ -1571,7 +1571,7 @@ luaA_screen_module_newindex(lua_State *L)
             );
     }
 
-    return luaA_default_newindex(L);
+    return Lua::default_newindex(L);
 }
 
 /** Iterate over screens.
@@ -1890,7 +1890,7 @@ screen_class_setup(lua_State *L)
                      (lua_class_allocator_t) screen_new,
                      (lua_class_collector_t) screen_wipe,
                      (lua_class_checker_t) screen_checker,
-                     luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
                      screen_methods, screen_meta);
     screen_class.add_property("geometry",
                             NULL,

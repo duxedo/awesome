@@ -132,7 +132,7 @@ xembed_property_update(xcb_connection_t *connection, window &emwin,
             xembed_window_deactivate(connection, emwin.win, timestamp);
             xembed_focus_out(connection, emwin.win, timestamp);
         }
-        luaA_systray_invalidate();
+        Lua::systray_invalidate();
     }
 }
 }
