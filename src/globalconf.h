@@ -21,6 +21,7 @@
 #pragma once
 
 #include <cstdlib>
+#include <xcb/xproto.h>
 #define SN_API_NOT_YET_FROZEN
 #include <libsn/sn.h>
 
@@ -65,7 +66,6 @@ struct sequence_pair_t {
 };
 
 ARRAY_TYPE(tag_t *, tag)
-DO_ARRAY(xcb_window_t, window, DO_NOTHING)
 #define ZERO_ARRAY { nullptr, 0, 0}
 /** Main configuration structure */
 class Globals
@@ -236,7 +236,7 @@ class Globals
     std::vector<sequence_pair_t> ignore_enter_leave_events;
     xcb_void_cookie_t pending_enter_leave_begin = { 0 };
     /** List of windows to be destroyed later */
-    window_array_t destroy_later_windows = ZERO_ARRAY;
+    std::vector<xcb_window_t> destroy_later_windows;
     /** Pending event that still needs to be handled */
     xcb_generic_event_t *pending_event = nullptr;
     /** The exit code that main() will return with */
