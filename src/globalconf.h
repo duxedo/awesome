@@ -67,7 +67,6 @@ typedef struct sequence_pair sequence_pair_t;
 
 ARRAY_TYPE(tag_t *, tag)
 ARRAY_TYPE(screen_t *, screen)
-ARRAY_TYPE(client_t *, client)
 ARRAY_TYPE(drawin_t *, drawin)
 DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
@@ -132,11 +131,20 @@ class Globals
     uint8_t event_base_randr = 0;
     uint8_t event_base_xfixes = 0;
     /** Clients list */
-    client_array_t clients = ZERO_ARRAY;
+    std::vector<client_t*> clients;
     /** Embedded windows */
+    private:
+        std::vector<client_t*> stack = {};
+    public:
+        const std::vector<client_t*>& getStack() {
+            return stack;
+        }
+        std::vector<client_t*>& refStack() {
+            return stack;
+        }
+
     std::vector<XEmbed::window> embedded;
     /** Stack client history */
-    client_array_t stack = ZERO_ARRAY;
     /** Lua VM state (opaque to avoid mis-use, see globalconf_get_lua_State()) */
     struct {
         lua_State *real_L_dont_use_directly = nullptr;

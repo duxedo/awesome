@@ -1036,10 +1036,11 @@ screen_removed(lua_State *L, int sidx)
     if (getGlobals().primary_screen == screen)
         getGlobals().primary_screen = NULL;
 
-    foreach(c, getGlobals().clients) {
-        if((*c)->screen == screen)
-            screen_client_moveto(*c, screen_getbycoord(
-                        (*c)->geometry.x, (*c)->geometry.y), false);
+    for(auto *c: getGlobals().clients) {
+        if(c->screen == screen) {
+            screen_client_moveto(c, screen_getbycoord(
+                        c->geometry.x, c->geometry.y), false);
+        }
     }
 }
 
@@ -1322,11 +1323,13 @@ void screen_update_workarea(screen_t *screen)
         } \
     }
 
-    foreach(c, getGlobals().clients)
-        if((*c)->screen == screen && client_isvisible(*c))
-            COMPUTE_STRUT(*c)
+    for(auto *c: getGlobals().clients) {
+        if(c->screen == screen && client_isvisible(c)) {
+            COMPUTE_STRUT(c)
+        }
+    }
 
-    foreach(drawin, getGlobals().drawins)
+    foreach(drawin, getGlobals().drawins) {
         if((*drawin)->visible)
         {
             screen_t *d_screen =
@@ -1334,6 +1337,7 @@ void screen_update_workarea(screen_t *screen)
             if (d_screen == screen)
                 COMPUTE_STRUT(*drawin)
         }
+    }
 
 #undef COMPUTE_STRUT
 
@@ -1718,9 +1722,9 @@ luaA_screen_fake_add(lua_State *L)
     luaA_class_emit_signal(L, &screen_class, "list", 0);
     luaA_object_push(L, s);
 
-    foreach(c, getGlobals().clients) {
-        screen_client_moveto(*c, screen_getbycoord(
-                    (*c)->geometry.x, (*c)->geometry.y), false);
+    for(auto *c: getGlobals().clients) {
+        screen_client_moveto(c, screen_getbycoord(
+                    (c)->geometry.x, (c)->geometry.y), false);
     }
 
     return 1;

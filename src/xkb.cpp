@@ -297,9 +297,8 @@ xkb_reload_keymap(void)
     xwindow_grabkeys(s->root, getGlobals().keys);
 
     /* Regrab key bindings on clients */
-    foreach(_c, getGlobals().clients)
+    for(auto *c: getGlobals().clients)
     {
-        client_t *c = *_c;
         xwindow_grabkeys(c->window, c->keys);
         if (c->nofocus_window) {
             xwindow_grabkeys(c->nofocus_window, c->keys);
