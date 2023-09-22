@@ -215,7 +215,7 @@ int
 luaA_key_array_get(lua_State *L, int oidx, const std::vector<keyb_t*>& keys)
 {
     lua_createtable(L, keys.size(), 0);
-    for(int i = 0; i < keys.size(); i++)
+    for(size_t i = 0; i < keys.size(); i++)
     {
         luaA_object_push_item(L, oidx, keys[i]);
         lua_rawseti(L, -2, i + 1);

@@ -2031,19 +2031,19 @@ void
 client_destroy_later(void)
 {
     bool ignored_enterleave = false;
-    foreach(window, getGlobals().destroy_later_windows)
+    for(auto window: getGlobals().destroy_later_windows)
     {
         if (!ignored_enterleave) {
             client_ignore_enterleave_events();
             ignored_enterleave = true;
         }
-        xcb_destroy_window(getGlobals().connection, *window);
+        xcb_destroy_window(getGlobals().connection, window);
     }
     if (ignored_enterleave)
         client_restore_enterleave_events();
 
     /* Everything's done, clear the list */
-    getGlobals().destroy_later_windows.len = 0;
+    getGlobals().destroy_later_windows.clear();
 }
 
 static void
@@ -2986,9 +2986,9 @@ client_unmanage(client_t *c, client_unmanage_t reason)
     }
 
     if (c->nofocus_window != XCB_NONE) {
-        window_array_append(&getGlobals().destroy_later_windows, c->nofocus_window);
+        getGlobals().destroy_later_windows.push_back(c->nofocus_window);
     }
-    window_array_append(&getGlobals().destroy_later_windows, c->frame_window);
+    getGlobals().destroy_later_windows.push_back(c->frame_window);
 
     if(reason != CLIENT_UNMANAGE_DESTROYED) {
         /* Remove this window from the save set since this shouldn't be made visible
