@@ -43,7 +43,7 @@ struct tag
     /** true if selected */
     bool selected;
     /** clients in this tag */
-    client_array_t clients;
+    std::vector<client_t*> clients;
 };
 
 extern lua_class_t tag_class;

@@ -311,7 +311,7 @@ tag_unref_simplified(tag_t **tag)
 static void
 tag_wipe(tag_t *tag)
 {
-    client_array_wipe(&tag->clients);
+    tag->clients.clear();
     p_delete(&(tag->name));
 }
 
@@ -371,7 +371,7 @@ tag_client(lua_State *L, client_t *c)
         return;
     }
 
-    client_array_append(&t->clients, c);
+    t->clients.push_back(c);
     ewmh_client_update_desktop(c);
     banning_need_update();
     screen_update_workarea(c->screen);
@@ -386,11 +386,10 @@ tag_client(lua_State *L, client_t *c)
 void
 untag_client(client_t *c, tag_t *t)
 {
-    for(int i = 0; i < t->clients.len; i++)
-        if(t->clients.tab[i] == c)
-        {
+    for(size_t i = 0; i < t->clients.size(); i++) {
+        if(t->clients[i] == c) {
             lua_State *L = globalconf_get_lua_State();
-            client_array_take(&t->clients, i);
+            t->clients.erase(t->clients.begin() + i);
             banning_need_update();
             ewmh_client_update_desktop(c);
             screen_update_workarea(c->screen);
@@ -398,6 +397,7 @@ untag_client(client_t *c, tag_t *t)
             luaA_object_unref(L, t);
             return;
         }
+    }
 }
 
 /** Check if a client is tagged with the specified tag.
@@ -408,9 +408,11 @@ untag_client(client_t *c, tag_t *t)
 bool
 is_client_tagged(client_t *c, tag_t *t)
 {
-    for(int i = 0; i < t->clients.len; i++)
-        if(t->clients.tab[i] == c)
+    for(size_t i = 0; i < t->clients.size(); i++) {
+        if(t->clients[i] == c) {
             return true;
+        }
+    }
 
     return false;
 }
@@ -464,15 +466,15 @@ static int
 luaA_tag_clients(lua_State *L)
 {
     tag_t *tag = (tag_t *)luaA_checkudata(L, 1, &tag_class);
-    client_array_t *clients = &tag->clients;
-    int i;
+    auto & clients = tag->clients;
+    size_t i;
 
     if(lua_gettop(L) == 2)
     {
         luaA_checktable(L, 2);
-        for(int j = 0; j < clients->len; j++)
+        for(size_t j = 0; j < clients.size(); j++)
         {
-            client_t *c = clients->tab[j];
+            client_t *c = clients[j];
 
             /* Only untag if we aren't going to add this tag again */
             bool found = false;
@@ -506,10 +508,10 @@ luaA_tag_clients(lua_State *L)
         }
     }
 
-    lua_createtable(L, clients->len, 0);
-    for(i = 0; i < clients->len; i++)
+    lua_createtable(L, clients.size(), 0);
+    for(i = 0; i < clients.size(); i++)
     {
-        luaA_object_push(L, clients->tab[i]);
+        luaA_object_push(L, clients[i]);
         lua_rawseti(L, -2, i + 1);
     }
 

@@ -91,11 +91,12 @@ ewmh_update_net_active_window(lua_State *L)
 static int
 ewmh_update_net_client_list(lua_State *L)
 {
-    xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().clients.len);
+    xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().clients.size());
 
     int n = 0;
-    foreach(client, getGlobals().clients)
-        wins[n++] = (*client)->window;
+    for(auto *client: getGlobals().clients) {
+        wins[n++] = (client)->window;
+    }
 
     getConnection().replace_property(getGlobals().screen->root, _NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
 
@@ -257,13 +258,13 @@ void
 ewmh_update_net_client_list_stacking(void)
 {
     size_t n = 0;
-    xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().stack.len);
+    std::vector<xcb_window_t> wins(getGlobals().getStack().size());
 
-    foreach(client, getGlobals().stack) {
-        wins[n++] = (*client)->window;
+    for(auto *client: getGlobals().getStack()) {
+        wins[n++] = (client)->window;
     }
 
-    getConnection().replace_property(getGlobals().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins, n});
+    getConnection().replace_property(getGlobals().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins});
 }
 
 void

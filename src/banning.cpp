@@ -33,12 +33,11 @@ banning_need_update(void)
     getGlobals().need_lazy_banning = true;
 
     /* But if a client will be banned in our next update we unfocus it now. */
-    foreach(_c, getGlobals().clients)
+    for(auto * c: getGlobals().clients)
     {
-        client_t *c = *_c;
-
-        if(!client_isvisible(c))
+        if(!client_isvisible(c)) {
             client_ban_unfocus(c);
+        }
     }
 }
 
@@ -52,15 +51,19 @@ banning_refresh(void)
 
     getGlobals().need_lazy_banning = false;
 
-    foreach(c, getGlobals().clients)
-        if(client_isvisible(*c))
-            client_unban(*c);
+    for(auto * c: getGlobals().clients) {
+        if(client_isvisible(c)) {
+            client_unban(c);
+        }
+    }
 
     /* Some people disliked the short flicker of background, so we first unban everything.
      * Afterwards we ban everything we don't want. This should avoid that. */
-    foreach(c, getGlobals().clients)
-        if(!client_isvisible(*c))
-            client_ban(*c);
+    for(auto *c: getGlobals().clients) {
+        if(!client_isvisible(c)) {
+            client_ban(c);
+        }
+    }
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

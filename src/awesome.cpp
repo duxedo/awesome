@@ -135,18 +135,19 @@ extern "C" void awesome_atexit(bool restart)
     signal_object_emit(L, &global_signals, "exit", 1);
 
     /* Move clients where we want them to be and keep the stacking order intact */
-    foreach(c, getGlobals().stack)
+    for(auto *c: getGlobals().getStack())
     {
-        area_t geometry = client_get_undecorated_geometry(*c);
+        area_t geometry = client_get_undecorated_geometry(c);
         getConnection().reparent_window(
-                (*c)->window, getGlobals().screen->root, geometry.x, geometry.y);
+                c->window, getGlobals().screen->root, geometry.x, geometry.y);
     }
 
     /* Save the client order.  This is useful also for "hard" restarts. */
-    xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().clients.len);
+    xcb_window_t *wins = p_alloca(xcb_window_t, getGlobals().clients.size());
     size_t n = 0;
-    foreach(client, getGlobals().clients)
-        wins[n++] = (*client)->window;
+    for(auto *client: getGlobals().clients) {
+        wins[n++] = client->window;
+    }
 
     getConnection().replace_property(getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, n});
 
@@ -195,16 +196,18 @@ restore_client_order(xcb_get_property_cookie_t prop_cookie)
     }
 
     windows = (xcb_window_t*)xcb_get_property_value(reply.get());
-    for (uint32_t i = 0; i < reply->value_len; i++)
-        /* Find windows[i] and swap it to where it belongs */
-        foreach(c, getGlobals().clients)
-            if ((*c)->window == windows[i])
+    for (uint32_t i = 0; i < reply->value_len; i++) {
+      //   Find windows[i] and swap it to where it belongs
+        for(auto *&c: getGlobals().clients) {
+            if (c->window == windows[i])
             {
-                client_t *tmp = *c;
-                *c = getGlobals().clients.tab[client_idx];
-                getGlobals().clients.tab[client_idx] = tmp;
+                client_t *tmp = c;
+                c = getGlobals().clients[client_idx];
+                getGlobals().clients[client_idx] = tmp;
                 client_idx++;
             }
+        }
+    }
 
     luaA_class_emit_signal(globalconf_get_lua_State(), &client_class, "list", 0);
 }
