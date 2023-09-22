@@ -178,11 +178,12 @@ stack_refresh()
     }
 
     /* first stack not ontop drawin window */
-    foreach(drawin, getGlobals().drawins)
-        if(!(*drawin)->ontop) {
-            stack_window_above((*drawin)->window, next);
-            next = (*drawin)->window;
+    for(auto drawin: getGlobals().drawins) {
+        if(!drawin->ontop) {
+            stack_window_above(drawin->window, next);
+            next = drawin->window;
         }
+    }
 
     /* then stack clients */
     for(int layer = WINDOW_LAYER_BELOW; layer < WINDOW_LAYER_COUNT; layer++) {
@@ -194,11 +195,11 @@ stack_refresh()
     }
 
     /* then stack ontop drawin window */
-    foreach(drawin, getGlobals().drawins) {
-        if((*drawin)->ontop)
+    for(auto *drawin: getGlobals().drawins) {
+        if(drawin->ontop)
         {
-            stack_window_above((*drawin)->window, next);
-            next = (*drawin)->window;
+            stack_window_above(drawin->window, next);
+            next = drawin->window;
         }
     }
 

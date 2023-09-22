@@ -44,8 +44,6 @@ struct drawin_t
     bool geometry_dirty;
 };
 
-ARRAY_FUNCS(drawin_t *, drawin, DO_NOTHING)
-
 drawin_t * drawin_getbywin(xcb_window_t);
 void drawin_refresh_pixmap_partial(drawin_t *, int16_t, int16_t, uint16_t, uint16_t);
 void luaA_drawin_systray_kickout(lua_State *);
