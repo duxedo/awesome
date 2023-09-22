@@ -185,22 +185,24 @@ luaA_key_new(lua_State *L)
  * \param keys The array key to fill.
  */
 void
-luaA_key_array_set(lua_State *L, int oidx, int idx, key_array_t *keys)
+luaA_key_array_set(lua_State *L, int oidx, int idx, std::vector<keyb_t*> *keys)
 {
     luaA_checktable(L, idx);
 
-    foreach(key, *keys)
-        luaA_object_unref_item(L, oidx, *key);
+    for(auto *key: *keys) {
+        luaA_object_unref_item(L, oidx, key);
+    }
 
-    key_array_wipe(keys);
-    key_array_init(keys);
+    keys->clear();
 
     lua_pushnil(L);
-    while(lua_next(L, idx))
-        if(luaA_toudata(L, -1, &key_class))
-            key_array_append(keys, reinterpret_cast<keyb_t*>(luaA_object_ref_item(L, oidx, -1)));
-        else
+    while(lua_next(L, idx)) {
+        if(luaA_toudata(L, -1, &key_class)) {
+            keys->push_back(reinterpret_cast<keyb_t*>(luaA_object_ref_item(L, oidx, -1)));
+         } else {
             lua_pop(L, 1);
+         }
+    }
 }
 
 /** Push an array of key as an Lua table onto the stack.
@@ -210,12 +212,12 @@ luaA_key_array_set(lua_State *L, int oidx, int idx, key_array_t *keys)
  * \return The number of elements pushed on stack.
  */
 int
-luaA_key_array_get(lua_State *L, int oidx, key_array_t *keys)
+luaA_key_array_get(lua_State *L, int oidx, const std::vector<keyb_t*>& keys)
 {
-    lua_createtable(L, keys->len, 0);
-    for(int i = 0; i < keys->len; i++)
+    lua_createtable(L, keys.size(), 0);
+    for(int i = 0; i < keys.size(); i++)
     {
-        luaA_object_push_item(L, oidx, keys->tab[i]);
+        luaA_object_push_item(L, oidx, keys[i]);
         lua_rawseti(L, -2, i + 1);
     }
     return 1;
