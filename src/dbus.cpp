@@ -769,16 +769,16 @@ luaA_dbus_remove_match(lua_State *L)
 static int
 luaA_dbus_connect_signal(lua_State *L)
 {
-    const char *name = luaL_checkstring(L, 1);
+    const auto name = Lua::checkstring(L, 1);
     luaA_checkfunction(L, 2);
     auto signalIt = dbus_signals.find(name);
     if(signalIt != dbus_signals.end()) {
-        luaA_warn(L, "cannot add signal %s on D-Bus, already existing", name);
+        luaA_warn(L, "cannot add signal %s on D-Bus, already existing", name.data());
         lua_pushnil(L);
-        lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name);
+        lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name.data());
         return 2;
     } else {
-        signal_connect(&dbus_signals, name, luaA_object_ref(L, 2));
+        dbus_signals.connect(name, luaA_object_ref(L, 2));
         lua_pushboolean(L, 1);
         return 1;
     }
@@ -796,7 +796,7 @@ luaA_dbus_disconnect_signal(lua_State *L)
     const char *name = luaL_checkstring(L, 1);
     luaA_checkfunction(L, 2);
     const void *func = lua_topointer(L, 2);
-    if (signal_disconnect(&dbus_signals, name, func))
+    if (dbus_signals.disconnect(name, func))
         luaA_object_unref(L, func);
     return 0;
 }
