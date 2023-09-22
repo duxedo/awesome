@@ -29,6 +29,7 @@
 
 #include "common/array.h"
 #include "common/util.h"
+#include <memory>
 
 /* Forward definition */
 typedef struct _GdkPixbuf GdkPixbuf;
@@ -50,12 +51,13 @@ struct area_t
 #define AREA_EQUAL(a, b) ((a).x == (b).x && (a).y == (b).y && \
         (a).width == (b).width && (a).height == (b).height)
 
-static inline void
-cairo_surface_array_destroy_surface(cairo_surface_t **s)
-{
-    cairo_surface_destroy(*s);
-}
-DO_ARRAY(cairo_surface_t *, cairo_surface, cairo_surface_array_destroy_surface)
+struct CairoDeleter {
+    void operator()(cairo_surface_t * ptr) const {
+        cairo_surface_destroy(ptr);
+    }
+};
+
+using cairo_surface_handle = std::unique_ptr<cairo_surface_t, CairoDeleter>;
 
 cairo_surface_t *draw_surface_from_data(int width, int height, uint32_t *data);
 cairo_surface_t *draw_dup_image_surface(cairo_surface_t *surface);

@@ -168,7 +168,7 @@ struct client_t
     /** Key bindings */
     std::vector<keyb_t*> keys;
     /** Icons */
-    cairo_surface_array_t icons;
+    std::vector<cairo_surface_handle> icons;
     /** True if we ever got an icon from _NET_WM_ICON */
     bool have_ewmh_icon;
     /** Size hints */
@@ -238,7 +238,7 @@ void client_set_name(lua_State *L, int, char *);
 void client_set_startup_id(lua_State *L, int, char *);
 void client_set_alt_name(lua_State *L, int, char *);
 void client_set_group_window(lua_State *, int, xcb_window_t);
-void client_set_icons(client_t *, cairo_surface_array_t);
+void client_set_icons(client_t *, std::vector<cairo_surface_handle>);
 void client_set_icon_from_pixmaps(client_t *, xcb_pixmap_t, xcb_pixmap_t);
 void client_set_skip_taskbar(lua_State *, int, bool);
 void client_set_motif_wm_hints(lua_State *, int, motif_wm_hints_t);
