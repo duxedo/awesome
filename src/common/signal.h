@@ -18,12 +18,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#pragma once
 
-#ifndef AWESOME_COMMON_SIGNAL
-#define AWESOME_COMMON_SIGNAL
-
+#include <string_view>
 #include <vector>
-#include <compare>
 #include <unordered_map>
 #include <string>
 #include <algorithm>
@@ -32,31 +30,60 @@ struct signal_t
 {
     std::vector<const void*> functions;
 };
+struct SignalHash {
+    using is_transparent = void;
+    size_t operator()(const std::string& s) const {
+        return std::hash<std::string_view>{}(s);
+    }
+    size_t operator()(const std::string_view& s) const {
+        return std::hash<std::string_view>{}(s);
+    }
+    size_t operator()(const char* s) const {
+        return std::hash<std::string_view>{}(s);
+    }
+};
 
-using Signals = std::unordered_map<std::string, signal_t> ;
+struct SignalEq {
+    using is_transparent = void;
+    size_t operator()(const std::string& s, const std::string& r) const {
+        return s == r;
+    }
+    size_t operator()(const std::string_view& s, const std::string& r) const {
+        return s == r;
+    }
+    size_t operator()(const char* s, const std::string& r) const {
+        return r == s;
+    }
+};
+
+struct Signals : public std::unordered_map<std::string, signal_t, SignalHash, SignalEq> {
 /** Connect a signal inside a signal array.
  * You are in charge of reference counting.
  * \param arr The signal array.
  * \param name The signal name.
  * \param ref The reference to add.
  */
-static inline void
-signal_connect(Signals *arr, const char *name, const void *ref)
-{
-    auto [it, inserted] = arr->try_emplace(name, signal_t{});
-    it->second.functions.push_back(ref);
-}
-
+    void connect(const std::string_view& name, const void* ref) {
+        auto it = this->find(name);
+        if(it == this->end()) {
+            std::string nm(name.begin(), name.end());
+            auto [it, done] = this->try_emplace(nm, signal_t{});
+            it->second.functions.push_back(ref);
+            return;
+        }
+        it->second.functions.push_back(ref);
+    }
 /** Disconnect a signal inside a signal array.
  * You are in charge of reference counting.
  * \param arr The signal array.
  * \param name The signal name.
  * \param ref The reference to remove.
  */
-static inline bool
-signal_disconnect(Signals *arr, const char *name, const void *ref)
-{
-    if(auto it = arr->find(name); it != arr->end()) {
+    bool disconnect(const std::string_view& name, const void* ref) {
+        auto it = this->find(name);
+        if(it == this->end()) {
+            return false;
+        }
         auto funIt = std::remove(it->second.functions.begin(), it->second.functions.end(), ref);
         if(funIt == it->second.functions.end()) {
             return false;
@@ -64,8 +91,5 @@ signal_disconnect(Signals *arr, const char *name, const void *ref)
         it->second.functions.erase(funIt);
         return true;
     }
-    return false;
-}
-
-#endif
+};
 

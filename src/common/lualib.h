@@ -23,7 +23,18 @@
 
 #include "common/luahdr.h"
 #include "common/util.h"
+#include "lauxlib.h"
+#include "lua.h"
+#include <string_view>
+#include <optional>
 
+namespace Lua {
+inline std::string_view checkstring(lua_State * L, int numArg) {
+    size_t length(0);
+    const char * str = luaL_checklstring(L, numArg, &length);
+    return {str, length};
+}
+}
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;
 
