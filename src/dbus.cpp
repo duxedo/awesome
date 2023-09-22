@@ -865,8 +865,8 @@ const struct luaL_Reg awesome_dbus_lib[] =
     { "connect_signal", luaA_dbus_connect_signal },
     { "disconnect_signal", luaA_dbus_disconnect_signal },
     { "emit_signal", luaA_dbus_emit_signal },
-    { "__index", luaA_default_index },
-    { "__newindex", luaA_default_newindex },
+    { "__index", Lua::default_index },
+    { "__newindex", Lua::default_newindex },
     { NULL, NULL }
 };
 

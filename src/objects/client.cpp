@@ -4491,7 +4491,7 @@ client_class_setup(lua_State *L)
                      (lua_class_allocator_t) client_new,
                      (lua_class_collector_t) client_wipe,
                      (lua_class_checker_t) client_checker,
-                     luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
                      client_methods, client_meta);
     luaA_class_set_tostring(&client_class, (lua_class_propfunc_t) client_tostring);
     client_class.add_property("name",

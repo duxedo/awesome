@@ -625,7 +625,7 @@ luaA_root_index(lua_State *L)
     if (miss_index_handler != LUA_REFNIL)
         return luaA_call_handler(L, miss_index_handler);
 
-    return luaA_default_index(L);
+    return Lua::default_index(L);
 }
 
 /** Newindex for root.
@@ -639,7 +639,7 @@ luaA_root_newindex(lua_State *L)
     if (miss_newindex_handler != LUA_REFNIL)
         return luaA_call_handler(L, miss_newindex_handler);
 
-    return luaA_default_newindex(L);
+    return Lua::default_newindex(L);
 }
 [[gnu::used]] const struct luaL_Reg awesome_root_methods[] =
 {

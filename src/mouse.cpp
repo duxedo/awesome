@@ -170,7 +170,7 @@ luaA_mouse_index(lua_State *L)
             return luaA_call_handler(L, miss_index_handler);
         }
         else
-            return luaA_default_index(L);
+            return Lua::default_index(L);
     }
 
     if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, NULL))
@@ -205,7 +205,7 @@ luaA_mouse_newindex(lua_State *L)
             return luaA_call_handler(L, miss_newindex_handler);
         }
         else
-            return luaA_default_newindex(L);
+            return Lua::default_newindex(L);
     }
 
     screen = luaA_checkscreen(L, 3);

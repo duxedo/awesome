@@ -365,7 +365,7 @@ selection_transfer_class_setup(lua_State *L)
     luaA_class_setup(L, &selection_transfer_class, "selection_transfer", NULL,
             (lua_class_allocator_t) selection_transfer_new, NULL,
             (lua_class_checker_t) selection_transfer_checker,
-            luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+            Lua::class_index_miss_property, Lua::class_newindex_miss_property,
             selection_transfer_methods, selection_transfer_meta);
 }
 
