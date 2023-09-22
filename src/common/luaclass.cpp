@@ -381,10 +381,7 @@ luaA_class_index(lua_State *L)
     if (A_STREQ(attr, "valid"))
     {
         void *p = luaA_toudata(L, 1, cls);
-        if (cls->checker)
-            lua_pushboolean(L, p != NULL && cls->checker(reinterpret_cast<lua_object_t*>(p)));
-        else
-            lua_pushboolean(L, p != NULL);
+        lua_pushboolean(L, p && (!cls->checker || cls->checker(reinterpret_cast<lua_object_t*>(p))));
         return 1;
     }
 
