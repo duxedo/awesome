@@ -479,7 +479,7 @@ luaA_root_drawins(lua_State *L)
 {
     lua_createtable(L, getGlobals().drawins.size(), 0);
 
-    for(int i = 0; i < getGlobals().drawins.size(); i++)
+    for(size_t i = 0; i < getGlobals().drawins.size(); i++)
     {
         luaA_object_push(L, getGlobals().drawins[i]);
         lua_rawseti(L, -2, i + 1);

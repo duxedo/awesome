@@ -66,7 +66,6 @@ struct sequence_pair {
 typedef struct sequence_pair sequence_pair_t;
 
 ARRAY_TYPE(tag_t *, tag)
-ARRAY_TYPE(screen_t *, screen)
 DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
 #define ZERO_ARRAY { nullptr, 0, 0}
@@ -90,7 +89,7 @@ class Globals
     /** Keys symbol table */
     xcb_key_symbols_t *keysyms = nullptr;
     /** Logical screens */
-    screen_array_t screens = ZERO_ARRAY;
+    std::vector<screen_t*> screens;
     /** The primary screen, access through screen_get_primary() */
     screen_t *primary_screen = nullptr;
     /** Root window key bindings */
