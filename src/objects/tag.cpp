@@ -331,8 +331,9 @@ tag_view(lua_State *L, int udx, bool view)
     {
         tag->selected = view;
         banning_need_update();
-        foreach(screen, getGlobals().screens)
-            screen_update_workarea(*screen);
+        for(auto *screen: getGlobals().screens) {
+            screen_update_workarea(screen);
+        }
 
         luaA_object_emit_signal(L, udx, "property::selected", 0);
     }
