@@ -1079,22 +1079,22 @@ should_ignore(xcb_generic_event_t *event)
 
     /* Remove completed sequences */
     uint32_t sequence = event->full_sequence;
-    while (getGlobals().ignore_enter_leave_events.len > 0) {
-        uint32_t end = getGlobals().ignore_enter_leave_events.tab[0].end.sequence;
+    while (getGlobals().ignore_enter_leave_events.size() > 0) {
+        uint32_t end = getGlobals().ignore_enter_leave_events[0].end.sequence;
         /* Do if (end >= sequence) break;, but handle wrap-around: The above is
          * equivalent to end-sequence > 0 (assuming unlimited precision). With
          * int32_t, this would mean that the sign bit is cleared, which means:
          */
         if (end - sequence < UINT32_MAX / 2)
             break;
-        sequence_pair_array_take(&getGlobals().ignore_enter_leave_events, 0);
+        getGlobals().ignore_enter_leave_events.erase(getGlobals().ignore_enter_leave_events.begin());
     }
 
     /* Check if this event should be ignored */
     if ((response_type == XCB_ENTER_NOTIFY || response_type == XCB_LEAVE_NOTIFY)
-            && getGlobals().ignore_enter_leave_events.len > 0) {
-        uint32_t begin = getGlobals().ignore_enter_leave_events.tab[0].begin.sequence;
-        uint32_t end   = getGlobals().ignore_enter_leave_events.tab[0].end.sequence;
+            && getGlobals().ignore_enter_leave_events.size() > 0) {
+        uint32_t begin = getGlobals().ignore_enter_leave_events[0].begin.sequence;
+        uint32_t end   = getGlobals().ignore_enter_leave_events[0].end.sequence;
         if (sequence >= begin && sequence <= end)
             return true;
     }
