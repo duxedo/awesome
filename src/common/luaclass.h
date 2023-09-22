@@ -125,10 +125,10 @@ struct lua_class_t
 const char * luaA_typename(lua_State *, int);
 lua_class_t * luaA_class_get(lua_State *, int);
 
-void luaA_class_connect_signal(lua_State *, lua_class_t *, const char *, lua_CFunction);
-void luaA_class_connect_signal_from_stack(lua_State *, lua_class_t *, const char *, int);
-void luaA_class_disconnect_signal_from_stack(lua_State *, lua_class_t *, const char *, int);
-void luaA_class_emit_signal(lua_State *, lua_class_t *, const char *, int);
+void luaA_class_connect_signal(lua_State *, lua_class_t *, const std::string_view&, lua_CFunction);
+void luaA_class_connect_signal_from_stack(lua_State *, lua_class_t *, const std::string_view&, int);
+void luaA_class_disconnect_signal_from_stack(lua_State *, lua_class_t *, const std::string_view&, int);
+void luaA_class_emit_signal(lua_State *, lua_class_t *, const std::string_view&, int);
 
 void luaA_openlib(lua_State *, const char *, const struct luaL_Reg[], const struct luaL_Reg[]);
 void luaA_class_setup(lua_State *, lua_class_t *, const char *, lua_class_t *,
@@ -163,7 +163,7 @@ luaA_checkudataornil(lua_State *L, int udx, lua_class_t *cls)
     luaA_##prefix##_class_connect_signal(lua_State *L)                         \
     {                                                                          \
         luaA_class_connect_signal_from_stack(L, &(lua_class),                  \
-                                             luaL_checkstring(L, 1), 2);       \
+                                             Lua::checkstring(L, 1), 2);       \
         return 0;                                                              \
     }                                                                          \
                                                                                \
@@ -171,14 +171,14 @@ luaA_checkudataornil(lua_State *L, int udx, lua_class_t *cls)
     luaA_##prefix##_class_disconnect_signal(lua_State *L)                      \
     {                                                                          \
         luaA_class_disconnect_signal_from_stack(L, &(lua_class),               \
-                                                luaL_checkstring(L, 1), 2);    \
+                                                Lua::checkstring(L, 1), 2);    \
         return 0;                                                              \
     }                                                                          \
                                                                                \
     static inline int                                                          \
     luaA_##prefix##_class_emit_signal(lua_State *L)                            \
     {                                                                          \
-        luaA_class_emit_signal(L, &(lua_class), luaL_checkstring(L, 1),        \
+        luaA_class_emit_signal(L, &(lua_class), Lua::checkstring(L, 1),        \
                                lua_gettop(L) - 1);                             \
         return 0;                                                              \
     }                                                                          \
