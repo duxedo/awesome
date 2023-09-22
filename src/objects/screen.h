@@ -54,7 +54,6 @@ struct a_screen
     /** Some XID identifying this screen */
     uint32_t xid;
 };
-ARRAY_FUNCS(screen_t *, screen, DO_NOTHING)
 
 void screen_class_setup(lua_State *L);
 void screen_scan(void);
