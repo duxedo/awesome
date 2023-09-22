@@ -36,6 +36,7 @@
 #include <stdarg.h>
 #include <assert.h>
 #include <stdio.h>
+#include <cstdint>
 
 /** \brief replace \c NULL strings with empty strings */
 #define NONULL(x)       (x ? x : "")
@@ -46,6 +47,22 @@
 #undef MIN
 #define MAX(a,b) ((a) < (b) ? (b) : (a))
 #define MIN(a,b) ((a) < (b) ? (a) : (b))
+
+
+template<uint32_t ... values>
+const uint32_t* makeArray() {
+    static uint32_t vals[] = {values...};
+    return vals;
+}
+namespace range {
+template<template<typename...> class Container>
+struct to {
+    template<typename Range>
+    friend auto operator|(Range && range, to && to) {
+        return Container(range.begin(), range.end());
+    }
+};
+}
 
 #define unsigned_subtract(a, b)  \
     do {                         \

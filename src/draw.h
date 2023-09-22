@@ -27,7 +27,6 @@
 #include "common/luahdr.h"
 #include <glib.h> /* for GError */
 
-#include "common/array.h"
 #include "common/util.h"
 #include <memory>
 

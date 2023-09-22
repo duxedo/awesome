@@ -20,7 +20,6 @@
  */
 
 #include "objects/selection_getter.h"
-#include "common/array.h"
 #include "common/luaobject.h"
 #include "common/atoms.h"
 #include "globalconf.h"
