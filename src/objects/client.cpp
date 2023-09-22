@@ -1539,7 +1539,7 @@ static void client_set_maximized_common(lua_State *L, int cidx, bool s, const ch
 static void
 client_wipe(client_t *c)
 {
-    key_array_wipe(&c->keys);
+    c->keys.clear();
     xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
     cairo_surface_array_wipe(&c->icons);
     p_delete(&c->machine);
@@ -1900,7 +1900,7 @@ client_get_nofocus_window(client_t *c)
                           -2, -2, 1, 1, 0, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
                           0, NULL);
         xcb_map_window(getGlobals().connection, c->nofocus_window);
-        xwindow_grabkeys(c->nofocus_window, &c->keys);
+        xwindow_grabkeys(c->nofocus_window, c->keys);
     }
     return c->nofocus_window;
 }
@@ -4331,15 +4331,15 @@ static int
 luaA_client_keys(lua_State *L)
 {
     auto c = (client_t *) luaA_checkudata(L, 1, &client_class);
-    key_array_t *keys = &c->keys;
+    auto& keys = c->keys;
 
     if(lua_gettop(L) == 2)
     {
-        luaA_key_array_set(L, 1, 2, keys);
+        luaA_key_array_set(L, 1, 2, &keys);
         luaA_object_emit_signal(L, 1, "property::keys", 0);
         xwindow_grabkeys(c->window, keys);
         if (c->nofocus_window)
-            xwindow_grabkeys(c->nofocus_window, &c->keys);
+            xwindow_grabkeys(c->nofocus_window, c->keys);
     }
 
     return luaA_key_array_get(L, 1, keys);

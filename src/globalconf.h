@@ -65,7 +65,6 @@ struct sequence_pair {
 };
 typedef struct sequence_pair sequence_pair_t;
 
-ARRAY_TYPE(button_t *, button)
 ARRAY_TYPE(tag_t *, tag)
 ARRAY_TYPE(screen_t *, screen)
 ARRAY_TYPE(client_t *, client)
@@ -97,9 +96,9 @@ class Globals
     /** The primary screen, access through screen_get_primary() */
     screen_t *primary_screen = nullptr;
     /** Root window key bindings */
-    key_array_t keys = ZERO_ARRAY;
+    std::vector<keyb_t*> keys;
     /** Root window mouse bindings */
-    button_array_t buttons = ZERO_ARRAY;
+    std::vector<button_t*> buttons;
     /** Atom for WM_Sn */
     xcb_atom_t selection_atom = 0;
     /** Window owning the WM_Sn selection */

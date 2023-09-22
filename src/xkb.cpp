@@ -294,15 +294,16 @@ xkb_reload_keymap(void)
 
     /* Regrab key bindings on the root window */
     xcb_screen_t *s = getGlobals().screen;
-    xwindow_grabkeys(s->root, &getGlobals().keys);
+    xwindow_grabkeys(s->root, getGlobals().keys);
 
     /* Regrab key bindings on clients */
     foreach(_c, getGlobals().clients)
     {
         client_t *c = *_c;
-        xwindow_grabkeys(c->window, &c->keys);
-        if (c->nofocus_window)
-            xwindow_grabkeys(c->nofocus_window, &c->keys);
+        xwindow_grabkeys(c->window, c->keys);
+        if (c->nofocus_window) {
+            xwindow_grabkeys(c->nofocus_window, c->keys);
+        }
     }
 }
 

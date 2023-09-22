@@ -362,26 +362,27 @@ luaA_root_keys(lua_State *L)
     {
         luaA_checktable(L, 1);
 
-        foreach(key, getGlobals().keys)
-            luaA_object_unref(L, *key);
+        for(auto *key: getGlobals().keys) {
+            luaA_object_unref(L, key);
+        }
 
-        key_array_wipe(&getGlobals().keys);
-        key_array_init(&getGlobals().keys);
+        getGlobals().keys.clear();
 
         lua_pushnil(L);
-        while(lua_next(L, 1))
-            key_array_append(&getGlobals().keys, (keyb_t*)luaA_object_ref_class(L, -1, &key_class));
+        while(lua_next(L, 1)) {
+            getGlobals().keys.push_back((keyb_t*)luaA_object_ref_class(L, -1, &key_class));
+        }
 
         xcb_screen_t *s = getGlobals().screen;
-        xwindow_grabkeys(s->root, &getGlobals().keys);
+        xwindow_grabkeys(s->root, getGlobals().keys);
 
         return 1;
     }
 
-    lua_createtable(L, getGlobals().keys.len, 0);
-    for(int i = 0; i < getGlobals().keys.len; i++)
+    lua_createtable(L, getGlobals().keys.size(), 0);
+    for(size_t i = 0; i < getGlobals().keys.size(); i++)
     {
-        luaA_object_push(L, getGlobals().keys.tab[i]);
+        luaA_object_push(L, getGlobals().keys[i]);
         lua_rawseti(L, -2, i + 1);
     }
 
@@ -408,27 +409,29 @@ luaA_root_keys(lua_State *L)
 static int
 luaA_root_buttons(lua_State *L)
 {
+    auto& buttons = getGlobals().buttons;
     if(lua_gettop(L) == 1)
     {
         luaA_checktable(L, 1);
 
-        foreach(button, getGlobals().buttons)
-            luaA_object_unref(L, *button);
+        for(auto * button: buttons) {
+            luaA_object_unref(L, button);
+        }
 
-        button_array_wipe(&getGlobals().buttons);
-        button_array_init(&getGlobals().buttons);
+        buttons.clear();
 
         lua_pushnil(L);
-        while(lua_next(L, 1))
-            button_array_append(&getGlobals().buttons, (button_t*)luaA_object_ref(L, -1));
+        while(lua_next(L, 1)) {
+            buttons.push_back((button_t*)luaA_object_ref(L, -1));
+        }
 
         return 1;
     }
 
-    lua_createtable(L, getGlobals().buttons.len, 0);
-    for(int i = 0; i < getGlobals().buttons.len; i++)
+    lua_createtable(L, buttons.size(), 0);
+    for(size_t i = 0; i < buttons.size(); i++)
     {
-        luaA_object_push(L, getGlobals().buttons.tab[i]);
+        luaA_object_push(L, buttons[i]);
         lua_rawseti(L, -2, i + 1);
     }
 

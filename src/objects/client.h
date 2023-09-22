@@ -22,6 +22,7 @@
 #ifndef AWESOME_OBJECTS_CLIENT_H
 #define AWESOME_OBJECTS_CLIENT_H
 
+#include "objects/key.h"
 #include "stack.h"
 #include "objects/window.h"
 
@@ -165,7 +166,7 @@ struct client_t
     /** Client's WM_PROTOCOLS property */
     xcb_icccm_get_wm_protocols_reply_t protocols;
     /** Key bindings */
-    key_array_t keys;
+    std::vector<keyb_t*> keys;
     /** Icons */
     cairo_surface_array_t icons;
     /** True if we ever got an icon from _NET_WM_ICON */

@@ -44,6 +44,7 @@
 #include <bits/ranges_util.h>
 #include <map>
 #include <set>
+#include <vector>
 #include <xcb/xcb.h>
 #include <xcb/randr.h>
 #include <xcb/shape.h>
@@ -65,7 +66,7 @@
 #define DO_EVENT_HOOK_CALLBACK(type, xcbtype, xcbeventprefix, arraytype, match) \
     static void \
     event_##xcbtype##_callback(xcb_##xcbtype##_press_event_t *ev, \
-                               arraytype *arr, \
+                               const arraytype& arr, \
                                lua_State *L, \
                                int oud, \
                                int nargs, \
@@ -73,13 +74,13 @@
     { \
         int abs_oud = oud < 0 ? ((lua_gettop(L) + 1) + oud) : oud; \
         int item_matching = 0; \
-        foreach(item, *arr) \
-            if(match(ev, *item, data)) \
+        for(auto * item: arr) \
+            if(match(ev, item, data)) \
             { \
                 if(oud) \
-                    luaA_object_push_item(L, abs_oud, *item); \
+                    luaA_object_push_item(L, abs_oud, item); \
                 else \
-                    luaA_object_push(L, *item); \
+                    luaA_object_push(L, item); \
                 item_matching++; \
             } \
         for(; item_matching > 0; item_matching--) \
@@ -119,8 +120,8 @@ event_button_match(xcb_button_press_event_t *ev, button_t *b, void *data)
             && (b->modifiers == XCB_BUTTON_MASK_ANY || b->modifiers == ev->state));
 }
 
-DO_EVENT_HOOK_CALLBACK(button_t, button, XCB_BUTTON, button_array_t, event_button_match)
-DO_EVENT_HOOK_CALLBACK(keyb_t, key, XCB_KEY, key_array_t, event_key_match)
+DO_EVENT_HOOK_CALLBACK(button_t, button, XCB_BUTTON, std::vector<button_t*>, event_button_match)
+DO_EVENT_HOOK_CALLBACK(keyb_t, key, XCB_KEY, std::vector<keyb_t*>, event_key_match)
 
 /** Handle an event with mouse grabber if needed
  * \param x The x coordinate.
@@ -229,7 +230,7 @@ event_handle_button(xcb_button_press_event_t *ev)
         event_emit_button(L, ev);
         lua_pop(L, 1);
         /* check if any button object matches */
-        event_button_callback(ev, &drawin->buttons, L, -1, 1, NULL);
+        event_button_callback(ev, drawin->buttons, L, -1, 1, NULL);
         /* Either we are receiving this due to ButtonPress/Release on the root
          * window or because we grabbed the button on the window. In the later
          * case we have to call AllowEvents.
@@ -277,18 +278,17 @@ event_handle_button(xcb_button_press_event_t *ev)
                 }
             }
             /* then check if any button objects match */
-            event_button_callback(ev, &c->buttons, L, -1, 1, NULL);
+            event_button_callback(ev, c->buttons, L, -1, 1, NULL);
         }
         xcb_allow_events(getGlobals().connection,
                          XCB_ALLOW_REPLAY_POINTER,
                          ev->time);
     }
-    else if(ev->child == XCB_NONE)
-        if(getGlobals().screen->root == ev->event)
-        {
-            event_button_callback(ev, &getGlobals().buttons, L, 0, 0, NULL);
-            return;
-        }
+    else if(ev->child == XCB_NONE && getGlobals().screen->root == ev->event)
+    {
+        event_button_callback(ev, getGlobals().buttons, L, 0, 0, NULL);
+        return;
+    }
 }
 
 static void
@@ -793,10 +793,10 @@ event_handle_key(xcb_key_press_event_t *ev)
         if((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event)))
         {
             luaA_object_push(L, c);
-            event_key_callback(ev, &c->keys, L, -1, 1, &keysym);
+            event_key_callback(ev, c->keys, L, -1, 1, &keysym);
         }
         else
-            event_key_callback(ev, &getGlobals().keys, L, 0, 0, &keysym);
+            event_key_callback(ev, getGlobals().keys, L, 0, 0, &keysym);
     }
 }
 

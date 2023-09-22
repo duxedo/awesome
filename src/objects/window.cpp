@@ -76,7 +76,7 @@ window_get(window_t *window)
 static void
 window_wipe(window_t *window)
 {
-    button_array_wipe(&window->buttons);
+    window->buttons.clear();
 }
 
 /** Get or set mouse buttons bindings on a window.
@@ -92,10 +92,10 @@ luaA_window_buttons(lua_State *L)
     {
         luaA_button_array_set(L, 1, 2, &window->buttons);
         luaA_object_emit_signal(L, 1, "property::buttons", 0);
-        xwindow_buttons_grab(window->window, &window->buttons);
+        xwindow_buttons_grab(window->window, window->buttons);
     }
 
-    return luaA_button_array_get(L, 1, &window->buttons);
+    return luaA_button_array_get(L, 1, window->buttons);
 }
 
 /** Return window struts (reserved space at the edge of the screen).
