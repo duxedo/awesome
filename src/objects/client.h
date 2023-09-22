@@ -198,8 +198,6 @@ struct client_t
     motif_wm_hints_t motif_wm_hints;
 };
 
-ARRAY_FUNCS(client_t *, client, DO_NOTHING)
-
 /** Client class */
 extern lua_class_t client_class;
 

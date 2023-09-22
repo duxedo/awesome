@@ -103,6 +103,8 @@
 
 #include "math.h"
 
+#include <algorithm>
+#include <ranges>
 #include <cstdint>
 #include <xcb/xcb_atom.h>
 #include <xcb/shape.h>
@@ -1642,7 +1644,7 @@ client_set_motif_wm_hints(lua_State *L, int cidx, motif_wm_hints_t hints)
 void
 client_find_transient_for(client_t *c)
 {
-    int counter;
+    size_t counter;
     client_t *tc, *tmp;
     lua_State *L = globalconf_get_lua_State();
 
@@ -1650,15 +1652,16 @@ client_find_transient_for(client_t *c)
     tmp = tc = client_getbywin(c->transient_for_window);
 
     /* Verify that there are no loops in the transient_for relation after we are done */
-    for(counter = 0; tmp != NULL && counter <= getGlobals().stack.len; counter++)
+    for(counter = 0; tmp != NULL && counter <= getGlobals().getStack().size(); counter++)
     {
-        if (tmp == c)
+        if (tmp == c) {
             /* We arrived back at the client we started from, so there is a loop */
-            counter = getGlobals().stack.len+1;
+            counter = getGlobals().getStack().size()+1;
+        }
         tmp = tmp->transient_for;
     }
 
-    if (counter > getGlobals().stack.len)
+    if (counter > getGlobals().getStack().size())
     {
         /* There was a loop, so unset .transient_for */
         tc = NULL;
@@ -1697,7 +1700,11 @@ client_on_selected_tags(client_t *c)
 
     return false;
 }
-
+template<typename Predicate>
+static client_t* find_client(const std::vector<client_t*> &clients, Predicate && pred) {
+    auto it = std::ranges::find_if(clients, pred);
+    return it != clients.end() ? *it : nullptr;
+}
 /** Get a client by its window.
  * \param w The client window to find.
  * \return A client pointer if found, NULL otherwise.
@@ -1705,21 +1712,13 @@ client_on_selected_tags(client_t *c)
 client_t *
 client_getbywin(xcb_window_t w)
 {
-    foreach(c, getGlobals().clients)
-        if((*c)->window == w)
-            return *c;
-
-    return NULL;
+    return find_client(getGlobals().clients, [w](auto c) { return c->window == w; });
 }
 
 client_t *
 client_getbynofocuswin(xcb_window_t w)
 {
-    foreach(c, getGlobals().clients)
-        if((*c)->nofocus_window == w)
-            return *c;
-
-    return NULL;
+    return find_client(getGlobals().clients, [w](auto c) { return c->nofocus_window == w; });
 }
 
 /** Get a client by its frame window.
@@ -1729,11 +1728,7 @@ client_getbynofocuswin(xcb_window_t w)
 client_t *
 client_getbyframewin(xcb_window_t w)
 {
-    foreach(c, getGlobals().clients)
-        if((*c)->frame_window == w)
-            return *c;
-
-    return NULL;
+    return find_client(getGlobals().clients, [w](auto c) { return c->frame_window == w; });
 }
 
 /** Unfocus a client (internal).
@@ -1884,11 +1879,13 @@ void
 client_focus(client_t *c)
 {
     /* We have to set focus on first client */
-    if(!c && getGlobals().clients.len && !(c = getGlobals().clients.tab[0]))
+    if(!c && getGlobals().clients.size() && !(c = getGlobals().clients[0])) {
         return;
+    }
 
-    if(client_focus_update(c))
+    if(client_focus_update(c)) {
         getGlobals().focus.need_update = true;
+    }
 }
 
 static xcb_window_t
@@ -1943,18 +1940,17 @@ client_focus_refresh(void)
 static void
 client_border_refresh(void)
 {
-    foreach(c, getGlobals().clients)
-        window_border_refresh((window_t *) *c);
+    for(auto *c: getGlobals().clients) {
+        window_border_refresh((window_t *)c);
+    }
 }
 
 static void
 client_geometry_refresh(void)
 {
     bool ignored_enterleave = false;
-    foreach(_c, getGlobals().clients)
+    for(auto *c: getGlobals().clients)
     {
-        client_t *c = *_c;
-
         /* Compute the client window's and frame window's geometry */
         area_t geometry = c->geometry;
         area_t real_geometry = c->geometry;
@@ -2192,7 +2188,7 @@ client_manage(xcb_window_t w, xcb_get_geometry_reply_t *wgeom, xcb_get_window_at
 
     /* Duplicate client and push it in client list */
     lua_pushvalue(L, -1);
-    client_array_push(&getGlobals().clients, (client_t*)luaA_object_ref(L, -1));
+    getGlobals().clients.insert(getGlobals().clients.begin(), (client_t*)luaA_object_ref(L, -1));
 
     /* Set the right screen */
     screen_client_moveto(c, screen_getbycoord(wgeom->x, wgeom->y), false);
@@ -2223,9 +2219,11 @@ client_manage(xcb_window_t w, xcb_get_geometry_reply_t *wgeom, xcb_get_window_at
     client_update_properties(L, -1, c);
 
     /* check if this is a TRANSIENT_FOR of another client */
-    foreach(oc, getGlobals().clients)
-        if ((*oc)->transient_for_window == w)
-            client_find_transient_for(*oc);
+    for(auto *oc: getGlobals().clients) {
+        if (oc->transient_for_window == w) {
+            client_find_transient_for(oc);
+        }
+    }
 
     /* Put the window in normal state. */
     xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_NORMAL);
@@ -2899,26 +2897,24 @@ client_unmanage(client_t *c, client_unmanage_t reason)
     lua_State *L = globalconf_get_lua_State();
 
     /* Reset transient_for attributes of windows that might be referring to us */
-    foreach(_tc, getGlobals().clients)
+    for(auto *tc: getGlobals().clients)
     {
-        client_t *tc = *_tc;
-        if(tc->transient_for == c)
+        if(tc->transient_for == c) {
             tc->transient_for = NULL;
+        }
     }
 
     if(getGlobals().focus.client == c)
         client_unfocus(c);
 
     /* remove client from global list and everywhere else */
-    foreach(elem, getGlobals().clients)
-        if(*elem == c)
-        {
-            client_array_remove(&getGlobals().clients, elem);
-            break;
-        }
+    if(auto it = std::ranges::find(getGlobals().clients, c); it != getGlobals().clients.end()) {
+        getGlobals().clients.erase(it);
+    }
     stack_client_remove(c);
-    for(int i = 0; i < getGlobals().tags.len; i++)
+    for(int i = 0; i < getGlobals().tags.len; i++) {
         untag_client(c, getGlobals().tags.tab[i]);
+    }
 
     luaA_object_push(L, c);
 
@@ -3068,21 +3064,23 @@ luaA_client_get(lua_State *L)
     lua_newtable(L);
     if(stacked)
     {
-        foreach_reverse(c, getGlobals().stack)
-            if(screen == NULL || (*c)->screen == screen)
+        for(auto * c : getGlobals().getStack() | std::views::reverse) {
+            if(screen == NULL || c->screen == screen)
             {
-                luaA_object_push(L, *c);
+                luaA_object_push(L, c);
                 lua_rawseti(L, -2, i++);
             }
+        }
     }
     else
     {
-        foreach(c, getGlobals().clients)
-            if(screen == NULL || (*c)->screen == screen)
+        for(auto * c: getGlobals().clients) {
+            if(screen == NULL || c->screen == screen)
             {
-                luaA_object_push(L, *c);
+                luaA_object_push(L, c);
                 lua_rawseti(L, -2, i++);
             }
+        }
     }
 
     return 1;
@@ -3247,12 +3245,12 @@ luaA_client_swap(lua_State *L)
     if(c != swap)
     {
         client_t **ref_c = NULL, **ref_swap = NULL;
-        foreach(item, getGlobals().clients)
+        for(auto *& item: getGlobals().clients)
         {
-            if(*item == c)
-                ref_c = item;
-            else if(*item == swap)
-                ref_swap = item;
+            if(item == c)
+                ref_c = &item;
+            else if(item == swap)
+                ref_swap = &item;
             if(ref_c && ref_swap)
                 break;
         }
@@ -3371,8 +3369,8 @@ luaA_client_raise(lua_State *L)
 
     /* Avoid sending the signal if nothing was done */
     if (c->transient_for == NULL &&
-        getGlobals().stack.len &&
-        getGlobals().stack.tab[getGlobals().stack.len-1] == c
+        getGlobals().getStack().size() &&
+        getGlobals().getStack().back() == c
     )
         return 0;
 
@@ -3397,7 +3395,7 @@ luaA_client_lower(lua_State *L)
     auto c = (client_t *) luaA_checkudata(L, 1, &client_class);
 
     /* Avoid sending the signal if nothing was done */
-    if (getGlobals().stack.len && getGlobals().stack.tab[0] == c)
+    if (getGlobals().getStack().size() && getGlobals().getStack().front() == c)
         return 0;
 
     stack_client_push(c);
