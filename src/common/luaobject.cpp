@@ -205,7 +205,7 @@ luaA_object_connect_signal_from_stack(lua_State *L, int oud,
 {
     luaA_checkfunction(L, ud);
     lua_object_t *obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
-    signal_connect(&obj->signals, name, luaA_object_ref_item(L, oud, ud));
+    obj->signals.connect(name, luaA_object_ref_item(L, oud, ud));
 }
 
 /** Remove a signal to an object.
@@ -221,7 +221,7 @@ luaA_object_disconnect_signal_from_stack(lua_State *L, int oud,
     luaA_checkfunction(L, ud);
     lua_object_t *obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     void *ref = (void *) lua_topointer(L, ud);
-    if (signal_disconnect(&obj->signals, name, ref))
+    if (obj->signals.disconnect(name, ref))
         luaA_object_unref_item(L, oud, ref);
     lua_remove(L, ud);
 }
