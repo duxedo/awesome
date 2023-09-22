@@ -1329,13 +1329,14 @@ void screen_update_workarea(screen_t *screen)
         }
     }
 
-    foreach(drawin, getGlobals().drawins) {
-        if((*drawin)->visible)
+    for(auto *drawin: getGlobals().drawins) {
+        if(drawin->visible)
         {
             screen_t *d_screen =
-                screen_getbycoord((*drawin)->geometry.x, (*drawin)->geometry.y);
-            if (d_screen == screen)
-                COMPUTE_STRUT(*drawin)
+                screen_getbycoord(drawin->geometry.x, drawin->geometry.y);
+            if (d_screen == screen) {
+                COMPUTE_STRUT(drawin)
+            }
         }
     }
 
