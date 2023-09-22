@@ -52,12 +52,12 @@
       | XCB_EVENT_MASK_PROPERTY_CHANGE \
     }
 
-typedef struct drawable_t drawable_t;
+struct drawable_t;
 typedef struct a_screen_area screen_area_t;
-typedef struct drawin_t drawin_t;
+struct drawin_t;
 typedef struct a_screen screen_t;
-typedef struct button_t button_t;
-typedef struct client_t client_t;
+struct button_t;
+struct client_t;
 typedef struct tag tag_t;
 typedef struct xproperty xproperty_t;
 struct sequence_pair_t {
@@ -65,7 +65,15 @@ struct sequence_pair_t {
     xcb_void_cookie_t end;
 };
 
-ARRAY_TYPE(tag_t *, tag)
+void tag_unref_simplified(tag_t *);
+
+struct TagDeleter {
+    void operator()(tag_t* tag) {
+        tag_unref_simplified(tag);
+    }
+};
+
+using tag_ptr = std::unique_ptr<tag_t, TagDeleter>;
 #define ZERO_ARRAY { nullptr, 0, 0}
 /** Main configuration structure */
 class Globals
@@ -213,7 +221,7 @@ class Globals
     /** Do we have to reban clients? */
     bool need_lazy_banning = false;
     /** Tag list */
-    tag_array_t tags = ZERO_ARRAY;
+    std::vector<tag_ptr> tags;
     /** List of registered xproperties */
     std::set<xproperty> xproperties;
     /* xkb context */
