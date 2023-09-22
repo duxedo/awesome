@@ -183,7 +183,7 @@ int luaA_object_emit_signal_simple(lua_State *);
 
 #define OBJECT_EXPORT_PROPERTY(pfx, type, field) \
     fieldtypeof(type, field) \
-    pfx##_get_##field(type *object) \
+    pfx##_get_##field(const type *object) \
     { \
         return object->field; \
     }

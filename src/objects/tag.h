@@ -19,18 +19,18 @@
  *
  */
 
-#ifndef AWESOME_OBJECTS_TAG_H
-#define AWESOME_OBJECTS_TAG_H
+#pragma once
 
 #include "client.h"
+#include <algorithm>
+#include <memory>
 
 int tags_get_current_or_first_selected_index(void);
 void tag_client(lua_State *, client_t *);
 void untag_client(client_t *, tag_t *);
 bool is_client_tagged(client_t *, tag_t *);
-void tag_unref_simplified(tag_t **);
+void tag_unref_simplified(tag_t *);
 
-ARRAY_FUNCS(tag_t *, tag, tag_unref_simplified)
 
 /** Tag type */
 struct tag
@@ -51,8 +51,6 @@ LUA_OBJECT_FUNCS(tag_class, tag_t, tag)
 
 void tag_class_setup(lua_State *);
 
-bool tag_get_selected(tag_t *);
-char *tag_get_name(tag_t *);
+bool tag_get_selected(const tag_t *);
+char *tag_get_name(const tag_t *);
 
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
