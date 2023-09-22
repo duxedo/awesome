@@ -22,7 +22,6 @@
 #include "awesome.h"
 
 #include "banning.h"
-#include "common/array.h"
 #include "common/atoms.h"
 #include "common/backtrace.h"
 #include "common/version.h"

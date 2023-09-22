@@ -87,7 +87,6 @@
  */
 
 #include "objects/client.h"
-#include "common/array.h"
 #include "common/atoms.h"
 #include "common/xutil.h"
 #include "draw.h"
