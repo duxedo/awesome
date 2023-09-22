@@ -101,7 +101,7 @@ xwindow_configure(xcb_window_t win, area_t geometry, int border)
  * \param buttons The buttons to grab.
  */
 void
-xwindow_buttons_grab(xcb_window_t win, button_array_t *buttons)
+xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& buttons)
 {
     if(win == XCB_NONE)
         return;
@@ -109,10 +109,11 @@ xwindow_buttons_grab(xcb_window_t win, button_array_t *buttons)
     /* Ungrab everything first */
     xcb_ungrab_button(getGlobals().connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
 
-    foreach(b, *buttons)
+    for(auto each: buttons) {
         xcb_grab_button(getGlobals().connection, false, win, BUTTONMASK,
                         XCB_GRAB_MODE_SYNC, XCB_GRAB_MODE_ASYNC, XCB_NONE, XCB_NONE,
-                        (*b)->button, (*b)->modifiers);
+                        each->button, each->modifiers);
+    }
 }
 
 /** Grab key on a window.
@@ -120,7 +121,7 @@ xwindow_buttons_grab(xcb_window_t win, button_array_t *buttons)
  * \param k The key.
  */
 static void
-xwindow_grabkey(xcb_window_t win, keyb_t *k)
+xwindow_grabkey(xcb_window_t win, const keyb_t *k)
 {
     if(k->keycode)
         xcb_grab_key(getGlobals().connection, true, win,
@@ -139,13 +140,14 @@ xwindow_grabkey(xcb_window_t win, keyb_t *k)
 }
 
 void
-xwindow_grabkeys(xcb_window_t win, key_array_t *keys)
+xwindow_grabkeys(xcb_window_t win, const std::vector<keyb_t*> &keys)
 {
     /* Ungrab everything first */
     xcb_ungrab_key(getGlobals().connection, XCB_GRAB_ANY, win, XCB_BUTTON_MASK_ANY);
 
-    foreach(k, *keys)
-        xwindow_grabkey(win, *k);
+    for(auto k: keys) {
+        xwindow_grabkey(win, k);
+    }
 }
 
 /** Send a request for a window's opacity.
