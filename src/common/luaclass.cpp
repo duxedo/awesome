@@ -259,7 +259,7 @@ luaA_class_setup(lua_State *L, lua_class_t *cls,
 }
 
 void
-luaA_class_connect_signal(lua_State *L, lua_class_t *lua_class, const char *name, lua_CFunction fn)
+luaA_class_connect_signal(lua_State *L, lua_class_t *lua_class, const std::string_view& name, lua_CFunction fn)
 {
     lua_pushcfunction(L, fn);
     luaA_class_connect_signal_from_stack(L, lua_class, name, -1);
@@ -267,17 +267,16 @@ luaA_class_connect_signal(lua_State *L, lua_class_t *lua_class, const char *name
 
 void
 luaA_class_connect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
-                                     const char *name, int ud)
+                                     const std::string_view& name, int ud)
 {
     luaA_checkfunction(L, ud);
 
     /* Duplicate the function in the stack */
     lua_pushvalue(L, ud);
 
-    char buf[a_strlen(name) + a_strlen(CONNECTED_SUFFIX) + 1];
-
+    std::string buf(name);
+    buf += CONNECTED_SUFFIX;
     /* Create a new signal to notify there is a global connection. */
-    sprintf(buf, "%s%s", name, CONNECTED_SUFFIX);
 
     /* Emit a signal to notify Lua of the global connection.
      *
@@ -293,7 +292,7 @@ luaA_class_connect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
 
 void
 luaA_class_disconnect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
-                                        const char *name, int ud)
+                                        const std::string_view& name, int ud)
 {
     luaA_checkfunction(L, ud);
     void *ref = (void *) lua_topointer(L, ud);
@@ -304,7 +303,7 @@ luaA_class_disconnect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
 
 void
 luaA_class_emit_signal(lua_State *L, lua_class_t *lua_class,
-                       const char *name, int nargs)
+                       const std::string_view& name, int nargs)
 {
     signal_object_emit(L, &lua_class->signals, name, nargs);
 }

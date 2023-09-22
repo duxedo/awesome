@@ -24,6 +24,7 @@
 
 #include "common/luaclass.h"
 #include "luaa.h"
+#include <string_view>
 
 #define LUAA_OBJECT_REGISTRY_KEY "awesome.object.registry"
 
@@ -149,7 +150,7 @@ luaA_object_push(lua_State *L, const void *pointer)
     return 1;
 }
 
-void signal_object_emit(lua_State *, Signals *, const char *, int);
+void signal_object_emit(lua_State *, Signals *, const std::string_view&, int);
 
 void luaA_object_connect_signal(lua_State *, int, const char *, lua_CFunction);
 void luaA_object_disconnect_signal(lua_State *, int, const char *, lua_CFunction);
