@@ -54,6 +54,7 @@
 #include <algorithm>
 #include <stdio.h>
 
+#include <string_view>
 #include <xcb/xcb.h>
 #include <xcb/xinerama.h>
 #include <xcb/randr.h>
@@ -258,27 +259,15 @@
  * @staticfct set_newindex_miss_handler
  */
 
-DO_ARRAY(xcb_randr_output_t, randr_output, DO_NOTHING);
-
 struct screen_output_t
 {
     /** The XRandR names of the output */
-    char *name;
+    std::string name;
     /** The size in millimeters */
     uint32_t mm_width, mm_height;
     /** The XID */
-    randr_output_array_t outputs;
+    std::vector<xcb_randr_output_t> outputs;
 };
-
-static void
-screen_output_wipe(screen_output_t *output)
-{
-    p_delete(&output->name);
-
-    randr_output_array_wipe(&output->outputs);
-}
-
-ARRAY_FUNCS(screen_output_t, screen_output, screen_output_wipe)
 
 static lua_class_t screen_class;
 LUA_OBJECT_FUNCS(screen_class, screen_t, screen)
@@ -378,7 +367,7 @@ typedef struct viewport_t
     int id;
     struct viewport_t *next;
     screen_t *screen;
-    screen_output_array_t outputs;
+    std::vector<screen_output_t> outputs;
 } viewport_t;
 
 static viewport_t *first_screen_viewport = NULL;
@@ -388,26 +377,26 @@ static int screen_area_gid = 1;
 static void
 luaA_viewport_get_outputs(lua_State *L, viewport_t *a)
 {
-    lua_createtable(L, 0, a ? a->outputs.len : 0);
+    lua_createtable(L, 0, a ? a->outputs.size() : 0);
 
     if (!a)
         return;
 
     int count = 1;
 
-    foreach(output, a->outputs) {
+    for(const auto& output: a->outputs) {
         lua_createtable(L, 3, 0);
 
         lua_pushstring(L, "mm_width");
-        lua_pushinteger(L, output->mm_width);
+        lua_pushinteger(L, output.mm_width);
         lua_settable(L, -3);
 
         lua_pushstring(L, "mm_height");
-        lua_pushinteger(L, output->mm_height);
+        lua_pushinteger(L, output.mm_height);
         lua_settable(L, -3);
 
         lua_pushstring(L, "name");
-        lua_pushstring(L, output->name);
+        lua_pushstring(L, output.name.c_str());
         lua_settable(L, -3);
 
         lua_pushstring(L, "viewport_id");
@@ -502,7 +491,7 @@ viewport_add(lua_State *L, int x, int y, int w, int h)
         }
     } while (a && (a = a->next));
 
-    auto node = (viewport_t *) malloc(sizeof(viewport_t));
+    auto node = new viewport_t;
     node->x      = x;
     node->y      = y;
     node->width  = w;
@@ -511,8 +500,6 @@ viewport_add(lua_State *L, int x, int y, int w, int h)
     node->next   = NULL;
     node->screen = NULL;
     node->marked = true;
-
-    screen_output_array_init(&node->outputs);
 
     if (!first_screen_viewport) {
         first_screen_viewport = node;
@@ -560,9 +547,8 @@ viewport_purge(void)
             (*it)->viewport = nullptr;
         }
 
-        screen_output_array_wipe(&cur->outputs);
-
-        free(cur);
+        cur->outputs.clear();
+        delete cur;
     }
 
     if (!first_screen_viewport) {
@@ -589,9 +575,9 @@ viewport_purge(void)
                 (*it)->viewport = nullptr;
             }
 
-            screen_output_array_wipe(&tmp->outputs);
+            tmp->outputs.clear();
 
-            free(tmp);
+            delete tmp;
         } else
             cur = cur->next;
 
@@ -646,12 +632,11 @@ screen_get_randr_output(lua_State *L, xcb_randr_monitor_info_iterator_t *it)
         output.name = a_strdup("unknown");
     }
 
-    randr_output_array_init(&output.outputs);
 
     randr_outputs = xcb_randr_monitor_info_outputs(it->data);
 
     for(int i = 0; i < xcb_randr_monitor_info_outputs_length(it->data); i++) {
-        randr_output_array_append(&output.outputs, randr_outputs[i]);
+        output.outputs.push_back(randr_outputs[i]);
     }
 
     return output;
@@ -683,7 +668,7 @@ screen_scan_randr_monitors(lua_State *L, std::vector<screen_t*> *screens)
             monitor_iter.data->height
         );
 
-        screen_output_array_append(&viewport->outputs, output);
+        viewport->outputs.push_back(output);
 
         if (getGlobals().ignore_screens)
             continue;
@@ -709,7 +694,7 @@ screen_scan_randr_monitors(lua_State *L, screen_array_t *screens)
 #endif
 
 static void
-screen_get_randr_crtcs_outputs(lua_State *L, xcb_randr_get_crtc_info_reply_t *crtc_info_r, screen_output_array_t *outputs)
+screen_get_randr_crtcs_outputs(lua_State *L, xcb_randr_get_crtc_info_reply_t *crtc_info_r, std::vector<screen_output_t> *outputs)
 {
     xcb_randr_output_t *randr_outputs = xcb_randr_get_crtc_info_outputs(crtc_info_r);
 
@@ -724,18 +709,13 @@ screen_get_randr_crtcs_outputs(lua_State *L, xcb_randr_get_crtc_info_reply_t *cr
             continue;
         }
 
-        int len = xcb_randr_get_output_info_name_length(output_info_r);
-        /* name is not NULL terminated */
-        char *name = (char*)memcpy(p_new(char *, len + 1), xcb_randr_get_output_info_name(output_info_r), len);
-        name[len] = '\0';
-
-        output.name = name;
-        output.mm_width = output_info_r->mm_width;
-        output.mm_height = output_info_r->mm_height;
-        randr_output_array_init(&output.outputs);
-        randr_output_array_append(&output.outputs, randr_outputs[j]);
-
-        screen_output_array_append(outputs, output);
+        outputs->emplace_back(
+                screen_output_t{
+                .name{(char*)xcb_randr_get_output_info_name(output_info_r), (size_t)xcb_randr_get_output_info_name_length(output_info_r)},
+                .mm_width = output_info_r->mm_width,
+                .mm_height = output_info_r->mm_height,
+                .outputs { randr_outputs[j] }
+                });
 
         p_delete(&output_info_r);
     }
@@ -800,8 +780,8 @@ screen_scan_randr_crtcs(lua_State *L, std::vector<screen_t*> *screens)
         new_screen->xid = randr_crtcs[i];
 
         /* Detect the older NVIDIA blobs */
-        foreach(output, new_screen->viewport->outputs) {
-            if (A_STREQ(output->name, "default")) {
+        for(auto& output: new_screen->viewport->outputs) {
+            if (output.name == "default") {
                 /* non RandR 1.2+ X driver don't return any usable multihead
                  * data. I'm looking at you, nvidia binary blob!
                  */
@@ -1078,21 +1058,21 @@ screen_modified(screen_t *existing_screen, screen_t *other_screen)
     }
 
     const int other_len = other_screen->viewport ?
-        other_screen->viewport->outputs.len : 0;
+        other_screen->viewport->outputs.size() : 0;
 
     const int existing_len = existing_screen->viewport ?
-        existing_screen->viewport->outputs.len : 0;
+        existing_screen->viewport->outputs.size() : 0;
 
     bool outputs_changed = (!(existing_screen->viewport && other_screen->viewport))
         || existing_len != other_len;
 
     if(existing_screen->viewport && other_screen->viewport && !outputs_changed)
-        for(int i = 0; i < existing_screen->viewport->outputs.len; i++) {
-            screen_output_t *existing_output = &existing_screen->viewport->outputs.tab[i];
-            screen_output_t *other_output = &other_screen->viewport->outputs.tab[i];
+        for(int i = 0; i < (int)existing_screen->viewport->outputs.size(); i++) {
+            screen_output_t *existing_output = &existing_screen->viewport->outputs[i];
+            screen_output_t *other_output = &other_screen->viewport->outputs[i];
             outputs_changed |= existing_output->mm_width != other_output->mm_width;
             outputs_changed |= existing_output->mm_height != other_output->mm_height;
-            outputs_changed |= A_STRNEQ(existing_output->name, other_output->name);
+            outputs_changed |= (existing_output->name != other_output->name);
         }
 
     /* Brute-force update the outputs by swapping */
@@ -1487,9 +1467,9 @@ screen_update_primary(void)
 
     for(auto *screen: getGlobals().screens) {
         if (screen->viewport) {
-            foreach(output, screen->viewport->outputs) {
-                foreach (randr_output, output->outputs) {
-                    if (*randr_output == primary->output) {
+            for(auto& output: screen->viewport->outputs) {
+                for(auto randr_output: output.outputs) {
+                    if (randr_output == primary->output) {
                         primary_screen = screen;
                     }
                 }
@@ -1556,8 +1536,8 @@ luaA_screen_module_index(lua_State *L)
             if (screen->name && A_STREQ(name, screen->name)) {
                 return luaA_object_push(L, screen);
             } else if (screen->viewport) {
-                foreach(output, screen->viewport->outputs) {
-                    if(A_STREQ(output->name, name)) {
+                for(auto& output: screen->viewport->outputs) {
+                    if(output.name == name) {
                         return luaA_object_push(L, screen);
                     }
                 }
