@@ -34,16 +34,21 @@ typedef struct keyb_t
     xcb_keysym_t keysym;
     /** Keycode */
     xcb_keycode_t keycode;
+
+    keyb_t() = default;
+    keyb_t(keyb_t&&) = default;
+    keyb_t& operator=(keyb_t&&) = default;
+    keyb_t(const keyb_t&) = delete;
+    keyb_t& operator=(const keyb_t&) = delete;
 } keyb_t;
 
 extern lua_class_t key_class;
 LUA_OBJECT_FUNCS(key_class, keyb_t, key)
-DO_ARRAY(keyb_t *, key, DO_NOTHING)
 
 void key_class_setup(lua_State *);
 
-void luaA_key_array_set(lua_State *, int, int, key_array_t *);
-int luaA_key_array_get(lua_State *, int, key_array_t *);
+void luaA_key_array_set(lua_State *, int, int, std::vector<keyb_t*> *);
+int luaA_key_array_get(lua_State *, int, const std::vector<keyb_t*>&);
 
 int luaA_pushmodifiers(lua_State *, uint16_t);
 uint16_t luaA_tomodifiers(lua_State *L, int ud);

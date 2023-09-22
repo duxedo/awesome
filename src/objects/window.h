@@ -62,7 +62,7 @@ typedef enum
     /** Strut */ \
     strut_t strut; \
     /** Button bindings */ \
-    button_array_t buttons; \
+    std::vector<button_t*> buttons; \
     /** Do we have pending border changes? */ \
     bool border_need_update; \
     /** Border color */ \

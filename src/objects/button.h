@@ -27,6 +27,7 @@
 #include "common/luaobject.h"
 
 #include <stdint.h>
+#include <vector>
 #include <xcb/xcb.h>
 
 /** Mouse buttons bindings */
@@ -37,14 +38,19 @@ struct button_t
     uint16_t modifiers;
     /** Mouse button number */
     xcb_button_t button;
+
+    button_t() = default;
+    button_t(button_t&&) = default;
+    button_t& operator=(button_t&&) = default;
+    button_t(const button_t&) = delete;
+    button_t& operator=(const button_t&) = delete;
 };
 
 extern lua_class_t button_class;
 LUA_OBJECT_FUNCS(button_class, button_t, button)
-ARRAY_FUNCS(button_t *, button, DO_NOTHING)
 
-int luaA_button_array_get(lua_State *, int, button_array_t *);
-void luaA_button_array_set(lua_State *, int, int, button_array_t *);
+int luaA_button_array_get(lua_State *, int, const std::vector<button_t*> &);
+void luaA_button_array_set(lua_State *, int, int, std::vector<button_t*> *);
 void button_class_setup(lua_State *);
 
 #endif
