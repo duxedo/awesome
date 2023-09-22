@@ -24,7 +24,6 @@
 
 #include "common/signal.h"
 #include "common/luahdr.h"
-#include "common/array.h"
 #include <cstddef>
 #include <string_view>
 #include <unordered_set>

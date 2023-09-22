@@ -18,7 +18,6 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-#include "common/array.h"
 #include "globalconf.h"
 #include <filesystem>
 #include <optional>
