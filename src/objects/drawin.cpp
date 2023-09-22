@@ -36,6 +36,7 @@
 #include "common/xutil.h"
 #include "event.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "objects/client.h"
 #include "objects/screen.h"
 #include "systray.h"
@@ -232,10 +233,10 @@ drawin_apply_moveresize(drawin_t *w)
 void
 drawin_refresh(void)
 {
-    foreach(item, getGlobals().drawins)
+    for(auto *item : getGlobals().drawins)
     {
-        drawin_apply_moveresize(*item);
-        window_border_refresh((window_t *) *item);
+        drawin_apply_moveresize(item);
+        window_border_refresh((window_t *) item);
     }
 }
 
@@ -250,8 +251,8 @@ luaA_drawin_get(lua_State *L)
 
     lua_newtable(L);
 
-    foreach(d, getGlobals().drawins) {
-        luaA_object_push(L, *d);
+    for(auto *d : getGlobals().drawins) {
+        luaA_object_push(L, d);
         lua_rawseti(L, -2, i++);
     }
 
@@ -338,7 +339,7 @@ drawin_map(lua_State *L, int widx)
     /* Stack this drawin correctly */
     stack_windows();
     /* Add it to the list of visible drawins */
-    drawin_array_append(&getGlobals().drawins, drawin);
+    getGlobals().drawins.push_back(drawin);
     /* Make sure it has a surface */
     if(drawin->drawable->surface == NULL)
         drawin_update_drawing(L, widx);
@@ -348,12 +349,10 @@ static void
 drawin_unmap(drawin_t *drawin)
 {
     xcb_unmap_window(getGlobals().connection, drawin->window);
-    foreach(item, getGlobals().drawins)
-        if(*item == drawin)
-        {
-            drawin_array_remove(&getGlobals().drawins, item);
-            break;
-        }
+    auto it = std::ranges::find(getGlobals().drawins, drawin);
+    if(it != getGlobals().drawins.end()) {
+        getGlobals().drawins.erase(it);
+    }
 }
 
 /** Get a drawin by its window.
@@ -363,10 +362,8 @@ drawin_unmap(drawin_t *drawin)
 drawin_t *
 drawin_getbywin(xcb_window_t win)
 {
-    foreach(w, getGlobals().drawins)
-        if((*w)->window == win)
-            return *w;
-    return NULL;
+    auto it = std::ranges::find_if(getGlobals().drawins, [win](auto * drawin) { return drawin->window == win; });
+    return it != getGlobals().drawins.end() ? *it : nullptr;
 }
 
 /** Set a drawin visible or not.
