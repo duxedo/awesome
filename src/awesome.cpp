@@ -273,7 +273,6 @@ acquire_WM_Sn(bool replace)
     xcb_intern_atom_reply_t *atom_r;
     char *atom_name;
     xcb_get_selection_owner_reply_t *get_sel_reply;
-    xcb_client_message_event_t ev;
 
     /* Get the WM_Sn atom */
     getGlobals().selection_owner_window = xcb_generate_id(getGlobals().connection);
@@ -328,15 +327,16 @@ acquire_WM_Sn(bool replace)
     p_delete(&get_sel_reply);
 
     /* Announce that we are the new owner */
-    p_clear(&ev, 1);
-    ev.response_type = XCB_CLIENT_MESSAGE;
-    ev.window = getGlobals().screen->root;
-    ev.format = 32;
-    ev.type = MANAGER;
-    ev.data.data32[0] = getGlobals().get_timestamp();
-    ev.data.data32[1] = getGlobals().selection_atom;
-    ev.data.data32[2] = getGlobals().selection_owner_window;
-    ev.data.data32[3] = ev.data.data32[4] = 0;
+    xcb_client_message_event_t ev {
+        .response_type = XCB_CLIENT_MESSAGE,
+        .format = 32,
+        .sequence = 0,
+        .window = getGlobals().screen->root,
+        .type = MANAGER,
+        .data {
+            .data32 = { getGlobals().get_timestamp(), getGlobals().selection_atom, getGlobals().selection_owner_window, 0, 0}
+        }
+    };
 
     xcb_send_event(getGlobals().connection, false, getGlobals().screen->root, 0xFFFFFF, (char *) &ev);
 }
