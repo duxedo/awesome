@@ -19,13 +19,8 @@
  *
  */
 
-#ifndef AWESOME_COMMON_BACKTRACE
-#define AWESOME_COMMON_BACKTRACE
+#pragma once
+#include <string>
 
-#include "common/buffer.h"
+std::string backtrace_get();
 
-void backtrace_get(buffer_t *);
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

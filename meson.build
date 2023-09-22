@@ -54,7 +54,6 @@ srcs = [
     'src/xrdb.cpp',
     'src/common/atoms.cpp',
     'src/common/backtrace.cpp',
-    'src/common/buffer.cpp',
     'src/common/luaclass.cpp',
     'src/common/lualib.cpp',
     'src/common/luaobject.cpp',

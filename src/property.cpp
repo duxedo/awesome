@@ -21,7 +21,6 @@
 
 #include "property.h"
 #include "common/atoms.h"
-#include "common/buffer.h"
 #include "common/xutil.h"
 #include "ewmh.h"
 #include "globalconf.h"
@@ -32,6 +31,7 @@
 #include "xwindow.h"
 
 #include <algorithm>
+#include <format>
 #include <xcb/xcb_atom.h>
 
 #define HANDLE_TEXT_PROPERTY(funcname, atom, setfunc) \
@@ -438,7 +438,6 @@ property_handle_propertynotify_xproperty(xcb_property_notify_event_t *ev)
 {
     lua_State *L = globalconf_get_lua_State();
     xproperty_t lookup = { .atom = ev->atom };
-    buffer_t buf;
     void *obj;
 
     auto it = getGlobals().xproperties.find(lookup);
@@ -457,19 +456,18 @@ property_handle_propertynotify_xproperty(xcb_property_notify_event_t *ev)
     } else
         obj = NULL;
 
-    /* Get us the name of the property */
-    buffer_inita(&buf, it->name.size() + a_strlen("xproperty::") + 1);
-    buffer_addf(&buf, "xproperty::%s", it->name.c_str());
+    std::string buf = std::format("xproperty::{}", it->name);
+
 
     /* And emit the right signal */
     if (obj)
     {
         luaA_object_push(L, obj);
-        luaA_object_emit_signal(L, -1, buf.s, 0);
+        luaA_object_emit_signal(L, -1, buf.c_str(), 0);
         lua_pop(L, 1);
-    } else
-        signal_object_emit(L, &global_signals, buf.s, 0);
-    buffer_wipe(&buf);
+    } else {
+        signal_object_emit(L, &global_signals, buf.c_str(), 0);
+    }
 }
 
 /** The property notify event handler.
