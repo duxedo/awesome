@@ -316,19 +316,23 @@ luaA_registerfct(lua_State *L, int idx, int *fct)
 
 typedef bool luaA_config_callback(const std::filesystem::path&);
 
-void luaA_init(xdgHandle *, const Paths & searchPaths);
-std::optional<std::filesystem::path> luaA_find_config(xdgHandle *, std::optional<std::filesystem::path>, luaA_config_callback *);
-bool luaA_parserc(xdgHandle *, std::optional<std::filesystem::path>);
-
-/** Global signals */
 extern Signals global_signals;
 
-int luaA_class_index_miss_property(lua_State *, lua_object_t *);
-int luaA_class_newindex_miss_property(lua_State *, lua_object_t *);
-int luaA_default_index(lua_State *);
-int luaA_default_newindex(lua_State *);
-void luaA_emit_startup(void);
+namespace Lua {
 
-void luaA_systray_invalidate(void);
+void init(xdgHandle *, const Paths & searchPaths);
 
+std::optional<std::filesystem::path>
+    find_config(xdgHandle *, std::optional<std::filesystem::path>, luaA_config_callback *);
+bool parserc(xdgHandle *, std::optional<std::filesystem::path>);
+
+/** Global signals */
+int class_index_miss_property(lua_State *, lua_object_t *);
+int class_newindex_miss_property(lua_State *, lua_object_t *);
+int default_index(lua_State *);
+int default_newindex(lua_State *);
+void emit_startup(void);
+
+void systray_invalidate(void);
+}
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

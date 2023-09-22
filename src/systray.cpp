@@ -179,7 +179,7 @@ systray_request_handle(xcb_window_t embed_win)
                            MIN(XEMBED_VERSION, em.info.version));
 
     getGlobals().embedded.push_back(em);
-    luaA_systray_invalidate();
+    Lua::systray_invalidate();
 
     return 0;
 }
@@ -265,11 +265,10 @@ systray_num_visible_entries(void)
                 return em.info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
             });
 }
-
+namespace Lua {
 /** Inform lua that the systray needs to be updated.
  */
-void
-luaA_systray_invalidate(void)
+void systray_invalidate(void)
 {
     lua_State *L = globalconf_get_lua_State();
     signal_object_emit(L, &global_signals, "systray::update", 0);
@@ -278,7 +277,7 @@ luaA_systray_invalidate(void)
     if(systray_num_visible_entries() == 0)
         xcb_unmap_window(getGlobals().connection, getGlobals().systray.window);
 }
-
+}
 static void
 systray_update(int base_size, bool horizontal, bool reverse, int spacing, bool force_redraw, int rows)
 {
