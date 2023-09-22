@@ -20,6 +20,7 @@
  */
 
 #include "ewmh.h"
+#include "draw.h"
 #include "globalconf.h"
 #include "objects/client.h"
 #include "objects/tag.h"
@@ -737,14 +738,13 @@ ewmh_window_icon_from_reply_next(uint32_t **data, uint32_t *data_end)
     return draw_surface_from_data(width, height, icon_data);
 }
 
-static cairo_surface_array_t
+static std::vector<cairo_surface_handle>
 ewmh_window_icon_from_reply(xcb_get_property_reply_t *r)
 {
     uint32_t *data, *data_end;
-    cairo_surface_array_t result;
+    std::vector<cairo_surface_handle> result;
     cairo_surface_t *s;
 
-    cairo_surface_array_init(&result);
     if(!r || r->type != XCB_ATOM_CARDINAL || r->format != 32)
         return result;
 
@@ -754,7 +754,7 @@ ewmh_window_icon_from_reply(xcb_get_property_reply_t *r)
         return result;
 
     while ((s = ewmh_window_icon_from_reply_next(&data, data_end)) != NULL) {
-        cairo_surface_array_push(&result, s);
+        result.emplace_back(s);
     }
 
     return result;
@@ -764,11 +764,11 @@ ewmh_window_icon_from_reply(xcb_get_property_reply_t *r)
  * \param cookie The cookie.
  * \return An array of icons.
  */
-cairo_surface_array_t
+std::vector<cairo_surface_handle>
 ewmh_window_icon_get_reply(xcb_get_property_cookie_t cookie)
 {
     xcb_get_property_reply_t *r = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
-    cairo_surface_array_t result = ewmh_window_icon_from_reply(r);
+    std::vector<cairo_surface_handle> result = ewmh_window_icon_from_reply(r);
     p_delete(&r);
     return result;
 }

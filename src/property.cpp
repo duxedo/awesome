@@ -273,14 +273,13 @@ property_get_net_wm_icon(client_t *c)
 void
 property_update_net_wm_icon(client_t *c, xcb_get_property_cookie_t cookie)
 {
-    cairo_surface_array_t array = ewmh_window_icon_get_reply(cookie);
-    if (array.len == 0)
+    auto array = ewmh_window_icon_get_reply(cookie);
+    if (array.empty())
     {
-        cairo_surface_array_wipe(&array);
         return;
     }
     c->have_ewmh_icon = true;
-    client_set_icons(c, array);
+    client_set_icons(c, std::move(array));
 }
 
 xcb_get_property_cookie_t

@@ -90,6 +90,7 @@
 #include "common/array.h"
 #include "common/atoms.h"
 #include "common/xutil.h"
+#include "draw.h"
 #include "event.h"
 #include "ewmh.h"
 #include "globalconf.h"
@@ -1543,7 +1544,7 @@ client_wipe(client_t *c)
 {
     c->keys.clear();
     xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
-    cairo_surface_array_wipe(&c->icons);
+    c->icons.clear();
     p_delete(&c->machine);
     p_delete(&c->cls);
     p_delete(&c->instance);
@@ -3106,10 +3107,10 @@ luaA_client_isvisible(lua_State *L)
  * \param array Array of icons to set.
  */
 void
-client_set_icons(client_t *c, cairo_surface_array_t array)
+client_set_icons(client_t *c, std::vector<cairo_surface_handle> array)
 {
-    cairo_surface_array_wipe(&c->icons);
-    c->icons = array;
+    c->icons.clear();
+    c->icons = std::move(array);
 
     lua_State *L = globalconf_get_lua_State();
     luaA_object_push(L, c);
@@ -3126,11 +3127,10 @@ client_set_icons(client_t *c, cairo_surface_array_t array)
 static void
 client_set_icon(client_t *c, cairo_surface_t *s)
 {
-    cairo_surface_array_t array;
-    cairo_surface_array_init(&array);
+    std::vector<cairo_surface_handle> array;
     if (s && cairo_surface_status(s) == CAIRO_STATUS_SUCCESS)
-        cairo_surface_array_push(&array, draw_dup_image_surface(s));
-    client_set_icons(c, array);
+        array.emplace_back(draw_dup_image_surface(s));
+    client_set_icons(c, std::move(array));
 }
 
 
@@ -4004,7 +4004,7 @@ luaA_client_get_content(lua_State *L, client_t *c)
 static int
 luaA_client_get_icon(lua_State *L, client_t *c)
 {
-    if(c->icons.len == 0)
+    if(c->icons.empty())
         return 0;
 
     /* Pick the closest available size, only picking a smaller icon if no bigger
@@ -4014,10 +4014,10 @@ luaA_client_get_icon(lua_State *L, client_t *c)
     int found_size = 0;
     int preferred_size = getGlobals().preferred_icon_size;
 
-    foreach(surf, c->icons)
+    for(auto & surf: c->icons)
     {
-        int width = cairo_image_surface_get_width(*surf);
-        int height = cairo_image_surface_get_height(*surf);
+        int width = cairo_image_surface_get_width(surf.get());
+        int height = cairo_image_surface_get_height(surf.get());
         int size = MAX(width, height);
 
         /* pick the icon if it's a better match than the one we already have */
@@ -4029,7 +4029,7 @@ luaA_client_get_icon(lua_State *L, client_t *c)
             size >= preferred_size && size < found_size;
         if (!icon_empty && (better_because_bigger || better_because_smaller || found_size == 0))
         {
-            found = *surf;
+            found = surf.get();
             found_size = size;
         }
     }
@@ -4351,14 +4351,14 @@ luaA_client_get_icon_sizes(lua_State *L, client_t *c)
     int index = 1;
 
     lua_newtable(L);
-    foreach (s, c->icons) {
+    for(auto& s: c->icons) {
         /* Create a table { width, height } and append it to the table */
         lua_createtable(L, 2, 0);
 
-        lua_pushinteger(L, cairo_image_surface_get_width(*s));
+        lua_pushinteger(L, cairo_image_surface_get_width(s.get()));
         lua_rawseti(L, -2, 1);
 
-        lua_pushinteger(L, cairo_image_surface_get_height(*s));
+        lua_pushinteger(L, cairo_image_surface_get_height(s.get()));
         lua_rawseti(L, -2, 2);
 
         lua_rawseti(L, -2, index++);
@@ -4393,9 +4393,9 @@ luaA_client_get_some_icon(lua_State *L)
 {
     auto c = (client_t *) luaA_checkudata(L, 1, &client_class);
     int index = luaL_checkinteger(L, 2);
-    luaL_argcheck(L, (index >= 1 && index <= c->icons.len), 2,
+    luaL_argcheck(L, (index >= 1 && index <= (int)c->icons.size()), 2,
             "invalid icon index");
-    lua_pushlightuserdata(L, cairo_surface_reference(c->icons.tab[index-1]));
+    lua_pushlightuserdata(L, cairo_surface_reference(c->icons[index-1].get()));
     return 1;
 }
 
