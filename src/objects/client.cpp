@@ -1831,7 +1831,7 @@ client_restore_enterleave_events(void)
     pair.end = xcb_no_operation(getGlobals().connection);
     xutil_ungrab_server(getGlobals().connection);
     getGlobals().pending_enter_leave_begin.sequence = 0;
-    sequence_pair_array_append(&getGlobals().ignore_enter_leave_events, pair);
+    getGlobals().ignore_enter_leave_events.push_back(pair);
 }
 
 /** Record that a client got focus.

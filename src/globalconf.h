@@ -59,14 +59,12 @@ typedef struct button_t button_t;
 typedef struct client_t client_t;
 typedef struct tag tag_t;
 typedef struct xproperty xproperty_t;
-struct sequence_pair {
+struct sequence_pair_t {
     xcb_void_cookie_t begin;
     xcb_void_cookie_t end;
 };
-typedef struct sequence_pair sequence_pair_t;
 
 ARRAY_TYPE(tag_t *, tag)
-DO_ARRAY(sequence_pair_t, sequence_pair, DO_NOTHING)
 DO_ARRAY(xcb_window_t, window, DO_NOTHING)
 #define ZERO_ARRAY { nullptr, 0, 0}
 /** Main configuration structure */
@@ -235,7 +233,7 @@ class Globals
     /** Cached wallpaper information */
     cairo_surface_t *wallpaper = nullptr;
     /** List of enter/leave events to ignore */
-    sequence_pair_array_t ignore_enter_leave_events = ZERO_ARRAY;
+    std::vector<sequence_pair_t> ignore_enter_leave_events;
     xcb_void_cookie_t pending_enter_leave_begin = { 0 };
     /** List of windows to be destroyed later */
     window_array_t destroy_later_windows = ZERO_ARRAY;
