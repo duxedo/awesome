@@ -280,7 +280,7 @@ luaA_class_connect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
     luaA_class_emit_signal(L, lua_class, buf, 1);
 
     /* Register the signal to the CAPI list */
-    signal_connect(&lua_class->signals, name, luaA_object_ref(L, ud));
+    lua_class->signals.connect(name, luaA_object_ref(L, ud));
 }
 
 void
@@ -289,7 +289,7 @@ luaA_class_disconnect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
 {
     luaA_checkfunction(L, ud);
     void *ref = (void *) lua_topointer(L, ud);
-    if (signal_disconnect(&lua_class->signals, name, ref))
+    if (lua_class->signals.disconnect(name, ref))
         luaA_object_unref(L, (void *) ref);
     lua_remove(L, ud);
 }
