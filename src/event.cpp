@@ -496,7 +496,7 @@ event_handle_destroynotify(xcb_destroy_notify_event_t *ev)
     }
     else if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; }))
     {
-        luaA_systray_invalidate();
+        Lua::systray_invalidate();
     }
 }
 
@@ -830,7 +830,7 @@ event_handle_maprequest(xcb_map_request_event_t *ev)
          * property. Let's simulate the XEMBED_MAPPED bit.
          */
         em->info.flags |= static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
-        luaA_systray_invalidate();
+        Lua::systray_invalidate();
     }
     else if((c = client_getbywin(ev->window)))
     {
@@ -1015,7 +1015,7 @@ event_handle_reparentnotify(xcb_reparent_notify_event_t *ev)
         /* Embedded window moved elsewhere, end of embedding */
         if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; })) {
             xcb_change_save_set(getGlobals().connection, XCB_SET_MODE_DELETE, ev->window);
-            luaA_systray_invalidate();
+            Lua::systray_invalidate();
         }
     }
 }

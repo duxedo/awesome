@@ -236,7 +236,7 @@ selection_acquire_class_setup(lua_State *L)
     luaA_class_setup(L, &selection_acquire_class, "selection_acquire", NULL,
             (lua_class_allocator_t) selection_acquire_new, NULL,
             (lua_class_checker_t) selection_acquire_checker,
-            luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+            Lua::class_index_miss_property, Lua::class_newindex_miss_property,
             selection_acquire_methods, selection_acquire_meta);
 }
 

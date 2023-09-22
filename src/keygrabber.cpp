@@ -162,9 +162,8 @@ const struct luaL_Reg  awesome_keygrabber_lib[]=
     { "run", luaA_keygrabber_run },
     { "stop", luaA_keygrabber_stop },
     { "isrunning", luaA_keygrabber_isrunning },
-    { "__index", luaA_default_index },
-    { "__newindex", luaA_default_newindex },
+    { "__index", Lua::default_index },
+    { "__newindex", Lua::default_newindex },
     { NULL, NULL }
 };
 
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

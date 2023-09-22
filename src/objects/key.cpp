@@ -362,7 +362,7 @@ key_class_setup(lua_State *L)
 
     luaA_class_setup(L, &key_class, "key", NULL,
                      (lua_class_allocator_t) key_new, NULL, NULL,
-                     luaA_class_index_miss_property, luaA_class_newindex_miss_property,
+                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
                      key_methods, key_meta);
     key_class.add_property("key",
                             (lua_class_propfunc_t) luaA_key_set_key,
