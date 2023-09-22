@@ -34,14 +34,12 @@
  * @coreclassmod root
  */
 
-#include "common/array.h"
 #include "globalconf.h"
 
 #include "common/atoms.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
 #include "objects/button.h"
-#include "common/luaclass.h"
 #include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
@@ -579,10 +577,10 @@ luaA_root_size_mm(lua_State *L)
 static int
 luaA_root_tags(lua_State *L)
 {
-    lua_createtable(L, getGlobals().tags.len, 0);
-    for(int i = 0; i < getGlobals().tags.len; i++)
+    lua_createtable(L, getGlobals().tags.size(), 0);
+    for(int i = 0; i < (int)getGlobals().tags.size(); i++)
     {
-        luaA_object_push(L, getGlobals().tags.tab[i]);
+        luaA_object_push(L, getGlobals().tags[i].get());
         lua_rawseti(L, -2, i + 1);
     }
 

@@ -270,7 +270,7 @@ ewmh_update_net_client_list_stacking(void)
 void
 ewmh_update_net_numbers_of_desktop(void)
 {
-    uint32_t count = getGlobals().tags.len;
+    uint32_t count = getGlobals().tags.size();
 
     getConnection().replace_property(getGlobals().screen->root, _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
 }
@@ -289,9 +289,9 @@ ewmh_update_net_desktop_names(void)
 {
     std::vector<char> buf;
 
-    foreach(tag, getGlobals().tags)
+    for(const auto &tag: getGlobals().tags)
     {
-        auto tagname = tag_get_name(*tag);
+        auto tagname = tag_get_name(tag.get());
         buf.insert(buf.begin() + buf.size(), tagname, tagname + strlen(tagname) + 1);
     }
 
@@ -421,10 +421,10 @@ ewmh_process_desktop(client_t *c, uint32_t desktop)
         /* Pop the client, arguments are already popped */
         lua_pop(L, 1);
     }
-    else if (idx >= 0 && idx < getGlobals().tags.len)
+    else if (idx >= 0 && idx < (int)getGlobals().tags.size())
     {
         luaA_object_push(L, c);
-        luaA_object_push(L, getGlobals().tags.tab[idx]);
+        luaA_object_push(L, getGlobals().tags[idx].get());
         /*TODO v5: Move the context argument to arg1 */
         luaA_object_emit_signal(L, -2, "request::tag", 1);
         /* Pop the client, arguments are already popped */
@@ -440,10 +440,10 @@ ewmh_process_client_message(xcb_client_message_event_t *ev)
     if(ev->type == _NET_CURRENT_DESKTOP)
     {
         int idx = ev->data.data32[0];
-        if (idx >= 0 && idx < getGlobals().tags.len)
+        if (idx >= 0 && idx < (int)getGlobals().tags.size())
         {
             lua_State *L = globalconf_get_lua_State();
-            luaA_object_push(L, getGlobals().tags.tab[idx]);
+            luaA_object_push(L, getGlobals().tags[idx].get());
             lua_pushstring(L, "ewmh");
             luaA_object_emit_signal(L, -2, "request::select", 1);
             lua_pop(L, 1);
@@ -508,8 +508,8 @@ ewmh_client_update_desktop(client_t *c)
         getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
         return;
     }
-    for(i = 0; i < (size_t)getGlobals().tags.len; i++) {
-        if(is_client_tagged(c, getGlobals().tags.tab[i])) {
+    for(i = 0; i < (size_t)getGlobals().tags.size(); i++) {
+        if(is_client_tagged(c, getGlobals().tags[i].get())) {
             getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
             return;
         }

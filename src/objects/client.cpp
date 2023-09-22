@@ -1694,9 +1694,11 @@ client_on_selected_tags(client_t *c)
     if(c->sticky)
         return true;
 
-    foreach(tag, getGlobals().tags)
-        if(tag_get_selected(*tag) && is_client_tagged(c, *tag))
+    for(auto& tag: getGlobals().tags) {
+        if(tag_get_selected(tag.get()) && is_client_tagged(c, tag.get())) {
             return true;
+        }
+    }
 
     return false;
 }
@@ -2912,8 +2914,8 @@ client_unmanage(client_t *c, client_unmanage_t reason)
         getGlobals().clients.erase(it);
     }
     stack_client_remove(c);
-    for(int i = 0; i < getGlobals().tags.len; i++) {
-        untag_client(c, getGlobals().tags.tab[i]);
+    for(size_t i = 0; i < getGlobals().tags.size(); i++) {
+        untag_client(c, getGlobals().tags[i].get());
     }
 
     luaA_object_push(L, c);
@@ -3296,7 +3298,7 @@ luaA_client_tags(lua_State *L)
     if(lua_gettop(L) == 2)
     {
         luaA_checktable(L, 2);
-        for(int i = 0; i < getGlobals().tags.len; i++)
+        for(size_t i = 0; i < getGlobals().tags.size(); i++)
         {
             /* Only untag if we aren't going to add this tag again */
             bool found = false;
@@ -3306,7 +3308,7 @@ luaA_client_tags(lua_State *L)
                 auto t = (tag_t *) lua_touserdata(L, -1);
                 /* Pop the value from lua_next */
                 lua_pop(L, 1);
-                if (t != getGlobals().tags.tab[i])
+                if (t != getGlobals().tags[i].get())
                     continue;
 
                 /* Pop the key from lua_next */
@@ -3315,7 +3317,7 @@ luaA_client_tags(lua_State *L)
                 break;
             }
             if(!found)
-                untag_client(c, getGlobals().tags.tab[i]);
+                untag_client(c, getGlobals().tags[i].get());
         }
         lua_pushnil(L);
         while(lua_next(L, 2))
@@ -3327,12 +3329,12 @@ luaA_client_tags(lua_State *L)
     }
 
     lua_newtable(L);
-    foreach(tag, getGlobals().tags)
-        if(is_client_tagged(c, *tag))
-        {
-            luaA_object_push(L, *tag);
+    for(const auto& tag: getGlobals().tags) {
+        if(is_client_tagged(c, tag.get())) {
+            luaA_object_push(L, tag.get());
             lua_rawseti(L, -2, ++j);
         }
+    }
 
     return 1;
 }
@@ -3342,12 +3344,12 @@ luaA_client_tags(lua_State *L)
 static int
 luaA_client_get_first_tag(lua_State *L, client_t *c)
 {
-    foreach(tag, getGlobals().tags)
-        if(is_client_tagged(c, *tag))
-        {
-            luaA_object_push(L, *tag);
+    for(const auto& tag: getGlobals().tags) {
+        if(is_client_tagged(c, tag.get())) {
+            luaA_object_push(L, tag.get());
             return 1;
         }
+    }
 
     return 0;
 }

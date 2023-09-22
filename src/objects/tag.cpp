@@ -197,11 +197,13 @@
  */
 
 #include "tag.h"
+#include "globalconf.h"
 #include "screen.h"
 #include "banning.h"
 #include "client.h"
 #include "ewmh.h"
 #include "luaa.h"
+#include <algorithm>
 
 lua_class_t tag_class;
 
@@ -302,10 +304,10 @@ lua_class_t tag_class;
 
 
 void
-tag_unref_simplified(tag_t **tag)
+tag_unref_simplified(tag_t *tag)
 {
     lua_State *L = globalconf_get_lua_State();
-    luaA_object_unref(L, *tag);
+    luaA_object_unref(L, tag);
 }
 
 static void
@@ -430,16 +432,18 @@ tags_get_current_or_first_selected_index(void)
      */
     if(getGlobals().focus.client)
     {
-        foreach(tag, getGlobals().tags)
-        {
-            if((*tag)->selected && is_client_tagged(getGlobals().focus.client, *tag))
-                return tag_array_indexof(&getGlobals().tags, tag);
+        for(int i = 0; i < (int)getGlobals().tags.size(); i++) {
+            auto & tag = getGlobals().tags[i];
+            if(tag->selected && is_client_tagged(getGlobals().focus.client, tag.get())) {
+                return i;
+            }
         }
     }
-    foreach(tag, getGlobals().tags)
-    {
-        if((*tag)->selected)
-            return tag_array_indexof(&getGlobals().tags, tag);
+    for(int i = 0; i < (int)getGlobals().tags.size(); i++) {
+        auto & tag = getGlobals().tags[i];
+        if(tag->selected) {
+            return i;
+        }
     }
     return 0;
 }
@@ -567,16 +571,18 @@ luaA_tag_set_activated(lua_State *L, tag_t *tag)
     if(activated)
     {
         lua_pushvalue(L, -3);
-        tag_array_append(&getGlobals().tags, (tag_t*)luaA_object_ref_class(L, -1, &tag_class));
+        getGlobals().tags.emplace_back((tag_t*)luaA_object_ref_class(L, -1, &tag_class));
     }
     else
     {
-        for (int i = 0; i < getGlobals().tags.len; i++)
-            if(getGlobals().tags.tab[i] == tag)
-            {
-                tag_array_take(&getGlobals().tags, i);
-                break;
-            }
+        auto it = std::ranges::find_if(getGlobals().tags, [tag](const auto & tagptr) {
+            return tagptr.get() == tag;
+        });
+        if(it != getGlobals().tags.end()) {
+            auto tmp = std::move(*it);
+            (void)tmp.release();
+            getGlobals().tags.erase(it);
+        }
 
         if (tag->selected)
         {
