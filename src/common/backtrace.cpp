@@ -31,32 +31,29 @@
 /** Get a backtrace.
   * \param buf The buffer to fill with backtrace.
   */
-void
-backtrace_get(buffer_t *buf)
+std::string backtrace_get()
 {
-    buffer_init(buf);
-
-#ifdef HAS_EXECINFO
+    std::string ret;
     void *stack[MAX_STACK_SIZE];
     char **bt;
     int stack_size;
 
-    stack_size = backtrace(stack, countof(stack));
+    stack_size = backtrace(stack, std::size(stack));
     bt = backtrace_symbols(stack, stack_size);
 
     if(bt)
     {
         for(int i = 0; i < stack_size; i++)
         {
-            if(i > 0)
-                buffer_addsl(buf, "\n");
-            buffer_adds(buf, bt[i]);
+            if(i > 0) {
+                ret+="\n";
+            }
+            ret+=bt[i];
         }
-        p_delete(&bt);
+        free(bt);
+        return ret;
     }
-    else
-#endif
-        buffer_addsl(buf, "Cannot get backtrace symbols.");
+    return  "Cannot get backtrace symbols.";
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
