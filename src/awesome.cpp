@@ -865,7 +865,7 @@ main(int argc, char **argv)
     screen_emit_scanned();
 
     /* Exit if the user doesn't read the instructions properly */
-    if (getGlobals().no_auto_screen && !getGlobals().screens.len)
+    if (getGlobals().no_auto_screen && !getGlobals().screens.size())
         fatal("When -m/--screen is set to \"off\", you **must** create a "
               "screen object before or inside the screen \"scanned\" "
               " signal. Using AwesomeWM with no screen is **not supported**.");
