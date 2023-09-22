@@ -227,7 +227,7 @@ luaA_object_disconnect_signal_from_stack(lua_State *L, int oud,
 }
 
 void
-signal_object_emit(lua_State *L, Signals *arr, const char *name, int nargs)
+signal_object_emit(lua_State *L, Signals *arr, const std::string_view& name, int nargs)
 {
     auto signalIt = arr->find(name);
 
