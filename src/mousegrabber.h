@@ -23,10 +23,11 @@
 #define AWESOME_MOUSEGRABBER_H
 
 #include "common/luahdr.h"
+
 #include <xcb/xcb.h>
 
-int luaA_mousegrabber_stop(lua_State *);
-void mousegrabber_handleevent(lua_State *, int, int, uint16_t);
+int luaA_mousegrabber_stop(lua_State*);
+void mousegrabber_handleevent(lua_State*, int, int, uint16_t);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

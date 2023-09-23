@@ -22,17 +22,16 @@
 #ifndef AWESOME_OBJECTS_BUTTON_H
 #define AWESOME_OBJECTS_BUTTON_H
 
-#include "globalconf.h"
 #include "common/luaclass.h"
 #include "common/luaobject.h"
+#include "globalconf.h"
 
 #include <stdint.h>
 #include <vector>
 #include <xcb/xcb.h>
 
 /** Mouse buttons bindings */
-struct button_t
-{
+struct button_t {
     LUA_OBJECT_HEADER
     /** Key modifiers */
     uint16_t modifiers;
@@ -49,9 +48,9 @@ struct button_t
 extern lua_class_t button_class;
 LUA_OBJECT_FUNCS(button_class, button_t, button)
 
-int luaA_button_array_get(lua_State *, int, const std::vector<button_t*> &);
-void luaA_button_array_set(lua_State *, int, int, std::vector<button_t*> *);
-void button_class_setup(lua_State *);
+int luaA_button_array_get(lua_State*, int, const std::vector<button_t*>&);
+void luaA_button_array_set(lua_State*, int, int, std::vector<button_t*>*);
+void button_class_setup(lua_State*);
 
 #endif
 

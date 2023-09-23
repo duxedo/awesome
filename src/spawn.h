@@ -22,13 +22,12 @@
 #ifndef AWESOME_SPAWN_H
 #define AWESOME_SPAWN_H
 
+#include "common/luahdr.h"
 #include "objects/client.h"
 
-#include "common/luahdr.h"
-
 void spawn_init(void);
-void spawn_start_notify(client_t *, const char *);
-int luaA_spawn(lua_State *);
+void spawn_start_notify(client_t*, const char*);
+int luaA_spawn(lua_State*);
 void spawn_child_exited(pid_t, int);
 
 #endif

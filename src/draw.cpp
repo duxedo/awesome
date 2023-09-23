@@ -19,26 +19,22 @@
  *
  */
 
-#include "config.h"
 #include "draw.h"
+
+#include "config.h"
 #include "globalconf.h"
 
-#include <langinfo.h>
-#include <errno.h>
-#include <ctype.h>
-#include <math.h>
-
-#include <gdk-pixbuf/gdk-pixbuf.h>
 #include <cairo-xcb.h>
+#include <ctype.h>
+#include <errno.h>
+#include <gdk-pixbuf/gdk-pixbuf.h>
+#include <langinfo.h>
 #include <lauxlib.h>
+#include <math.h>
 
 static cairo_user_data_key_t data_key;
 
-static inline void
-free_data(void *data)
-{
-    p_delete(&data);
-}
+static inline void free_data(void* data) { p_delete(&data); }
 
 /** Create a surface object from this image data.
  * \param width The width of the image.
@@ -46,31 +42,24 @@ free_data(void *data)
  * \param data The image's data in ARGB format, will be copied by this function.
  * \return Number of items pushed on the lua stack.
  */
-cairo_surface_t *
-draw_surface_from_data(int width, int height, uint32_t *data)
-{
+cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data) {
     unsigned long int len = width * height;
     unsigned long int i;
-    uint32_t *buffer = p_new(uint32_t, len);
-    cairo_surface_t *surface;
+    uint32_t* buffer = p_new(uint32_t, len);
+    cairo_surface_t* surface;
 
     /* Cairo wants premultiplied alpha, meh :( */
-    for(i = 0; i < len; i++)
-    {
+    for (i = 0; i < len; i++) {
         uint8_t a = (data[i] >> 24) & 0xff;
         double alpha = a / 255.0;
         uint8_t r = ((data[i] >> 16) & 0xff) * alpha;
-        uint8_t g = ((data[i] >>  8) & 0xff) * alpha;
-        uint8_t b = ((data[i] >>  0) & 0xff) * alpha;
+        uint8_t g = ((data[i] >> 8) & 0xff) * alpha;
+        uint8_t b = ((data[i] >> 0) & 0xff) * alpha;
         buffer[i] = (a << 24) | (r << 16) | (g << 8) | b;
     }
 
-    surface =
-        cairo_image_surface_create_for_data((unsigned char *) buffer,
-                                            CAIRO_FORMAT_ARGB32,
-                                            width,
-                                            height,
-                                            width*4);
+    surface = cairo_image_surface_create_for_data(
+      (unsigned char*)buffer, CAIRO_FORMAT_ARGB32, width, height, width * 4);
     /* This makes sure that buffer will be freed */
     cairo_surface_set_user_data(surface, &data_key, buffer, &free_data);
 
@@ -81,17 +70,15 @@ draw_surface_from_data(int width, int height, uint32_t *data)
  * \param buf The pixbuf
  * \return Number of items pushed on the lua stack.
  */
-cairo_surface_t *
-draw_surface_from_pixbuf(GdkPixbuf *buf)
-{
+cairo_surface_t* draw_surface_from_pixbuf(GdkPixbuf* buf) {
     int width = gdk_pixbuf_get_width(buf);
     int height = gdk_pixbuf_get_height(buf);
     int pix_stride = gdk_pixbuf_get_rowstride(buf);
-    guchar *pixels = gdk_pixbuf_get_pixels(buf);
+    guchar* pixels = gdk_pixbuf_get_pixels(buf);
     int channels = gdk_pixbuf_get_n_channels(buf);
-    cairo_surface_t *surface;
+    cairo_surface_t* surface;
     int cairo_stride;
-    unsigned char *cairo_pixels;
+    unsigned char* cairo_pixels;
 
     cairo_format_t format = CAIRO_FORMAT_ARGB32;
     if (channels == 3)
@@ -102,13 +89,11 @@ draw_surface_from_pixbuf(GdkPixbuf *buf)
     cairo_stride = cairo_image_surface_get_stride(surface);
     cairo_pixels = cairo_image_surface_get_data(surface);
 
-    for (int y = 0; y < height; y++)
-    {
-        guchar *row = pixels;
-        uint32_t *cairo = (uint32_t *) cairo_pixels;
+    for (int y = 0; y < height; y++) {
+        guchar* row = pixels;
+        uint32_t* cairo = (uint32_t*)cairo_pixels;
         for (int x = 0; x < width; x++) {
-            if (channels == 3)
-            {
+            if (channels == 3) {
                 uint8_t r = *row++;
                 uint8_t g = *row++;
                 uint8_t b = *row++;
@@ -133,11 +118,9 @@ draw_surface_from_pixbuf(GdkPixbuf *buf)
     return surface;
 }
 
-static void
-get_surface_size(cairo_surface_t *surface, int *width, int *height)
-{
+static void get_surface_size(cairo_surface_t* surface, int* width, int* height) {
     double x1, y1, x2, y2;
-    cairo_t *cr = cairo_create(surface);
+    cairo_t* cr = cairo_create(surface);
 
     cairo_clip_extents(cr, &x1, &y1, &x2, &y2);
     cairo_destroy(cr);
@@ -149,10 +132,8 @@ get_surface_size(cairo_surface_t *surface, int *width, int *height)
  * \param surface The surface to copy
  * \return A pointer to a new cairo image surface.
  */
-cairo_surface_t *
-draw_dup_image_surface(cairo_surface_t *surface)
-{
-    cairo_surface_t *res;
+cairo_surface_t* draw_dup_image_surface(cairo_surface_t* surface) {
+    cairo_surface_t* res;
     int width, height;
 
     get_surface_size(surface, &width, &height);
@@ -162,7 +143,7 @@ draw_dup_image_surface(cairo_surface_t *surface)
     res = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
 #endif
 
-    cairo_t *cr = cairo_create(res);
+    cairo_t* cr = cairo_create(res);
     cairo_set_source_surface(cr, surface, 0, 0);
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
     cairo_paint(cr);
@@ -177,11 +158,9 @@ draw_dup_image_surface(cairo_surface_t *surface)
  * \param error A place to store an error message, if needed
  * \return A cairo image surface or NULL on error.
  */
-cairo_surface_t *
-draw_load_image(lua_State *L, const char *path, GError **error)
-{
-    cairo_surface_t *ret;
-    GdkPixbuf *buf = gdk_pixbuf_new_from_file(path, error);
+cairo_surface_t* draw_load_image(lua_State* L, const char* path, GError** error) {
+    cairo_surface_t* ret;
+    GdkPixbuf* buf = gdk_pixbuf_new_from_file(path, error);
 
     if (!buf)
         /* error was set above */
@@ -192,63 +171,64 @@ draw_load_image(lua_State *L, const char *path, GError **error)
     return ret;
 }
 
-xcb_visualtype_t *draw_find_visual(const xcb_screen_t *s, xcb_visualid_t visual)
-{
+xcb_visualtype_t* draw_find_visual(const xcb_screen_t* s, xcb_visualid_t visual) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if(depth_iter.data)
-        for(; depth_iter.rem; xcb_depth_next (&depth_iter))
-            for(xcb_visualtype_iterator_t visual_iter = xcb_depth_visuals_iterator(depth_iter.data);
-                visual_iter.rem; xcb_visualtype_next (&visual_iter))
-                if(visual == visual_iter.data->visual_id)
+    if (depth_iter.data)
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
+            for (xcb_visualtype_iterator_t visual_iter =
+                   xcb_depth_visuals_iterator(depth_iter.data);
+                 visual_iter.rem;
+                 xcb_visualtype_next(&visual_iter))
+                if (visual == visual_iter.data->visual_id)
                     return visual_iter.data;
 
     return NULL;
 }
 
-xcb_visualtype_t *draw_default_visual(const xcb_screen_t *s)
-{
+xcb_visualtype_t* draw_default_visual(const xcb_screen_t* s) {
     return draw_find_visual(s, s->root_visual);
 }
 
-xcb_visualtype_t *draw_argb_visual(const xcb_screen_t *s)
-{
+xcb_visualtype_t* draw_argb_visual(const xcb_screen_t* s) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if(depth_iter.data)
-        for(; depth_iter.rem; xcb_depth_next (&depth_iter))
-            if(depth_iter.data->depth == 32)
-                for(xcb_visualtype_iterator_t visual_iter = xcb_depth_visuals_iterator(depth_iter.data);
-                    visual_iter.rem; xcb_visualtype_next (&visual_iter))
+    if (depth_iter.data)
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
+            if (depth_iter.data->depth == 32)
+                for (xcb_visualtype_iterator_t visual_iter =
+                       xcb_depth_visuals_iterator(depth_iter.data);
+                     visual_iter.rem;
+                     xcb_visualtype_next(&visual_iter))
                     return visual_iter.data;
 
     return NULL;
 }
 
-uint8_t draw_visual_depth(const xcb_screen_t *s, xcb_visualid_t vis)
-{
+uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if(depth_iter.data)
-        for(; depth_iter.rem; xcb_depth_next (&depth_iter))
-            for(xcb_visualtype_iterator_t visual_iter = xcb_depth_visuals_iterator(depth_iter.data);
-                visual_iter.rem; xcb_visualtype_next (&visual_iter))
-                if(vis == visual_iter.data->visual_id)
+    if (depth_iter.data)
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
+            for (xcb_visualtype_iterator_t visual_iter =
+                   xcb_depth_visuals_iterator(depth_iter.data);
+                 visual_iter.rem;
+                 xcb_visualtype_next(&visual_iter))
+                if (vis == visual_iter.data->visual_id)
                     return depth_iter.data->depth;
 
     fatal("Could not find a visual's depth");
 }
 
-void draw_test_cairo_xcb(void)
-{
+void draw_test_cairo_xcb(void) {
     xcb_pixmap_t pixmap = xcb_generate_id(getGlobals().connection);
-    xcb_create_pixmap(getGlobals().connection, getGlobals().default_depth, pixmap,
-                      getGlobals().screen->root, 1, 1);
-    cairo_surface_t *surface = cairo_xcb_surface_create(getGlobals().connection,
-                                          pixmap, getGlobals().visual, 1, 1);
-    if(cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
+    xcb_create_pixmap(
+      getGlobals().connection, getGlobals().default_depth, pixmap, getGlobals().screen->root, 1, 1);
+    cairo_surface_t* surface =
+      cairo_xcb_surface_create(getGlobals().connection, pixmap, getGlobals().visual, 1, 1);
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
         fatal("Could not set up display: got cairo surface with status %s",
-                cairo_status_to_string(cairo_surface_status(surface)));
+              cairo_status_to_string(cairo_surface_status(surface)));
     cairo_surface_finish(surface);
     cairo_surface_destroy(surface);
     xcb_free_pixmap(getGlobals().connection, pixmap);

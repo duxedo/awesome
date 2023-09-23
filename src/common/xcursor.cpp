@@ -27,8 +27,7 @@
  * \param cursor_font Type of cursor to use.
  * \return Allocated cursor font.
  */
-xcb_cursor_t
-xcursor_new(CursorMap *map, xcb_cursor_context_t *ctx, const char *cursor_name)
+xcb_cursor_t xcursor_new(CursorMap *map, xcb_cursor_context_t *ctx, const char *cursor_name)
 {
     auto it = map->find(cursor_name);
 
@@ -42,6 +41,5 @@ xcursor_new(CursorMap *map, xcb_cursor_context_t *ctx, const char *cursor_name)
 
     return cursor;
 }
-
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

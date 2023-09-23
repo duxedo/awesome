@@ -20,6 +20,7 @@
  */
 
 #include "xrdb.h"
+
 #include "globalconf.h"
 
 #include <string.h>
@@ -32,12 +33,13 @@
  * \lparam string xrdb name, ie "background" or "color0"
  * \lreturn string xrdb value or nil if not exists. \
  */
-int luaA_xrdb_get_value(lua_State *L) {
-    const char *resource_class = luaL_checkstring(L, 1);
-    const char *resource_name = luaL_checkstring(L, 2);
-    char *result = NULL;
+int luaA_xrdb_get_value(lua_State* L) {
+    const char* resource_class = luaL_checkstring(L, 1);
+    const char* resource_name = luaL_checkstring(L, 2);
+    char* result = NULL;
 
-    if (xcb_xrm_resource_get_string(getGlobals().xrmdb, resource_name, resource_class, &result) < 0 ) {
+    if (xcb_xrm_resource_get_string(getGlobals().xrmdb, resource_name, resource_class, &result) <
+        0) {
         lua_pushnil(L);
     } else {
         lua_pushstring(L, result);

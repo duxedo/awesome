@@ -24,13 +24,12 @@
 
 #include "color.h"
 #include "common/luaclass.h"
+#include "math.h"
 #include "objects/button.h"
 #include "strut.h"
-#include "math.h"
 
 /** Windows type */
-typedef enum
-{
+typedef enum {
     WINDOW_TYPE_NORMAL = 0,
     WINDOW_TYPE_DESKTOP,
     WINDOW_TYPE_DOCK,
@@ -51,47 +50,46 @@ typedef enum
     WINDOW_TYPE_DND
 } window_type_t;
 
-#define WINDOW_OBJECT_HEADER \
-    LUA_OBJECT_HEADER \
-    /** The X window number */ \
-    xcb_window_t window; \
+#define WINDOW_OBJECT_HEADER                   \
+    LUA_OBJECT_HEADER                          \
+    /** The X window number */                 \
+    xcb_window_t window;                       \
     /** The frame window, might be XCB_NONE */ \
-    xcb_window_t frame_window; \
-    /** Opacity */ \
-    double opacity; \
-    /** Strut */ \
-    strut_t strut; \
-    /** Button bindings */ \
-    std::vector<button_t*> buttons; \
-    /** Do we have pending border changes? */ \
-    bool border_need_update; \
-    /** Border color */ \
-    color_t border_color; \
-    /** Border width */ \
-    uint16_t border_width; \
-    /** The window type */ \
-    window_type_t type; \
-    /** The border width callback */ \
-    void (*border_width_callback)(void *, uint16_t old, uint16_t new_width);
+    xcb_window_t frame_window;                 \
+    /** Opacity */                             \
+    double opacity;                            \
+    /** Strut */                               \
+    strut_t strut;                             \
+    /** Button bindings */                     \
+    std::vector<button_t*> buttons;            \
+    /** Do we have pending border changes? */  \
+    bool border_need_update;                   \
+    /** Border color */                        \
+    color_t border_color;                      \
+    /** Border width */                        \
+    uint16_t border_width;                     \
+    /** The window type */                     \
+    window_type_t type;                        \
+    /** The border width callback */           \
+    void (*border_width_callback)(void*, uint16_t old, uint16_t new_width);
 
 /** Window structure */
-typedef struct
-{
+typedef struct {
     WINDOW_OBJECT_HEADER
 } window_t;
 
 extern lua_class_t window_class;
 
-void window_class_setup(lua_State *);
+void window_class_setup(lua_State*);
 
-void window_set_opacity(lua_State *, int, double);
-void window_set_border_width(lua_State *, int, int);
-void window_border_refresh(window_t *);
-int luaA_window_get_type(lua_State *, window_t *);
-int luaA_window_set_type(lua_State *, window_t *);
+void window_set_opacity(lua_State*, int, double);
+void window_set_border_width(lua_State*, int, int);
+void window_border_refresh(window_t*);
+int luaA_window_get_type(lua_State*, window_t*);
+int luaA_window_set_type(lua_State*, window_t*);
 uint32_t window_translate_type(window_type_t);
-int window_set_xproperty(lua_State *, xcb_window_t, int, int);
-int window_get_xproperty(lua_State *, xcb_window_t, int);
+int window_set_xproperty(lua_State*, xcb_window_t, int, int);
+int window_get_xproperty(lua_State*, xcb_window_t, int);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

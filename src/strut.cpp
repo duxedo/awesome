@@ -20,6 +20,7 @@
  */
 
 #include "strut.h"
+
 #include "luaa.h"
 #include "math.h"
 
@@ -28,9 +29,7 @@
  * \param strut The strut to push.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_pushstrut(lua_State *L, strut_t strut)
-{
+int luaA_pushstrut(lua_State* L, strut_t strut) {
     lua_createtable(L, 4, 0);
     lua_pushinteger(L, strut.left);
     lua_setfield(L, -2, "left");
@@ -48,9 +47,7 @@ luaA_pushstrut(lua_State *L, strut_t strut)
  * \param idx The index of the table on the stack.
  * \param strut The strut to fill. Current values will be used as default.
  */
-void
-luaA_tostrut(lua_State *L, int idx, strut_t *strut)
-{
+void luaA_tostrut(lua_State* L, int idx, strut_t* strut) {
     luaA_checktable(L, idx);
     strut->left = ceil(luaA_getopt_number_range(L, idx, "left", strut->left, 0, UINT16_MAX));
     strut->right = ceil(luaA_getopt_number_range(L, idx, "right", strut->right, 0, UINT16_MAX));

@@ -23,4 +23,3 @@
 #include <string>
 
 std::string backtrace_get();
-

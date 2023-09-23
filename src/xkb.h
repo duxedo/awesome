@@ -22,16 +22,17 @@
 #ifndef AWESOME_XKB_H
 #define AWESOME_XKB_H
 
-#include <xcb/xcb.h>
 #include "common/luahdr.h"
+
+#include <xcb/xcb.h>
 
 void event_handle_xkb_notify(xcb_generic_event_t* event);
 void xkb_init(void);
 void xkb_free(void);
 
-extern "C" int luaA_xkb_set_layout_group(lua_State *L);
-extern "C" int luaA_xkb_get_layout_group(lua_State *L);
-extern "C" int luaA_xkb_get_group_names(lua_State *L);
+extern "C" int luaA_xkb_set_layout_group(lua_State* L);
+extern "C" int luaA_xkb_get_layout_group(lua_State* L);
+extern "C" int luaA_xkb_get_group_names(lua_State* L);
 
 #endif
 

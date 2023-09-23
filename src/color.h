@@ -23,13 +23,12 @@
 #ifndef AWESOME_COLOR_H
 #define AWESOME_COLOR_H
 
-#include <xcb/xcb.h>
-#include <stdbool.h>
-
 #include "common/luahdr.h"
 
-typedef struct
-{
+#include <stdbool.h>
+#include <xcb/xcb.h>
+
+typedef struct {
     uint32_t pixel;
     uint16_t red;
     uint16_t green;
@@ -38,18 +37,17 @@ typedef struct
     bool initialized;
 } color_t;
 
-typedef struct
-{
+typedef struct {
     xcb_alloc_color_cookie_t cookie_hexa;
-    color_t *color;
+    color_t* color;
     bool has_error;
-    const char *colstr;
+    const char* colstr;
 } color_init_request_t;
 
-color_init_request_t color_init_unchecked(color_t *, const char *, ssize_t, xcb_visualtype_t *visual);
+color_init_request_t color_init_unchecked(color_t*, const char*, ssize_t, xcb_visualtype_t* visual);
 bool color_init_reply(color_init_request_t);
 
-int luaA_pushcolor(lua_State *, const color_t);
+int luaA_pushcolor(lua_State*, const color_t);
 
 #endif
 

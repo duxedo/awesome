@@ -52,18 +52,18 @@
  */
 
 #include "spawn.h"
+
 #include "glibconfig.h"
 #include "libsn/sn-monitor.h"
 #include "luaa.h"
 
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#include <unistd.h>
 #include <glib.h>
-#include <vector>
 #include <memory>
 #include <set>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <vector>
 
 /** 20 seconds timeout */
 #define AWESOME_SPAWN_TIMEOUT 20.0
@@ -71,10 +71,7 @@
 /** Wrapper for unrefing startup sequence.
  */
 struct SnStartupDeleter {
-    void operator()(SnStartupSequence *sss)
-    {
-        return sn_startup_sequence_unref(sss);
-    }
+    void operator()(SnStartupSequence* sss) { return sn_startup_sequence_unref(sss); }
 };
 using StartupSequenceHandle = std::unique_ptr<SnStartupSequence, SnStartupDeleter>;
 /** The array of startup sequence running */
@@ -83,27 +80,18 @@ std::vector<StartupSequenceHandle> sn_waits;
 struct running_child_t {
     GPid pid;
     int exit_callback;
-    auto operator<=>(const running_child_t & c) {
-        return pid <=> c.pid;
-    }
-    auto operator<=>(GPid pid) {
-        return this->pid <=> pid;
-    }
+    auto operator<=>(const running_child_t& c) { return pid <=> c.pid; }
+    auto operator<=>(GPid pid) { return this->pid <=> pid; }
 };
 
 struct ChildPidComparator {
     using is_transparent = void;
-    bool operator()(const running_child_t & lhs, const running_child_t & rhs) const {
+    bool operator()(const running_child_t& lhs, const running_child_t& rhs) const {
         return lhs.pid < rhs.pid;
     }
-    bool operator()(const running_child_t & lhs, GPid rhs) const {
-        return lhs.pid < rhs;
-    }
-    bool operator()(GPid lhs, const running_child_t & rhs) const {
-        return lhs < rhs.pid;
-    }
+    bool operator()(const running_child_t& lhs, GPid rhs) const { return lhs.pid < rhs; }
+    bool operator()(GPid lhs, const running_child_t& rhs) const { return lhs < rhs.pid; }
 };
-
 
 static std::set<running_child_t, ChildPidComparator> running_children;
 
@@ -111,61 +99,50 @@ static std::set<running_child_t, ChildPidComparator> running_children;
  * \param s The startup sequence to find, remove and unref.
  * \return True if found and removed.
  */
-static inline bool
-spawn_sequence_remove(SnStartupSequence *s)
-{
-    auto it = std::find_if(sn_waits.begin(), sn_waits.end(), [s](const auto & var) {
-        return var.get() == s;
-    });
-    if(it == sn_waits.end()) {
+static inline bool spawn_sequence_remove(SnStartupSequence* s) {
+    auto it = std::find_if(
+      sn_waits.begin(), sn_waits.end(), [s](const auto& var) { return var.get() == s; });
+    if (it == sn_waits.end()) {
         return false;
     }
     sn_waits.erase(it);
     return false;
 }
 
-static gboolean
-spawn_monitor_timeout(gpointer sequence)
-{
-    if(spawn_sequence_remove((SnStartupSequence*)sequence))
-    {
-         auto sigIt = global_signals.find("spawn::timeout");
-         if(sigIt != global_signals.end())
-         {
-             /* send a timeout signal */
-             lua_State *L = globalconf_get_lua_State();
-             lua_createtable(L, 0, 2);
-             lua_pushstring(L, sn_startup_sequence_get_id((SnStartupSequence*)sequence));
-             lua_setfield(L, -2, "id");
-             for(auto func : sigIt->second.functions)
-             {
-                 lua_pushvalue(L, -1);
-                 luaA_object_push(L, (void *) func);
-                 luaA_dofunction(L, 1, 0);
-             }
-             lua_pop(L, 1);
-         }
+static gboolean spawn_monitor_timeout(gpointer sequence) {
+    if (spawn_sequence_remove((SnStartupSequence*)sequence)) {
+        auto sigIt = global_signals.find("spawn::timeout");
+        if (sigIt != global_signals.end()) {
+            /* send a timeout signal */
+            lua_State* L = globalconf_get_lua_State();
+            lua_createtable(L, 0, 2);
+            lua_pushstring(L, sn_startup_sequence_get_id((SnStartupSequence*)sequence));
+            lua_setfield(L, -2, "id");
+            for (auto func : sigIt->second.functions) {
+                lua_pushvalue(L, -1);
+                luaA_object_push(L, (void*)func);
+                luaA_dofunction(L, 1, 0);
+            }
+            lua_pop(L, 1);
+        }
     }
     sn_startup_sequence_unref((SnStartupSequence*)sequence);
     return FALSE;
 }
 
-static void
-spawn_monitor_event(SnMonitorEvent *event, void *data)
-{
-    lua_State *L = globalconf_get_lua_State();
-    SnStartupSequence *sequence = sn_monitor_event_get_startup_sequence(event);
+static void spawn_monitor_event(SnMonitorEvent* event, void* data) {
+    lua_State* L = globalconf_get_lua_State();
+    SnStartupSequence* sequence = sn_monitor_event_get_startup_sequence(event);
     SnMonitorEventType event_type = sn_monitor_event_get_type(event);
 
     lua_createtable(L, 0, 2);
     lua_pushstring(L, sn_startup_sequence_get_id(sequence));
     lua_setfield(L, -2, "id");
 
-    const char *event_type_str = NULL;
+    const char* event_type_str = NULL;
 
-    switch(event_type)
-    {
-      case SN_MONITOR_EVENT_INITIATED:
+    switch (event_type) {
+    case SN_MONITOR_EVENT_INITIATED:
         /* ref the sequence for the array */
         sn_startup_sequence_ref(sequence);
         sn_waits.push_back(StartupSequenceHandle{sequence});
@@ -177,73 +154,55 @@ spawn_monitor_event(SnMonitorEvent *event, void *data)
         /* ref the sequence for the callback event */
         sn_startup_sequence_ref(sequence);
         break;
-      case SN_MONITOR_EVENT_CHANGED:
-        event_type_str = "spawn::change";
-        break;
-      case SN_MONITOR_EVENT_COMPLETED:
-        event_type_str = "spawn::completed";
-        break;
-      case SN_MONITOR_EVENT_CANCELED:
-        event_type_str = "spawn::canceled";
-        break;
+    case SN_MONITOR_EVENT_CHANGED: event_type_str = "spawn::change"; break;
+    case SN_MONITOR_EVENT_COMPLETED: event_type_str = "spawn::completed"; break;
+    case SN_MONITOR_EVENT_CANCELED: event_type_str = "spawn::canceled"; break;
     }
 
     /* common actions */
-    switch(event_type)
-    {
-      case SN_MONITOR_EVENT_INITIATED:
-      case SN_MONITOR_EVENT_CHANGED:
-        {
-            const char *s = sn_startup_sequence_get_name(sequence);
-            if(s)
-            {
-                lua_pushstring(L, s);
-                lua_setfield(L, -2, "name");
-            }
-
-            if((s = sn_startup_sequence_get_description(sequence)))
-            {
-                lua_pushstring(L, s);
-                lua_setfield(L, -2, "description");
-            }
-
-            lua_pushinteger(L, sn_startup_sequence_get_workspace(sequence));
-            lua_setfield(L, -2, "workspace");
-
-            if((s = sn_startup_sequence_get_binary_name(sequence)))
-            {
-                lua_pushstring(L, s);
-                lua_setfield(L, -2, "binary_name");
-            }
-
-            if((s = sn_startup_sequence_get_icon_name(sequence)))
-            {
-                lua_pushstring(L, s);
-                lua_setfield(L, -2, "icon_name");
-            }
-
-            if((s = sn_startup_sequence_get_wmclass(sequence)))
-            {
-                lua_pushstring(L, s);
-                lua_setfield(L, -2, "wmclass");
-            }
+    switch (event_type) {
+    case SN_MONITOR_EVENT_INITIATED:
+    case SN_MONITOR_EVENT_CHANGED: {
+        const char* s = sn_startup_sequence_get_name(sequence);
+        if (s) {
+            lua_pushstring(L, s);
+            lua_setfield(L, -2, "name");
         }
-        break;
-      case SN_MONITOR_EVENT_COMPLETED:
-      case SN_MONITOR_EVENT_CANCELED:
-        spawn_sequence_remove(sequence);
-        break;
+
+        if ((s = sn_startup_sequence_get_description(sequence))) {
+            lua_pushstring(L, s);
+            lua_setfield(L, -2, "description");
+        }
+
+        lua_pushinteger(L, sn_startup_sequence_get_workspace(sequence));
+        lua_setfield(L, -2, "workspace");
+
+        if ((s = sn_startup_sequence_get_binary_name(sequence))) {
+            lua_pushstring(L, s);
+            lua_setfield(L, -2, "binary_name");
+        }
+
+        if ((s = sn_startup_sequence_get_icon_name(sequence))) {
+            lua_pushstring(L, s);
+            lua_setfield(L, -2, "icon_name");
+        }
+
+        if ((s = sn_startup_sequence_get_wmclass(sequence))) {
+            lua_pushstring(L, s);
+            lua_setfield(L, -2, "wmclass");
+        }
+    } break;
+    case SN_MONITOR_EVENT_COMPLETED:
+    case SN_MONITOR_EVENT_CANCELED: spawn_sequence_remove(sequence); break;
     }
 
     /* send the signal */
     auto sigIt = global_signals.find(event_type_str);
 
-    if(sigIt != global_signals.end())
-    {
-        for(auto func : sigIt->second.functions)
-        {
+    if (sigIt != global_signals.end()) {
+        for (auto func : sigIt->second.functions) {
             lua_pushvalue(L, -1);
-            luaA_object_push(L, (void *) func);
+            luaA_object_push(L, (void*)func);
             luaA_dofunction(L, 1, 0);
         }
         lua_pop(L, 1);
@@ -254,32 +213,26 @@ spawn_monitor_event(SnMonitorEvent *event, void *data)
  * \param c The client that just started.
  * \param startup_id The startup id of the started application.
  */
-void
-spawn_start_notify(client_t *c, const char * startup_id)
-{
-    for(auto & _seq : sn_waits)
-    {
-        SnStartupSequence *seq = _seq.get();
+void spawn_start_notify(client_t* c, const char* startup_id) {
+    for (auto& _seq : sn_waits) {
+        SnStartupSequence* seq = _seq.get();
         bool found = false;
-        const char *seqid = sn_startup_sequence_get_id(seq);
+        const char* seqid = sn_startup_sequence_get_id(seq);
 
         if (A_STRNEQ(seqid, startup_id))
             found = true;
-        else
-        {
-            const char *seqclass = sn_startup_sequence_get_wmclass(seq);
+        else {
+            const char* seqclass = sn_startup_sequence_get_wmclass(seq);
             if (A_STREQ(seqclass, c->cls) || A_STREQ(seqclass, c->instance))
                 found = true;
-            else
-            {
-                const char *seqbin = sn_startup_sequence_get_binary_name(seq);
+            else {
+                const char* seqbin = sn_startup_sequence_get_binary_name(seq);
                 if (A_STREQ_CASE(seqbin, c->cls) || A_STREQ_CASE(seqbin, c->instance))
                     found = true;
             }
         }
 
-        if(found)
-        {
+        if (found) {
             sn_startup_sequence_complete(seq);
             break;
         }
@@ -288,29 +241,21 @@ spawn_start_notify(client_t *c, const char * startup_id)
 
 /** Initialize program spawner.
  */
-void
-spawn_init(void)
-{
+void spawn_init(void) {
     getGlobals().sndisplay = sn_xcb_display_new(getGlobals().connection, NULL, NULL);
 
-    getGlobals().snmonitor = sn_monitor_context_new(getGlobals().sndisplay,
-                                                  getGlobals().default_screen,
-                                                  spawn_monitor_event,
-                                                  NULL, NULL);
+    getGlobals().snmonitor = sn_monitor_context_new(
+      getGlobals().sndisplay, getGlobals().default_screen, spawn_monitor_event, NULL, NULL);
 }
 
-static gboolean
-spawn_launchee_timeout(gpointer context)
-{
-    sn_launcher_context_complete((SnLauncherContext *)context);
-    sn_launcher_context_unref((SnLauncherContext *)context);
+static gboolean spawn_launchee_timeout(gpointer context) {
+    sn_launcher_context_complete((SnLauncherContext*)context);
+    sn_launcher_context_unref((SnLauncherContext*)context);
     return FALSE;
 }
 
-static void
-spawn_callback(gpointer user_data)
-{
-    SnLauncherContext *context = (SnLauncherContext *) user_data;
+static void spawn_callback(gpointer user_data) {
+    SnLauncherContext* context = (SnLauncherContext*)user_data;
     setsid();
 
     if (context)
@@ -325,10 +270,8 @@ spawn_callback(gpointer user_data)
  * \param idx The index of the table that we should parse.
  * \return The argv array.
  */
-static gchar **
-parse_table_array(lua_State *L, int idx, GError **error)
-{
-    gchar **argv = NULL;
+static gchar** parse_table_array(lua_State* L, int idx, GError** error) {
+    gchar** argv = NULL;
     size_t i, len;
 
     luaL_checktype(L, idx, LUA_TTABLE);
@@ -338,13 +281,10 @@ parse_table_array(lua_State *L, int idx, GError **error)
     /* First verify that the table is sane: All integer keys must contain
      * strings. Do this by pushing them all onto the stack.
      */
-    for (i = 0; i < len; i++)
-    {
-        lua_rawgeti(L, idx, i+1);
-        if (lua_type(L, -1) != LUA_TSTRING)
-        {
-            g_set_error(error, G_SPAWN_ERROR, 0,
-                    "Non-string argument at table index %zd", i+1);
+    for (i = 0; i < len; i++) {
+        lua_rawgeti(L, idx, i + 1);
+        if (lua_type(L, -1) != LUA_TSTRING) {
+            g_set_error(error, G_SPAWN_ERROR, 0, "Non-string argument at table index %zd", i + 1);
             return NULL;
         }
     }
@@ -352,9 +292,8 @@ parse_table_array(lua_State *L, int idx, GError **error)
     /* From this point on nothing can go wrong and so we can safely allocate
      * memory.
      */
-    argv = g_new0(gchar *, len + 1);
-    for (i = 0; i < len; i++)
-    {
+    argv = g_new0(gchar*, len + 1);
+    for (i = 0; i < len; i++) {
         argv[len - i - 1] = g_strdup(lua_tostring(L, -1));
         lua_pop(L, 1);
     }
@@ -367,25 +306,18 @@ parse_table_array(lua_State *L, int idx, GError **error)
  * \param idx The index of the argument that we should parse.
  * \return The argv array for the new process.
  */
-static gchar **
-parse_command(lua_State *L, int idx, GError **error)
-{
-    gchar **argv = NULL;
+static gchar** parse_command(lua_State* L, int idx, GError** error) {
+    gchar** argv = NULL;
 
-    if (lua_isstring(L, idx))
-    {
-        const char *cmd = luaL_checkstring(L, idx);
-        if(!g_shell_parse_argv(cmd, NULL, &argv, error))
+    if (lua_isstring(L, idx)) {
+        const char* cmd = luaL_checkstring(L, idx);
+        if (!g_shell_parse_argv(cmd, NULL, &argv, error))
             return NULL;
-    }
-    else if (lua_istable(L, idx))
-    {
+    } else if (lua_istable(L, idx)) {
         argv = parse_table_array(L, idx, error);
-    }
-    else
-    {
-        g_set_error_literal(error, G_SPAWN_ERROR, 0,
-                "Invalid argument to spawn(), expected string or table");
+    } else {
+        g_set_error_literal(
+          error, G_SPAWN_ERROR, 0, "Invalid argument to spawn(), expected string or table");
         return NULL;
     }
 
@@ -393,16 +325,16 @@ parse_command(lua_State *L, int idx, GError **error)
 }
 
 /** Callback for when a spawned process exits. */
-void
-spawn_child_exited(pid_t pid, int status)
-{
+void spawn_child_exited(pid_t pid, int status) {
     int exit_callback;
-    lua_State *L = globalconf_get_lua_State();
+    lua_State* L = globalconf_get_lua_State();
 
     auto it = running_children.find(GPid(pid));
     if (it == running_children.end()) {
         warn("Unknown child %d exited with %s %d",
-                 (int)pid, WIFEXITED(status) ? "status" : "signal", status);
+             (int)pid,
+             WIFEXITED(status) ? "status" : "signal",
+             status);
         return;
     }
     exit_callback = it->exit_callback;
@@ -456,9 +388,7 @@ spawn_child_exited(pid_t pid, int status)
  * @treturn[2] string An error string if an error occurred.
  * @staticfct spawn
  */
-int
-luaA_spawn(lua_State *L)
-{
+int luaA_spawn(lua_State* L) {
     gchar **argv = NULL, **envp = NULL;
     bool use_sn = true, return_stdin = false, return_stdout = false, return_stderr = false;
     int stdin_fd = -1, stdout_fd = -1, stderr_fd = -1;
@@ -467,7 +397,7 @@ luaA_spawn(lua_State *L)
     gboolean retval;
     GPid pid;
 
-    if(lua_gettop(L) >= 2)
+    if (lua_gettop(L) >= 2)
         use_sn = luaA_checkboolean(L, 2);
     /* Valid values for return_std* are:
     * true -> return a fd
@@ -534,23 +464,21 @@ luaA_spawn(lua_State *L)
         luaA_checkfunction(L, 6);
         flags |= G_SPAWN_DO_NOT_REAP_CHILD;
     }
-    if(return_stdin)
+    if (return_stdin)
         stdin_ptr = &stdin_fd;
-    if(return_stdout)
+    if (return_stdout)
         stdout_ptr = &stdout_fd;
-    if(return_stderr)
+    if (return_stderr)
         stderr_ptr = &stderr_fd;
 
-    GError *error = NULL;
+    GError* error = NULL;
     argv = parse_command(L, 1, &error);
-    if(!argv || !argv[0])
-    {
+    if (!argv || !argv[0]) {
         g_strfreev(argv);
         if (error) {
             lua_pushfstring(L, "spawn: parse error: %s", error->message);
             g_error_free(error);
-        }
-        else
+        } else
             lua_pushliteral(L, "spawn: There is nothing to execute");
         return 1;
     }
@@ -566,9 +494,8 @@ luaA_spawn(lua_State *L)
         }
     }
 
-    SnLauncherContext *context = NULL;
-    if(use_sn)
-    {
+    SnLauncherContext* context = NULL;
+    if (use_sn) {
         context = sn_launcher_context_new(getGlobals().sndisplay, getGlobals().default_screen);
         sn_launcher_context_set_name(context, "awesome");
         sn_launcher_context_set_description(context, "awesome spawn");
@@ -581,24 +508,30 @@ luaA_spawn(lua_State *L)
     }
 
     flags |= G_SPAWN_SEARCH_PATH | G_SPAWN_CLOEXEC_PIPES;
-    retval = g_spawn_async_with_pipes(NULL, argv, envp, (GSpawnFlags)flags,
-                                      spawn_callback, context, &pid,
-                                      stdin_ptr, stdout_ptr, stderr_ptr, &error);
+    retval = g_spawn_async_with_pipes(NULL,
+                                      argv,
+                                      envp,
+                                      (GSpawnFlags)flags,
+                                      spawn_callback,
+                                      context,
+                                      &pid,
+                                      stdin_ptr,
+                                      stdout_ptr,
+                                      stderr_ptr,
+                                      &error);
     g_strfreev(argv);
     g_strfreev(envp);
-    if(!retval)
-    {
+    if (!retval) {
         lua_pushstring(L, error->message);
         g_error_free(error);
-        if(context)
+        if (context)
             sn_launcher_context_complete(context);
         return 1;
     }
 
-    if(flags & G_SPAWN_DO_NOT_REAP_CHILD)
-    {
+    if (flags & G_SPAWN_DO_NOT_REAP_CHILD) {
         /* Only do this down here to avoid leaks in case of errors */
-        running_child_t child = { .pid = pid, .exit_callback = LUA_REFNIL };
+        running_child_t child = {.pid = pid, .exit_callback = LUA_REFNIL};
         luaA_registerfct(L, 6, &child.exit_callback);
         running_children.insert(child);
     }
@@ -612,15 +545,15 @@ luaA_spawn(lua_State *L)
     else
         lua_pushnil(L);
 
-    if(return_stdin)
+    if (return_stdin)
         lua_pushinteger(L, stdin_fd);
     else
         lua_pushnil(L);
-    if(return_stdout)
+    if (return_stdout)
         lua_pushinteger(L, stdout_fd);
     else
         lua_pushnil(L);
-    if(return_stderr)
+    if (return_stderr)
         lua_pushinteger(L, stderr_fd);
     else
         lua_pushnil(L);

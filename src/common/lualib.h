@@ -25,42 +25,39 @@
 #include "common/util.h"
 #include "lauxlib.h"
 #include "lua.h"
-#include <string_view>
+
 #include <optional>
+#include <string_view>
 
 namespace Lua {
-inline std::string_view checkstring(lua_State * L, int numArg) {
+inline std::string_view checkstring(lua_State* L, int numArg) {
     size_t length(0);
-    const char * str = luaL_checklstring(L, numArg, &length);
+    const char* str = luaL_checklstring(L, numArg, &length);
     return {str, length};
 }
 }
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;
 
-void luaA_checkfunction(lua_State *, int);
-void luaA_checktable(lua_State *, int);
+void luaA_checkfunction(lua_State*, int);
+void luaA_checktable(lua_State*, int);
 
 /** Dump the Lua stack. Useful for debugging.
  * \param L The Lua VM state.
  */
-void luaA_dumpstack(lua_State *);
+void luaA_dumpstack(lua_State*);
 
 /** Convert s stack index to positive.
  * \param L The Lua VM state.
  * \param ud The index.
  * \return A positive index.
  */
-static inline int
-luaA_absindex(lua_State *L, int ud)
-{
+static inline int luaA_absindex(lua_State* L, int ud) {
     return (ud > 0 || ud <= LUA_REGISTRYINDEX) ? ud : lua_gettop(L) + ud + 1;
 }
 
-static inline int
-luaA_dofunction_error(lua_State *L)
-{
-    if(lualib_dofunction_on_error)
+static inline int luaA_dofunction_error(lua_State* L) {
+    if (lualib_dofunction_on_error)
         return lualib_dofunction_on_error(L);
     return 0;
 }
@@ -71,18 +68,15 @@ luaA_dofunction_error(lua_State *L)
  * \param nret The number of returned value from the Lua function.
  * \return True on no error, false otherwise.
  */
-static inline bool
-luaA_dofunction(lua_State *L, int nargs, int nret)
-{
+static inline bool luaA_dofunction(lua_State* L, int nargs, int nret) {
     /* Move function before arguments */
-    lua_insert(L, - nargs - 1);
+    lua_insert(L, -nargs - 1);
     /* Push error handling function */
     lua_pushcfunction(L, luaA_dofunction_error);
     /* Move error handling function before args and function */
-    lua_insert(L, - nargs - 2);
+    lua_insert(L, -nargs - 2);
     int error_func_pos = lua_gettop(L) - nargs - 1;
-    if(lua_pcall(L, nargs, nret, - nargs - 2))
-    {
+    if (lua_pcall(L, nargs, nret, -nargs - 2)) {
         warn("%s", lua_tostring(L, -1));
         /* Remove error function and error string */
         lua_pop(L, 2);
@@ -98,9 +92,7 @@ luaA_dofunction(lua_State *L, int nargs, int nret)
  * \param handler The function to call.
  * \return The number of elements pushed on stack.
  */
-static inline
-int luaA_call_handler(lua_State *L, int handler)
-{
+static inline int luaA_call_handler(lua_State* L, int handler) {
     /* This is based on luaA_dofunction, but allows multiple return values */
     assert(handler != LUA_REFNIL);
 
@@ -108,15 +100,14 @@ int luaA_call_handler(lua_State *L, int handler)
 
     /* Push error handling function and move it before args */
     lua_pushcfunction(L, luaA_dofunction_error);
-    lua_insert(L, - nargs - 1);
+    lua_insert(L, -nargs - 1);
     int error_func_pos = 1;
 
     /* push function and move it before args */
     lua_rawgeti(L, LUA_REGISTRYINDEX, handler);
-    lua_insert(L, - nargs - 1);
+    lua_insert(L, -nargs - 1);
 
-    if(lua_pcall(L, nargs, LUA_MULTRET, error_func_pos))
-    {
+    if (lua_pcall(L, nargs, LUA_MULTRET, error_func_pos)) {
         warn("%s", lua_tostring(L, -1));
         /* Remove error function and error string */
         lua_pop(L, 2);

@@ -24,14 +24,15 @@
 
 #include "common/luaclass.h"
 #include "luaa.h"
+
 #include <string_view>
 
 #define LUAA_OBJECT_REGISTRY_KEY "awesome.object.registry"
 
-int luaA_settype(lua_State *, lua_class_t *);
-void luaA_object_setup(lua_State *);
-void * luaA_object_incref(lua_State *, int, int);
-void luaA_object_decref(lua_State *, int, const void *);
+int luaA_settype(lua_State*, lua_class_t*);
+void luaA_object_setup(lua_State*);
+void* luaA_object_incref(lua_State*, int, int);
+void luaA_object_decref(lua_State*, int, const void*);
 
 /** Store an item in the environment table of an object.
  * \param L The Lua VM state.
@@ -39,12 +40,10 @@ void luaA_object_decref(lua_State *, int, const void *);
  * \param iud The index of the item on the stack.
  * \return The item reference.
  */
-static inline void *
-luaA_object_ref_item(lua_State *L, int ud, int iud)
-{
+static inline void* luaA_object_ref_item(lua_State* L, int ud, int iud) {
     /* Get the env table from the object */
     luaA_getuservalue(L, ud);
-    void *pointer = luaA_object_incref(L, -1, iud < 0 ? iud - 1 : iud);
+    void* pointer = luaA_object_incref(L, -1, iud < 0 ? iud - 1 : iud);
     /* Remove env table */
     lua_pop(L, 1);
     return pointer;
@@ -55,9 +54,7 @@ luaA_object_ref_item(lua_State *L, int ud, int iud)
  * \param ud The index of the object on the stack.
  * \param ref item.
  */
-static inline void
-luaA_object_unref_item(lua_State *L, int ud, void *pointer)
-{
+static inline void luaA_object_unref_item(lua_State* L, int ud, void* pointer) {
     /* Get the env table from the object */
     luaA_getuservalue(L, ud);
     /* Decrement */
@@ -72,13 +69,11 @@ luaA_object_unref_item(lua_State *L, int ud, void *pointer)
  * \param pointer The item pointer.
  * \return The number of element pushed on stack.
  */
-static inline int
-luaA_object_push_item(lua_State *L, int ud, const void *pointer)
-{
+static inline int luaA_object_push_item(lua_State* L, int ud, const void* pointer) {
     /* Get env table of the object */
     luaA_getuservalue(L, ud);
     /* Push key */
-    lua_pushlightuserdata(L, (void *) pointer);
+    lua_pushlightuserdata(L, (void*)pointer);
     /* Get env.pointer */
     lua_rawget(L, -2);
     /* Remove env table */
@@ -86,9 +81,7 @@ luaA_object_push_item(lua_State *L, int ud, const void *pointer)
     return 1;
 }
 
-static inline void
-luaA_object_registry_push(lua_State *L)
-{
+static inline void luaA_object_registry_push(lua_State* L) {
     lua_pushliteral(L, LUAA_OBJECT_REGISTRY_KEY);
     lua_rawget(L, LUA_REGISTRYINDEX);
 }
@@ -99,11 +92,9 @@ luaA_object_registry_push(lua_State *L)
  * \param oud The object index on the stack.
  * \return The object reference, or NULL if not referenceable.
  */
-static inline void *
-luaA_object_ref(lua_State *L, int oud)
-{
+static inline void* luaA_object_ref(lua_State* L, int oud) {
     luaA_object_registry_push(L);
-    void *p = luaA_object_incref(L, -1, oud < 0 ? oud - 1 : oud);
+    void* p = luaA_object_incref(L, -1, oud < 0 ? oud - 1 : oud);
     lua_pop(L, 1);
     return p;
 }
@@ -115,9 +106,7 @@ luaA_object_ref(lua_State *L, int oud)
  * \param class The class of object expected
  * \return The object reference, or NULL if not referenceable.
  */
-static inline void *
-luaA_object_ref_class(lua_State *L, int oud, lua_class_t *cls)
-{
+static inline void* luaA_object_ref_class(lua_State* L, int oud, lua_class_t* cls) {
     luaA_checkudata(L, oud, cls);
     return luaA_object_ref(L, oud);
 }
@@ -127,9 +116,7 @@ luaA_object_ref_class(lua_State *L, int oud, lua_class_t *cls)
  * \param L The Lua VM state.
  * \param oud The object index on the stack.
  */
-static inline void
-luaA_object_unref(lua_State *L, const void *pointer)
-{
+static inline void luaA_object_unref(lua_State* L, const void* pointer) {
     luaA_object_registry_push(L);
     luaA_object_decref(L, -1, pointer);
     lua_pop(L, 1);
@@ -140,87 +127,72 @@ luaA_object_unref(lua_State *L, const void *pointer)
  * \param pointer The object to push.
  * \return The number of element pushed on stack.
  */
-static inline int
-luaA_object_push(lua_State *L, const void *pointer)
-{
+static inline int luaA_object_push(lua_State* L, const void* pointer) {
     luaA_object_registry_push(L);
-    lua_pushlightuserdata(L, (void *) pointer);
+    lua_pushlightuserdata(L, (void*)pointer);
     lua_rawget(L, -2);
     lua_remove(L, -2);
     return 1;
 }
 
-void signal_object_emit(lua_State *, Signals *, const std::string_view&, int);
+void signal_object_emit(lua_State*, Signals*, const std::string_view&, int);
 
-void luaA_object_connect_signal(lua_State *, int, const char *, lua_CFunction);
-void luaA_object_disconnect_signal(lua_State *, int, const char *, lua_CFunction);
-void luaA_object_connect_signal_from_stack(lua_State *, int, const char *, int);
-void luaA_object_disconnect_signal_from_stack(lua_State *, int, const char *, int);
-void luaA_object_emit_signal(lua_State *, int, const char *, int);
+void luaA_object_connect_signal(lua_State*, int, const char*, lua_CFunction);
+void luaA_object_disconnect_signal(lua_State*, int, const char*, lua_CFunction);
+void luaA_object_connect_signal_from_stack(lua_State*, int, const char*, int);
+void luaA_object_disconnect_signal_from_stack(lua_State*, int, const char*, int);
+void luaA_object_emit_signal(lua_State*, int, const char*, int);
 
-int luaA_object_connect_signal_simple(lua_State *);
-int luaA_object_disconnect_signal_simple(lua_State *);
-int luaA_object_emit_signal_simple(lua_State *);
+int luaA_object_connect_signal_simple(lua_State*);
+int luaA_object_disconnect_signal_simple(lua_State*);
+int luaA_object_emit_signal_simple(lua_State*);
 
-#define LUA_OBJECT_FUNCS(lua_class, type, prefix)                              \
-    LUA_CLASS_FUNCS(prefix, lua_class)                                         \
-    static inline type *                                                       \
-    prefix##_new(lua_State *L)                                                 \
-    {                                                                          \
-        void *mem = lua_newuserdata(L, sizeof(type));                          \
-        auto p = new(mem) type {};\
-        (lua_class).instances++;                                               \
-        luaA_settype(L, &(lua_class));                                         \
-        lua_newtable(L);                                                       \
-        lua_newtable(L);                                                       \
-        lua_setmetatable(L, -2);                                               \
-        lua_newtable(L);                                                       \
-        lua_setfield(L, -2, "data");                                           \
-        luaA_setuservalue(L, -2);                                              \
-        lua_pushvalue(L, -1);                                                  \
-        luaA_class_emit_signal(L, &(lua_class), "new", 1);                     \
-        return p;                                                              \
+#define LUA_OBJECT_FUNCS(lua_class, type, prefix)          \
+    LUA_CLASS_FUNCS(prefix, lua_class)                     \
+    static inline type* prefix##_new(lua_State* L) {       \
+        void* mem = lua_newuserdata(L, sizeof(type));      \
+        auto p = new (mem) type{};                         \
+        (lua_class).instances++;                           \
+        luaA_settype(L, &(lua_class));                     \
+        lua_newtable(L);                                   \
+        lua_newtable(L);                                   \
+        lua_setmetatable(L, -2);                           \
+        lua_newtable(L);                                   \
+        lua_setfield(L, -2, "data");                       \
+        luaA_setuservalue(L, -2);                          \
+        lua_pushvalue(L, -1);                              \
+        luaA_class_emit_signal(L, &(lua_class), "new", 1); \
+        return p;                                          \
     }
 
 #define OBJECT_EXPORT_PROPERTY(pfx, type, field) \
-    fieldtypeof(type, field) \
-    pfx##_get_##field(const type *object) \
-    { \
-        return object->field; \
+    fieldtypeof(type, field) pfx##_get_##field(const type* object) { return object->field; }
+
+#define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
+    static int luaA_##pfx##_get_##field(lua_State* L, type* object) { \
+        pusher(L, object->field);                                     \
+        return 1;                                                     \
     }
 
-#define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher) \
-    static int \
-    luaA_##pfx##_get_##field(lua_State *L, type *object) \
-    { \
-        pusher(L, object->field); \
-        return 1; \
-    }
-
-#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher) \
-    static int \
-    luaA_##pfx##_get_##name(lua_State *L, type *object) \
-    { \
-        pusher(L, object->field); \
-        return 1; \
+#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)  \
+    static int luaA_##pfx##_get_##name(lua_State* L, type* object) { \
+        pusher(L, object->field);                                    \
+        return 1;                                                    \
     }
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
-    static int \
-    luaA_##pfx##_get_##field(lua_State *L, type *object) \
-    { \
-        if (object->field == empty_value) \
-            return 0; \
-        pusher(L, object->field); \
-        return 1; \
+    static int luaA_##pfx##_get_##field(lua_State* L, type* object) {              \
+        if (object->field == empty_value)                                          \
+            return 0;                                                              \
+        pusher(L, object->field);                                                  \
+        return 1;                                                                  \
     }
 
-int luaA_object_tostring(lua_State *);
+int luaA_object_tostring(lua_State*);
 
-#define LUA_OBJECT_META(prefix) \
-    { "__tostring", luaA_object_tostring }, \
-    { "connect_signal", luaA_object_connect_signal_simple }, \
-    { "disconnect_signal", luaA_object_disconnect_signal_simple }, \
-    { "emit_signal", luaA_object_emit_signal_simple },
+#define LUA_OBJECT_META(prefix)                                                                  \
+    {"__tostring", luaA_object_tostring}, {"connect_signal", luaA_object_connect_signal_simple}, \
+      {"disconnect_signal", luaA_object_disconnect_signal_simple},                               \
+      {"emit_signal", luaA_object_emit_signal_simple},
 
 #endif
 
