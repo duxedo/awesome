@@ -38,13 +38,15 @@ void atoms_init(xcb_connection_t* conn) {
 
     /* Create the atom and get the reply in a XCB way (e.g. send all
      * the requests at the same time and then get the replies) */
-    for (i = 0; i < countof(ATOM_LIST); i++)
+    for (i = 0; i < countof(ATOM_LIST); i++) {
         cs[i] = xcb_intern_atom_unchecked(conn, false, ATOM_LIST[i].len, ATOM_LIST[i].name);
+    }
 
     for (i = 0; i < countof(ATOM_LIST); i++) {
-        if (!(r = xcb_intern_atom_reply(conn, cs[i], NULL)))
+        if (!(r = xcb_intern_atom_reply(conn, cs[i], NULL))) {
             /* An error occurred, get reply for next atom */
             continue;
+        }
 
         *ATOM_LIST[i].atom = r->atom;
         p_delete(&r);

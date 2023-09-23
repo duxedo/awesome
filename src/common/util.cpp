@@ -37,8 +37,9 @@ const char* a_current_time_str(void) {
 
     time(&now);
     localtime_r(&now, &tm);
-    if (!strftime(buffer, sizeof(buffer), "%Y-%m-%d %T ", &tm))
+    if (!strftime(buffer, sizeof(buffer), "%Y-%m-%d %T ", &tm)) {
         buffer[0] = '\0';
+    }
 
     return buffer;
 }
@@ -120,8 +121,9 @@ ssize_t a_strcpy(char* dst, ssize_t n, const char* src) {
 void a_exec(const char* cmd) {
     static const char* shell = NULL;
 
-    if (!shell && !(shell = getenv("SHELL")))
+    if (!shell && !(shell = getenv("SHELL"))) {
         shell = "/bin/sh";
+    }
 
     execlp(shell, shell, "-c", cmd, NULL);
     fatal("execlp() failed: %s", strerror(errno));

@@ -47,26 +47,36 @@ static int ewmh_client_update_hints(lua_State* L) {
     xcb_atom_t state[10]; /* number of defined state atoms */
     size_t i = 0;
 
-    if (c->modal)
+    if (c->modal) {
         state[i++] = _NET_WM_STATE_MODAL;
-    if (c->fullscreen)
+    }
+    if (c->fullscreen) {
         state[i++] = _NET_WM_STATE_FULLSCREEN;
-    if (c->maximized_vertical || c->maximized)
+    }
+    if (c->maximized_vertical || c->maximized) {
         state[i++] = _NET_WM_STATE_MAXIMIZED_VERT;
-    if (c->maximized_horizontal || c->maximized)
+    }
+    if (c->maximized_horizontal || c->maximized) {
         state[i++] = _NET_WM_STATE_MAXIMIZED_HORZ;
-    if (c->sticky)
+    }
+    if (c->sticky) {
         state[i++] = _NET_WM_STATE_STICKY;
-    if (c->skip_taskbar)
+    }
+    if (c->skip_taskbar) {
         state[i++] = _NET_WM_STATE_SKIP_TASKBAR;
-    if (c->above)
+    }
+    if (c->above) {
         state[i++] = _NET_WM_STATE_ABOVE;
-    if (c->below)
+    }
+    if (c->below) {
         state[i++] = _NET_WM_STATE_BELOW;
-    if (c->minimized)
+    }
+    if (c->minimized) {
         state[i++] = _NET_WM_STATE_HIDDEN;
-    if (c->urgent)
+    }
+    if (c->urgent) {
         state[i++] = _NET_WM_STATE_DEMANDS_ATTENTION;
+    }
 
     getConnection().replace_property(c->window, _NET_WM_STATE, XCB_ATOM_ATOM, std::span{state, i});
 
@@ -76,10 +86,11 @@ static int ewmh_client_update_hints(lua_State* L) {
 static int ewmh_update_net_active_window(lua_State* L) {
     xcb_window_t win;
 
-    if (getGlobals().focus.client)
+    if (getGlobals().focus.client) {
         win = getGlobals().focus.client->window;
-    else
+    } else {
         win = XCB_NONE;
+    }
 
     getConnection().replace_property(
       getGlobals().screen->root, _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
@@ -201,10 +212,11 @@ void ewmh_init(void) {
 static void ewmh_update_maximize(bool h, bool status, bool toggle) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (h)
+    if (h) {
         lua_pushstring(L, "client_maximize_horizontal");
-    else
+    } else {
         lua_pushstring(L, "client_maximize_vertical");
+    }
 
     /* Create table argument with raise=true. */
     lua_newtable(L);
@@ -304,68 +316,77 @@ static void ewmh_process_state_atom(client_t* c, xcb_atom_t state, int set) {
     luaA_object_push(L, c);
 
     if (state == _NET_WM_STATE_STICKY) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_sticky(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_sticky(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_sticky(L, -1, !c->sticky);
+        }
     } else if (state == _NET_WM_STATE_SKIP_TASKBAR) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_skip_taskbar(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_skip_taskbar(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_skip_taskbar(L, -1, !c->skip_taskbar);
+        }
     } else if (state == _NET_WM_STATE_FULLSCREEN) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_fullscreen(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_fullscreen(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_fullscreen(L, -1, !c->fullscreen);
+        }
     } else if (state == _NET_WM_STATE_MAXIMIZED_HORZ) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             ewmh_update_maximize(true, false, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             ewmh_update_maximize(true, true, false);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             ewmh_update_maximize(true, false, true);
+        }
     } else if (state == _NET_WM_STATE_MAXIMIZED_VERT) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             ewmh_update_maximize(false, false, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             ewmh_update_maximize(false, true, false);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             ewmh_update_maximize(false, false, true);
+        }
     } else if (state == _NET_WM_STATE_ABOVE) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_above(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_above(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_above(L, -1, !c->above);
+        }
     } else if (state == _NET_WM_STATE_BELOW) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_below(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_below(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_below(L, -1, !c->below);
+        }
     } else if (state == _NET_WM_STATE_MODAL) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_modal(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_modal(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_modal(L, -1, !c->modal);
+        }
     } else if (state == _NET_WM_STATE_HIDDEN) {
-        if (set == _NET_WM_STATE_REMOVE)
+        if (set == _NET_WM_STATE_REMOVE) {
             client_set_minimized(L, -1, false);
-        else if (set == _NET_WM_STATE_ADD)
+        } else if (set == _NET_WM_STATE_ADD) {
             client_set_minimized(L, -1, true);
-        else if (set == _NET_WM_STATE_TOGGLE)
+        } else if (set == _NET_WM_STATE_TOGGLE) {
             client_set_minimized(L, -1, !c->minimized);
+        }
     } else if (state == _NET_WM_STATE_DEMANDS_ATTENTION) {
         if (set == _NET_WM_STATE_REMOVE) {
             lua_pushboolean(L, false);
@@ -418,8 +439,9 @@ int ewmh_process_client_message(xcb_client_message_event_t* ev) {
             lua_pop(L, 1);
         }
     } else if (ev->type == _NET_CLOSE_WINDOW) {
-        if ((c = client_getbywin(ev->window)))
+        if ((c = client_getbywin(ev->window))) {
             client_kill(c);
+        }
     } else if (ev->type == _NET_WM_DESKTOP) {
         if ((c = client_getbywin(ev->window))) {
             ewmh_process_desktop(c, ev->data.data32[0]);
@@ -427,8 +449,9 @@ int ewmh_process_client_message(xcb_client_message_event_t* ev) {
     } else if (ev->type == _NET_WM_STATE) {
         if ((c = client_getbywin(ev->window))) {
             ewmh_process_state_atom(c, (xcb_atom_t)ev->data.data32[1], ev->data.data32[0]);
-            if (ev->data.data32[2])
+            if (ev->data.data32[2]) {
                 ewmh_process_state_atom(c, (xcb_atom_t)ev->data.data32[2], ev->data.data32[0]);
+            }
         }
     } else if (ev->type == _NET_ACTIVE_WINDOW) {
         if ((c = client_getbywin(ev->window))) {
@@ -532,13 +555,15 @@ void ewmh_client_check_hints(client_t* c) {
     reply = xcb_get_property_reply(getGlobals().connection, c1, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++)
-            if (state[i] == _NET_WM_STATE_MAXIMIZED_HORZ)
+        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++) {
+            if (state[i] == _NET_WM_STATE_MAXIMIZED_HORZ) {
                 is_h_max = true;
-            else if (state[i] == _NET_WM_STATE_MAXIMIZED_VERT)
+            } else if (state[i] == _NET_WM_STATE_MAXIMIZED_VERT) {
                 is_v_max = true;
-            else
+            } else {
                 ewmh_process_state_atom(c, state[i], _NET_WM_STATE_ADD);
+            }
+        }
     }
 
     /* Check maximization manually */
@@ -565,23 +590,26 @@ void ewmh_client_check_hints(client_t* c) {
     if (reply && (data = xcb_get_property_value(reply))) {
         c->has_NET_WM_WINDOW_TYPE = true;
         state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++)
-            if (state[i] == _NET_WM_WINDOW_TYPE_DESKTOP)
+        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++) {
+            if (state[i] == _NET_WM_WINDOW_TYPE_DESKTOP) {
                 c->type = MAX(c->type, WINDOW_TYPE_DESKTOP);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_DIALOG)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_DIALOG) {
                 c->type = MAX(c->type, WINDOW_TYPE_DIALOG);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_SPLASH)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_SPLASH) {
                 c->type = MAX(c->type, WINDOW_TYPE_SPLASH);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_DOCK)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_DOCK) {
                 c->type = MAX(c->type, WINDOW_TYPE_DOCK);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_MENU)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_MENU) {
                 c->type = MAX(c->type, WINDOW_TYPE_MENU);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_TOOLBAR)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_TOOLBAR) {
                 c->type = MAX(c->type, WINDOW_TYPE_TOOLBAR);
-            else if (state[i] == _NET_WM_WINDOW_TYPE_UTILITY)
+            } else if (state[i] == _NET_WM_WINDOW_TYPE_UTILITY) {
                 c->type = MAX(c->type, WINDOW_TYPE_UTILITY);
-    } else
+            }
+        }
+    } else {
         c->has_NET_WM_WINDOW_TYPE = false;
+    }
 
     p_delete(&reply);
 }
@@ -643,16 +671,18 @@ static cairo_surface_t* ewmh_window_icon_from_reply_next(uint32_t** data, uint32
     uint64_t data_len;
     uint32_t* icon_data;
 
-    if (data_end - *data <= 2)
+    if (data_end - *data <= 2) {
         return NULL;
+    }
 
     width = (*data)[0];
     height = (*data)[1];
 
     /* Check that we have enough data, handling overflow */
     data_len = width * (uint64_t)height;
-    if (width < 1 || height < 1 || data_len > (uint64_t)(data_end - *data) - 2)
+    if (width < 1 || height < 1 || data_len > (uint64_t)(data_end - *data) - 2) {
         return NULL;
+    }
 
     icon_data = *data + 2;
     *data += 2 + data_len;
@@ -664,13 +694,15 @@ static std::vector<cairo_surface_handle> ewmh_window_icon_from_reply(xcb_get_pro
     std::vector<cairo_surface_handle> result;
     cairo_surface_t* s;
 
-    if (!r || r->type != XCB_ATOM_CARDINAL || r->format != 32)
+    if (!r || r->type != XCB_ATOM_CARDINAL || r->format != 32) {
         return result;
+    }
 
     data = (uint32_t*)xcb_get_property_value(r);
     data_end = &data[r->length];
-    if (!data)
+    if (!data) {
         return result;
+    }
 
     while ((s = ewmh_window_icon_from_reply_next(&data, data_end)) != NULL) {
         result.emplace_back(s);

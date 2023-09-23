@@ -60,10 +60,11 @@ void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
  */
 void* luaA_checkudata(lua_State* L, int ud, lua_class_t* cls) {
     lua_object_t* p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
-    if (!p)
+    if (!p) {
         luaA_typerror(L, ud, cls->name);
-    else if (cls->checker && !cls->checker(p))
+    } else if (cls->checker && !cls->checker(p)) {
         luaL_error(L, "invalid object");
+    }
     return p;
 }
 
@@ -94,8 +95,9 @@ const char* luaA_typename(lua_State* L, int idx) {
 
     if (type == LUA_TUSERDATA) {
         lua_class_t* lua_class = luaA_class_get(L, idx);
-        if (lua_class)
+        if (lua_class) {
             return lua_class->name;
+        }
     }
 
     return lua_typename(L, type);
@@ -148,9 +150,11 @@ static int luaA_class_gc(lua_State* L) {
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
     cls->instances--;
     /* Call the collector function of the class, and all its parent classes */
-    for (; cls; cls = cls->parent)
-        if (cls->collector)
+    for (; cls; cls = cls->parent) {
+        if (cls->collector) {
             cls->collector(item);
+        }
+    }
     /* Unset its metatable so that e.g. luaA_toudata() will no longer accept
      * this object. This is needed since other __gc methods can still use this.
      * We also make sure that `item.valid == false`.
@@ -270,8 +274,9 @@ void luaA_class_disconnect_signal_from_stack(lua_State* L,
                                              int ud) {
     luaA_checkfunction(L, ud);
     void* ref = (void*)lua_topointer(L, ud);
-    if (lua_class->signals.disconnect(name, ref))
+    if (lua_class->signals.disconnect(name, ref)) {
         luaA_object_unref(L, (void*)ref);
+    }
     lua_remove(L, ud);
 }
 
@@ -342,8 +347,9 @@ luaA_class_property_get(lua_State* L, lua_class_t* lua_class, int fieldidx) {
  */
 int luaA_class_index(lua_State* L) {
     /* Try to use metatable first. */
-    if (luaA_usemetatable(L, 1, 2))
+    if (luaA_usemetatable(L, 1, 2)) {
         return 1;
+    }
 
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
@@ -376,14 +382,17 @@ int luaA_class_index(lua_State* L) {
 
     /* Property does exist and has an index callback */
     if (prop) {
-        if (prop->index)
+        if (prop->index) {
             return prop->index(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        }
     } else {
-        if (cls->index_miss_handler != LUA_REFNIL)
+        if (cls->index_miss_handler != LUA_REFNIL) {
             return luaA_call_handler(L, cls->index_miss_handler);
-        if (cls->index_miss_property)
+        }
+        if (cls->index_miss_property) {
             return cls->index_miss_property(
               L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        }
     }
 
     return 0;
@@ -395,8 +404,9 @@ int luaA_class_index(lua_State* L) {
  */
 int luaA_class_newindex(lua_State* L) {
     /* Try to use metatable first. */
-    if (luaA_usemetatable(L, 1, 2))
+    if (luaA_usemetatable(L, 1, 2)) {
         return 1;
+    }
 
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
@@ -404,14 +414,17 @@ int luaA_class_newindex(lua_State* L) {
 
     /* Property does exist and has a newindex callback */
     if (prop) {
-        if (prop->newindex)
+        if (prop->newindex) {
             return prop->newindex(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        }
     } else {
-        if (cls->newindex_miss_handler != LUA_REFNIL)
+        if (cls->newindex_miss_handler != LUA_REFNIL) {
             return luaA_call_handler(L, cls->newindex_miss_handler);
-        if (cls->newindex_miss_property)
+        }
+        if (cls->newindex_miss_property) {
             return cls->newindex_miss_property(
               L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        }
     }
 
     return 0;
@@ -438,8 +451,9 @@ int luaA_class_new(lua_State* L, lua_class_t* lua_class) {
         if (lua_isstring(L, -2)) {
             auto prop = luaA_class_property_get(L, lua_class, -2);
 
-            if (prop && prop->newobj)
+            if (prop && prop->newobj) {
                 prop->newobj(L, object);
+            }
         }
         /* Remove value */
         lua_pop(L, 1);

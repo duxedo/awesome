@@ -24,13 +24,15 @@
 lua_CFunction lualib_dofunction_on_error;
 
 void luaA_checkfunction(lua_State* L, int idx) {
-    if (!lua_isfunction(L, idx))
+    if (!lua_isfunction(L, idx)) {
         luaA_typerror(L, idx, "function");
+    }
 }
 
 void luaA_checktable(lua_State* L, int idx) {
-    if (!lua_istable(L, idx))
+    if (!lua_istable(L, idx)) {
         luaA_typerror(L, idx, "table");
+    }
 }
 
 void luaA_dumpstack(lua_State* L) {

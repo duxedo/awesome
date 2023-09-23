@@ -69,11 +69,12 @@ void stack_windows(void) { need_stack_refresh = true; }
  * \param previous The window which should be below this window.
  */
 static void stack_window_above(xcb_window_t w, xcb_window_t previous) {
-    if (previous == XCB_NONE)
+    if (previous == XCB_NONE) {
         /* This would cause an error from the X server. Also, if we really
          * changed the stacking order of all windows, they'd all have to redraw
          * themselves. Doing it like this is better. */
         return;
+    }
     getConnection().configure_window(w,
                                      XCB_CONFIG_WINDOW_SIBLING | XCB_CONFIG_WINDOW_STACK_MODE,
                                      std::array<uint32_t, 2>{previous, XCB_STACK_MODE_ABOVE});
@@ -119,18 +120,21 @@ typedef enum {
  */
 static window_layer_t client_layer_translator(client_t* c) {
     /* first deal with user set attributes */
-    if (c->ontop)
+    if (c->ontop) {
         return WINDOW_LAYER_ONTOP;
+    }
     /* Fullscreen windows only get their own layer when they have the focus */
-    else if (c->fullscreen && getGlobals().focus.client == c)
+    else if (c->fullscreen && getGlobals().focus.client == c) {
         return WINDOW_LAYER_FULLSCREEN;
-    else if (c->above)
+    } else if (c->above) {
         return WINDOW_LAYER_ABOVE;
-    else if (c->below)
+    } else if (c->below) {
         return WINDOW_LAYER_BELOW;
+    }
     /* check for transient attr */
-    else if (c->transient_for)
+    else if (c->transient_for) {
         return WINDOW_LAYER_IGNORE;
+    }
 
     /* then deal with windows type */
     switch (c->type) {
@@ -146,8 +150,9 @@ static window_layer_t client_layer_translator(client_t* c) {
  * relatively to the first matching in the list.
  */
 void stack_refresh() {
-    if (!need_stack_refresh)
+    if (!need_stack_refresh) {
         return;
+    }
 
     xcb_window_t next = XCB_NONE;
 

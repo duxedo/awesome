@@ -125,8 +125,9 @@ static void selection_push_data(lua_State* L, xcb_get_property_reply_t* property
         xcb_atom_t* atoms = (xcb_atom_t*)xcb_get_property_value(property);
         xcb_get_atom_name_cookie_t cookies[num_atoms];
 
-        for (size_t i = 0; i < num_atoms; i++)
+        for (size_t i = 0; i < num_atoms; i++) {
             cookies[i] = xcb_get_atom_name_unchecked(getGlobals().connection, atoms[i]);
+        }
 
         lua_newtable(L);
         for (size_t i = 0; i < num_atoms; i++) {
@@ -219,11 +220,13 @@ static int selection_getter_find_by_window(lua_State* L, xcb_window_t window) {
 void property_handle_awesome_selection_atom(uint8_t state, xcb_window_t window) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (state != XCB_PROPERTY_NEW_VALUE)
+    if (state != XCB_PROPERTY_NEW_VALUE) {
         return;
+    }
 
-    if (selection_getter_find_by_window(L, window) == 0)
+    if (selection_getter_find_by_window(L, window) == 0) {
         return;
+    }
 
     selection_getter_t* selection = (selection_getter_t*)lua_touserdata(L, -1);
 
@@ -256,8 +259,9 @@ void property_handle_awesome_selection_atom(uint8_t state, xcb_window_t window) 
 void event_handle_selectionnotify(xcb_selection_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (selection_getter_find_by_window(L, ev->requestor) == 0)
+    if (selection_getter_find_by_window(L, ev->requestor) == 0) {
         return;
+    }
 
     selection_handle_selectionnotify(L, -1, ev->property);
     lua_pop(L, 1);

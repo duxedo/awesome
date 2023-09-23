@@ -42,8 +42,9 @@ void banning_need_update(void) {
 /** Check all clients if they need to rebanned
  */
 void banning_refresh(void) {
-    if (!getGlobals().need_lazy_banning)
+    if (!getGlobals().need_lazy_banning) {
         return;
+    }
 
     getGlobals().need_lazy_banning = false;
 

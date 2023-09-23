@@ -175,8 +175,9 @@ void selection_transfer_begin(lua_State* L,
     if (reply) {
         lua_pushlstring(L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
         p_delete(&reply);
-    } else
+    } else {
         lua_pushnil(L);
+    }
 
     /* Emit the request signal with target and transfer object */
     lua_pushvalue(L, -2);
@@ -199,16 +200,18 @@ static int luaA_selection_transfer_send(lua_State* L) {
 
     selection_transfer_t* transfer =
       reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, 1, &selection_transfer_class));
-    if (transfer->state != TRANSFER_WAIT_FOR_DATA && transfer->state != TRANSFER_INCREMENTAL_DONE)
+    if (transfer->state != TRANSFER_WAIT_FOR_DATA && transfer->state != TRANSFER_INCREMENTAL_DONE) {
         luaL_error(L, "Transfer object is not ready for more data to be sent");
+    }
 
     luaA_checktable(L, 2);
 
     lua_pushliteral(L, "continue");
     lua_rawget(L, 2);
     transfer->more_data = incr = lua_toboolean(L, -1);
-    if (incr && lua_isnumber(L, -1))
+    if (incr && lua_isnumber(L, -1)) {
         incr_size = lua_tonumber(L, -1);
+    }
     lua_pop(L, 1);
 
     if (transfer->state == TRANSFER_INCREMENTAL_DONE) {
@@ -239,10 +242,12 @@ static int luaA_selection_transfer_send(lua_State* L) {
 
     if (lua_isstring(L, -2)) {
         const char* format_string = luaL_checkstring(L, -2);
-        if (A_STRNEQ(format_string, "atom"))
+        if (A_STRNEQ(format_string, "atom")) {
             luaL_error(L, "Unknown format '%s'", format_string);
-        if (incr)
+        }
+        if (incr) {
             luaL_error(L, "Cannot transfer atoms in pieces");
+        }
 
         /* 'data' is a table with strings */
         size_t len = luaA_rawlen(L, -1);
@@ -274,11 +279,13 @@ static int luaA_selection_transfer_send(lua_State* L) {
         /* 'data' is a string with the data to transfer */
         const char* data = luaL_checklstring(L, -1, &data_length);
 
-        if (!incr)
+        if (!incr) {
             incr_size = data_length;
+        }
 
-        if (data_length >= max_property_length())
+        if (data_length >= max_property_length()) {
             incr = true;
+        }
 
         if (incr) {
             getConnection().change_attributes(
@@ -306,8 +313,9 @@ static int luaA_selection_transfer_send(lua_State* L) {
                               transfer->target,
                               transfer->property,
                               transfer->time);
-    if (!incr)
+    if (!incr) {
         transfer_done(L, transfer);
+    }
 
     return 0;
 }
@@ -315,8 +323,9 @@ static int luaA_selection_transfer_send(lua_State* L) {
 void selection_transfer_handle_propertynotify(xcb_property_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (ev->state != XCB_PROPERTY_DELETE)
+    if (ev->state != XCB_PROPERTY_DELETE) {
         return;
+    }
 
     /* Iterate over all active selection acquire objects */
     lua_pushliteral(L, REGISTRY_TRANSFER_TABLE_INDEX);
