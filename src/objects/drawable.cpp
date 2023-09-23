@@ -118,8 +118,9 @@ drawable_t* drawable_allocator(lua_State* L, drawable_refresh_callback* callback
 static void drawable_unset_surface(drawable_t* d) {
     cairo_surface_finish(d->surface);
     cairo_surface_destroy(d->surface);
-    if (d->pixmap)
+    if (d->pixmap) {
         xcb_free_pixmap(getGlobals().connection, d->pixmap);
+    }
     d->refreshed = false;
     d->surface = NULL;
     d->pixmap = XCB_NONE;
@@ -133,8 +134,9 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     d->geometry = geom;
 
     bool area_changed = !AREA_EQUAL(old, geom);
-    if (area_changed)
+    if (area_changed) {
         drawable_unset_surface(d);
+    }
     if (area_changed && geom.width > 0 && geom.height > 0) {
         d->pixmap = xcb_generate_id(getGlobals().connection);
         xcb_create_pixmap(getGlobals().connection,
@@ -148,16 +150,21 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
         luaA_object_emit_signal(L, didx, "property::surface", 0);
     }
 
-    if (area_changed)
+    if (area_changed) {
         luaA_object_emit_signal(L, didx, "property::geometry", 0);
-    if (old.x != geom.x)
+    }
+    if (old.x != geom.x) {
         luaA_object_emit_signal(L, didx, "property::x", 0);
-    if (old.y != geom.y)
+    }
+    if (old.y != geom.y) {
         luaA_object_emit_signal(L, didx, "property::y", 0);
-    if (old.width != geom.width)
+    }
+    if (old.width != geom.width) {
         luaA_object_emit_signal(L, didx, "property::width", 0);
-    if (old.height != geom.height)
+    }
+    if (old.height != geom.height) {
         luaA_object_emit_signal(L, didx, "property::height", 0);
+    }
 }
 
 /** Get a drawable's surface
@@ -166,11 +173,12 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_drawable_get_surface(lua_State* L, drawable_t* drawable) {
-    if (drawable->surface)
+    if (drawable->surface) {
         /* Lua gets its own reference which it will have to destroy */
         lua_pushlightuserdata(L, cairo_surface_reference(drawable->surface));
-    else
+    } else {
         lua_pushnil(L);
+    }
     return 1;
 }
 

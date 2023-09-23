@@ -71,11 +71,13 @@ xcb_get_property_cookie_t info_get_unchecked(xcb_connection_t* connection, xcb_w
 static bool xembed_info_from_reply(info* info, xcb_get_property_reply_t* prop_r) {
     uint32_t* data;
 
-    if (!prop_r || !prop_r->value_len)
+    if (!prop_r || !prop_r->value_len) {
         return false;
+    }
 
-    if (!(data = (uint32_t*)xcb_get_property_value(prop_r)))
+    if (!(data = (uint32_t*)xcb_get_property_value(prop_r))) {
         return false;
+    }
 
     info->version = data[0];
     info->flags = data[1] & IFLAG(FLAGS_ALL);
@@ -114,8 +116,9 @@ void xembed_property_update(xcb_connection_t* connection,
 
     /* test if it changed */
     if (!(flags_changed =
-            static_cast<int32_t>(info.flags) ^ static_cast<uint32_t>(emwin.info.flags)))
+            static_cast<int32_t>(info.flags) ^ static_cast<uint32_t>(emwin.info.flags))) {
         return;
+    }
 
     emwin.info.flags = info.flags;
     if (flags_changed & IFLAG(MAPPED)) {

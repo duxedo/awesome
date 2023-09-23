@@ -93,10 +93,12 @@ static uint32_t apply_mask(uint8_t component, uint32_t mask) {
     uint32_t result = component;
 
     // Scale the result up to the desired width
-    if (width < 8)
+    if (width < 8) {
         result >>= (8 - width);
-    if (width > 8)
+    }
+    if (width > 8) {
         result <<= (width - 8);
+    }
     return result << shift;
 }
 
@@ -166,10 +168,12 @@ color_init_unchecked(color_t* color, const char* colstr, ssize_t len, xcb_visual
  * \return True if color allocation was successful.
  */
 bool color_init_reply(color_init_request_t req) {
-    if (req.has_error)
+    if (req.has_error) {
         return false;
-    if (req.color->initialized)
+    }
+    if (req.color->initialized) {
         return true;
+    }
 
     xcb_alloc_color_reply_t* hexa_color;
 
@@ -201,10 +205,11 @@ int luaA_pushcolor(lua_State* L, const color_t c) {
 
     char s[1 + 4 * 2 + 1];
     int len;
-    if (a >= 0xff)
+    if (a >= 0xff) {
         len = snprintf(s, sizeof(s), "#%02x%02x%02x", r, g, b);
-    else
+    } else {
         len = snprintf(s, sizeof(s), "#%02x%02x%02x%02x", r, g, b, a);
+    }
     lua_pushlstring(L, s, len);
     return 1;
 }

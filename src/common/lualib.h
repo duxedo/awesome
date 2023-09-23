@@ -57,8 +57,9 @@ static inline int luaA_absindex(lua_State* L, int ud) {
 }
 
 static inline int luaA_dofunction_error(lua_State* L) {
-    if (lualib_dofunction_on_error)
+    if (lualib_dofunction_on_error) {
         return lualib_dofunction_on_error(L);
+    }
     return 0;
 }
 

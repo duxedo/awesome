@@ -60,11 +60,13 @@ static Signals dbus_signals;
  * \param source The D-Bus source
  */
 static void a_dbus_cleanup_bus(DBusConnection* dbus_connection, GSource** source) {
-    if (!dbus_connection)
+    if (!dbus_connection) {
         return;
+    }
 
-    if (*source != NULL)
+    if (*source != NULL) {
         g_source_destroy(*source);
+    }
     *source = NULL;
 
     /* This is a shared connection owned by libdbus
@@ -117,8 +119,9 @@ static int a_dbus_message_iter(lua_State* L, DBusMessageIter* iter) {
             /* move the table before array elements */
             lua_insert(L, -n - 1);
 
-            for (int i = n; i > 0; i--)
+            for (int i = n; i > 0; i--) {
                 lua_rawseti(L, -i - 1, i);
+            }
         }
             nargs++;
             break;
@@ -185,8 +188,9 @@ static int a_dbus_message_iter(lua_State* L, DBusMessageIter* iter) {
                 /* move the table before array elements */
                 lua_insert(L, -(n * 2) - 1);
 
-                for (int i = 0; i < n; i++)
+                for (int i = 0; i < n; i++) {
                     lua_rawset(L, -(n * 2) - 1 + i * 2);
+                }
             } else {
                 DBusMessageIter subiter;
                 /* prepare to dig into the array*/
@@ -200,8 +204,9 @@ static int a_dbus_message_iter(lua_State* L, DBusMessageIter* iter) {
                 /* move the table before array elements */
                 lua_insert(L, -n - 1);
 
-                for (int i = n; i > 0; i--)
+                for (int i = n; i > 0; i--) {
                     lua_rawseti(L, -i - 1, i);
+                }
             }
         }
             nargs++;
@@ -254,8 +259,9 @@ static bool a_dbus_convert_value(lua_State* L, int idx, DBusMessageIter* iter) {
     size_t len;
     const char* type = lua_tolstring(L, idx, &len);
 
-    if (!type || len < 1)
+    if (!type || len < 1) {
         return false;
+    }
 
     switch (*type) {
     case DBUS_TYPE_ARRAY: {
@@ -275,8 +281,9 @@ static bool a_dbus_convert_value(lua_State* L, int idx, DBusMessageIter* iter) {
         for (int i = 1; i < arraylen; i += 2) {
             lua_rawgeti(L, -1, i);
             lua_rawgeti(L, -2, i + 1);
-            if (!a_dbus_convert_value(L, -2, &subiter))
+            if (!a_dbus_convert_value(L, -2, &subiter)) {
                 return false;
+            }
             lua_pop(L, 2);
         }
 
@@ -354,18 +361,20 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
         lua_setfield(L, -2, "sender");
     }
 
-    if (dbus_connection == dbus_connection_system)
+    if (dbus_connection == dbus_connection_system) {
         lua_pushliteral(L, "system");
-    else
+    } else {
         lua_pushliteral(L, "session");
+    }
     lua_setfield(L, -2, "bus");
 
     /* + 1 for the table above */
     DBusMessageIter iter;
     int nargs = 1;
 
-    if (dbus_message_iter_init(msg, &iter))
+    if (dbus_message_iter_init(msg, &iter)) {
         nargs += a_dbus_message_iter(L, &iter);
+    }
 
     if (dbus_message_get_no_reply(msg)) {
         auto signalIt = dbus_signals.find(interface);
@@ -430,23 +439,26 @@ static void a_dbus_process_requests_on_bus(DBusConnection* dbus_connection, GSou
     while (true) {
         dbus_connection_read_write(dbus_connection, 0);
 
-        if (!(msg = dbus_connection_pop_message(dbus_connection)))
+        if (!(msg = dbus_connection_pop_message(dbus_connection))) {
             break;
+        }
 
         if (dbus_message_is_signal(msg, DBUS_INTERFACE_LOCAL, "Disconnected")) {
             a_dbus_cleanup_bus(dbus_connection, source);
             dbus_message_unref(msg);
             return;
-        } else
+        } else {
             a_dbus_process_request(dbus_connection, msg);
+        }
 
         dbus_message_unref(msg);
 
         nmsg++;
     }
 
-    if (nmsg)
+    if (nmsg) {
         dbus_connection_flush(dbus_connection);
+    }
 }
 
 static gboolean a_dbus_process_requests_session(gpointer data) {
@@ -468,8 +480,9 @@ static gboolean a_dbus_process_requests_system(gpointer data) {
 static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* name) {
     DBusError err;
 
-    if (!dbus_connection)
+    if (!dbus_connection) {
         return false;
+    }
 
     dbus_error_init(&err);
 
@@ -499,8 +512,9 @@ static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* nam
 static bool a_dbus_release_name(DBusConnection* dbus_connection, const char* name) {
     DBusError err;
 
-    if (!dbus_connection)
+    if (!dbus_connection) {
         return false;
+    }
 
     dbus_error_init(&err);
 
@@ -583,10 +597,12 @@ void a_dbus_cleanup(void) {
  * \return The corresponding D-Bus connection.
  */
 static DBusConnection* a_dbus_bus_getbyname(lua_State* L, const char* name) {
-    if (A_STREQ(name, "system"))
+    if (A_STREQ(name, "system")) {
         return dbus_connection_system;
-    if (A_STREQ(name, "session"))
+    }
+    if (A_STREQ(name, "session")) {
         return dbus_connection_session;
+    }
     luaL_error(L, "Unknown dbus connection '%s', only 'system' and 'session' are valid", name);
     return NULL;
 }
@@ -694,8 +710,9 @@ static int luaA_dbus_disconnect_signal(lua_State* L) {
     const char* name = luaL_checkstring(L, 1);
     luaA_checkfunction(L, 2);
     const void* func = lua_topointer(L, 2);
-    if (dbus_signals.disconnect(name, func))
+    if (dbus_signals.disconnect(name, func)) {
         luaA_object_unref(L, func);
+    }
     return 0;
 }
 

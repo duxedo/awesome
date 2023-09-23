@@ -462,8 +462,9 @@ static int luaA_tag_clients(lua_State* L) {
                 client_t* tc = (client_t*)luaA_checkudata(L, -1, &client_class);
                 /* Pop the value from lua_next */
                 lua_pop(L, 1);
-                if (tc != c)
+                if (tc != c) {
                     continue;
+                }
 
                 /* Pop the key from lua_next */
                 lua_pop(L, 1);
@@ -529,8 +530,9 @@ static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
  */
 static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
     bool activated = luaA_checkboolean(L, -1);
-    if (activated == tag->activated)
+    if (activated == tag->activated) {
         return 0;
+    }
 
     tag->activated = activated;
     if (activated) {

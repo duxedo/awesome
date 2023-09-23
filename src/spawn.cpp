@@ -219,16 +219,17 @@ void spawn_start_notify(client_t* c, const char* startup_id) {
         bool found = false;
         const char* seqid = sn_startup_sequence_get_id(seq);
 
-        if (A_STRNEQ(seqid, startup_id))
+        if (A_STRNEQ(seqid, startup_id)) {
             found = true;
-        else {
+        } else {
             const char* seqclass = sn_startup_sequence_get_wmclass(seq);
-            if (A_STREQ(seqclass, c->cls) || A_STREQ(seqclass, c->instance))
+            if (A_STREQ(seqclass, c->cls) || A_STREQ(seqclass, c->instance)) {
                 found = true;
-            else {
+            } else {
                 const char* seqbin = sn_startup_sequence_get_binary_name(seq);
-                if (A_STREQ_CASE(seqbin, c->cls) || A_STREQ_CASE(seqbin, c->instance))
+                if (A_STREQ_CASE(seqbin, c->cls) || A_STREQ_CASE(seqbin, c->instance)) {
                     found = true;
+                }
             }
         }
 
@@ -258,11 +259,12 @@ static void spawn_callback(gpointer user_data) {
     SnLauncherContext* context = (SnLauncherContext*)user_data;
     setsid();
 
-    if (context)
+    if (context) {
         sn_launcher_context_setup_child_process(context);
-    else
+    } else {
         /* Unset in case awesome was already started with this variable set */
         unsetenv("DESKTOP_STARTUP_ID");
+    }
 }
 
 /** Convert a Lua table of strings to a char** array.
@@ -311,8 +313,9 @@ static gchar** parse_command(lua_State* L, int idx, GError** error) {
 
     if (lua_isstring(L, idx)) {
         const char* cmd = luaL_checkstring(L, idx);
-        if (!g_shell_parse_argv(cmd, NULL, &argv, error))
+        if (!g_shell_parse_argv(cmd, NULL, &argv, error)) {
             return NULL;
+        }
     } else if (lua_istable(L, idx)) {
         argv = parse_table_array(L, idx, error);
     } else {
@@ -397,7 +400,7 @@ int luaA_spawn(lua_State* L) {
     gboolean retval;
     GPid pid;
 
-    if (lua_gettop(L) >= 2)
+    if (lua_gettop(L) >= 2) {
         use_sn = luaA_checkboolean(L, 2);
     /* Valid values for return_std* are:
     * true -> return a fd
@@ -464,12 +467,15 @@ int luaA_spawn(lua_State* L) {
         luaA_checkfunction(L, 6);
         flags |= G_SPAWN_DO_NOT_REAP_CHILD;
     }
-    if (return_stdin)
+    if (return_stdin) {
         stdin_ptr = &stdin_fd;
-    if (return_stdout)
+    }
+    if (return_stdout) {
         stdout_ptr = &stdout_fd;
-    if (return_stderr)
+    }
+    if (return_stderr) {
         stderr_ptr = &stderr_fd;
+    }
 
     GError* error = NULL;
     argv = parse_command(L, 1, &error);
@@ -478,8 +484,9 @@ int luaA_spawn(lua_State* L) {
         if (error) {
             lua_pushfstring(L, "spawn: parse error: %s", error->message);
             g_error_free(error);
-        } else
+        } else {
             lua_pushliteral(L, "spawn: There is nothing to execute");
+        }
         return 1;
     }
 
@@ -524,8 +531,9 @@ int luaA_spawn(lua_State* L) {
     if (!retval) {
         lua_pushstring(L, error->message);
         g_error_free(error);
-        if (context)
+        if (context) {
             sn_launcher_context_complete(context);
+        }
         return 1;
     }
 
@@ -540,23 +548,27 @@ int luaA_spawn(lua_State* L) {
     lua_pushinteger(L, pid);
 
     /* push sn on stack */
-    if (context)
+    if (context) {
         lua_pushstring(L, sn_launcher_context_get_startup_id(context));
-    else
+    } else {
         lua_pushnil(L);
+    }
 
-    if (return_stdin)
+    if (return_stdin) {
         lua_pushinteger(L, stdin_fd);
-    else
+    } else {
         lua_pushnil(L);
-    if (return_stdout)
+    }
+    if (return_stdout) {
         lua_pushinteger(L, stdout_fd);
-    else
+    } else {
         lua_pushnil(L);
-    if (return_stderr)
+    }
+    if (return_stderr) {
         lua_pushinteger(L, stderr_fd);
-    else
+    } else {
         lua_pushnil(L);
+    }
 
     return 5;
 }

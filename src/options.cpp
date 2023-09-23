@@ -39,8 +39,9 @@
 namespace Options {
 
 static void set_api_level(char* value) {
-    if (!value)
+    if (!value) {
         return;
+    }
 
     char* ptr;
     int ret = strtol(value, &ptr, 10);
@@ -58,8 +59,9 @@ static void set_api_level(char* value) {
     }
 
     /* This API level doesn't exist, fallback to v4 */
-    if (ret < 4)
+    if (ret < 4) {
         ret = 4;
+    }
 
     getGlobals().api_level = ret;
 }
@@ -119,18 +121,21 @@ bool options_init_config(
         const char* xdg_confpath = xdgConfigFind("awesome/rc.lua", xdg);
 
         /* xdg_confpath is "string1\0string2\0string3\0\0" */
-        if (xdg_confpath && *xdg_confpath)
+        if (xdg_confpath && *xdg_confpath) {
             fp = fopen(xdg_confpath, "r");
-        else
+        } else {
             fp = fopen(AWESOME_DEFAULT_CONF, "r");
+        }
 
         p_delete(&xdg_confpath);
-    } else
+    } else {
         fp = fopen(configpath, "r");
+    }
 
     /* Share the error codepath with parsing errors */
-    if (!fp)
+    if (!fp) {
         return false;
+    }
 
     /* Try to read the first line */
     if (!fgets(file_buf, READ_BUF_MAX, fp)) {
@@ -176,9 +181,9 @@ bool options_init_config(
             }
             break;
         case MODELINE_STATE_MODELINE:
-            if (c == ' ')
+            if (c == ' ') {
                 break;
-            else if (c != name[pos++]) {
+            } else if (c != name[pos++]) {
                 state = MODELINE_STATE_INVALID;
                 pos = 0;
             }
@@ -319,24 +324,27 @@ bool options_init_config(
         }
 
         /* No keys or values are that large */
-        if (pos >= KEY_VALUE_BUF_MAX)
+        if (pos >= KEY_VALUE_BUF_MAX) {
             state = MODELINE_STATE_ERROR;
+        }
 
         /* Stop parsing when completed */
-        if (state == MODELINE_STATE_ERROR || state == MODELINE_STATE_COMPLETE)
+        if (state == MODELINE_STATE_ERROR || state == MODELINE_STATE_COMPLETE) {
             break;
+        }
 
         /* Try the next line */
         if (((i == READ_BUF_MAX || file_buf[i] == '\0') && !feof(fp)) ||
             state == MODELINE_STATE_INVALID) {
-            if (state == MODELINE_STATE_KEY || state == MODELINE_STATE_VALUE)
+            if (state == MODELINE_STATE_KEY || state == MODELINE_STATE_VALUE) {
                 push_arg(argv, key_buf, &pos);
+            }
 
             /* Skip empty lines */
             do {
-                if (fgets(file_buf, READ_BUF_MAX, fp))
+                if (fgets(file_buf, READ_BUF_MAX, fp)) {
                     state = MODELINE_STATE_NEWLINE;
-                else {
+                } else {
                     state = argv.size() ? MODELINE_STATE_COMPLETE : MODELINE_STATE_ERROR;
                     break;
                 }
@@ -382,18 +390,21 @@ char* options_detect_shebang(int argc, char** argv) {
      */
 
     /* On WSL and some other *nix this isn't true, but it is true often enough */
-    if (argc > 3 || argc == 1)
+    if (argc > 3 || argc == 1) {
         return NULL;
+    }
 
     /* Check if it is executable */
     struct stat inf;
-    if (stat(argv[argc - 1], &inf) || !(inf.st_mode & S_IXUSR))
+    if (stat(argv[argc - 1], &inf) || !(inf.st_mode & S_IXUSR)) {
         return NULL;
+    }
 
     FILE* fp = fopen(argv[argc - 1], "r");
 
-    if (!fp)
+    if (!fp) {
         return NULL;
+    }
 
     char buf[3];
 
@@ -404,8 +415,9 @@ char* options_detect_shebang(int argc, char** argv) {
 
     fclose(fp);
 
-    if (!strcmp(buf, "#!"))
+    if (!strcmp(buf, "#!")) {
         return NULL;
+    }
 
     /* Ok, good enough, this is a shebang script, assume it called `awesome` */
     return a_strdup(argv[argc - 1]);
@@ -458,8 +470,9 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
         switch (opt) {
         case 'v': eprint_version(); break;
         case 'h':
-            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
+            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK)) {
                 exit_help(EXIT_SUCCESS);
+            }
             break;
         case 'f': (*init_flags) |= INIT_FLAG_FORCE_CMD_ARGS; break;
         case 'k': (*init_flags) |= INIT_FLAG_RUN_TEST; break;
@@ -497,8 +510,9 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
             /* Silently ignore --reap and its argument */
             break;
         default:
-            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
+            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK)) {
                 exit_help(EXIT_FAILURE);
+            }
             break;
         }
     }

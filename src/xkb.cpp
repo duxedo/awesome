@@ -152,8 +152,9 @@ static bool fill_rmlvo_from_root(struct xkb_rule_names* xkb_names) {
                                                         0,
                                                         UINT_MAX),
                              NULL);
-    if (!prop_reply)
+    if (!prop_reply) {
         return false;
+    }
 
     if (prop_reply->value_len == 0) {
         p_delete(&prop_reply);
@@ -187,34 +188,39 @@ static void xkb_fill_state(void) {
     int32_t device_id = -1;
     if (getGlobals().have_xkb) {
         device_id = xkb_x11_get_core_keyboard_device_id(conn);
-        if (device_id == -1)
+        if (device_id == -1) {
             warn("Failed while getting XKB device id");
+        }
     }
 
     if (device_id != -1) {
         struct xkb_keymap* xkb_keymap = xkb_x11_keymap_new_from_device(
           getGlobals().xkb_ctx, conn, device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
-        if (!xkb_keymap)
+        if (!xkb_keymap) {
             fatal("Failed while getting XKB keymap from device");
+        }
 
         getGlobals().xkb_state = xkb_x11_state_new_from_device(xkb_keymap, conn, device_id);
-        if (!getGlobals().xkb_state)
+        if (!getGlobals().xkb_state) {
             fatal("Failed while getting XKB state from device");
+        }
 
         /* xkb_keymap is no longer referenced directly; decreasing refcount */
         xkb_keymap_unref(xkb_keymap);
     } else {
         struct xkb_rule_names names = {NULL, NULL, NULL, NULL, NULL};
-        if (!fill_rmlvo_from_root(&names))
+        if (!fill_rmlvo_from_root(&names)) {
             warn("Could not get _XKB_RULES_NAMES from root window, falling back to defaults.");
+        }
 
         struct xkb_keymap* xkb_keymap =
           xkb_keymap_new_from_names(getGlobals().xkb_ctx, &names, (enum xkb_keymap_compile_flags)0);
 
         getGlobals().xkb_state = xkb_state_new(xkb_keymap);
-        if (!getGlobals().xkb_state)
+        if (!getGlobals().xkb_state) {
             fatal("Failed while creating XKB state");
+        }
 
         /* xkb_keymap is no longer referenced directly; decreasing refcount */
         xkb_keymap_unref(xkb_keymap);
@@ -231,8 +237,9 @@ static void xkb_fill_state(void) {
  */
 static void xkb_init_keymap(void) {
     getGlobals().xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
-    if (!getGlobals().xkb_ctx)
+    if (!getGlobals().xkb_ctx) {
         fatal("Failed while getting XKB context");
+    }
 
     xkb_fill_state();
 }
@@ -276,12 +283,15 @@ static gboolean xkb_refresh(gpointer unused) {
     lua_State* L = globalconf_get_lua_State();
 
     getGlobals().xkb_update_pending = false;
-    if (getGlobals().xkb_reload_keymap)
+    if (getGlobals().xkb_reload_keymap) {
         xkb_reload_keymap();
-    if (getGlobals().xkb_map_changed)
+    }
+    if (getGlobals().xkb_map_changed) {
         signal_object_emit(L, &global_signals, "xkb::map_changed", 0);
-    if (getGlobals().xkb_group_changed)
+    }
+    if (getGlobals().xkb_group_changed) {
         signal_object_emit(L, &global_signals, "xkb::group_changed", 0);
+    }
 
     getGlobals().xkb_reload_keymap = false;
     getGlobals().xkb_map_changed = false;
@@ -291,8 +301,9 @@ static gboolean xkb_refresh(gpointer unused) {
 }
 
 static void xkb_schedule_refresh(void) {
-    if (getGlobals().xkb_update_pending)
+    if (getGlobals().xkb_update_pending) {
         return;
+    }
     getGlobals().xkb_update_pending = true;
     g_idle_add_full(G_PRIORITY_LOW, xkb_refresh, NULL, NULL);
 }
@@ -312,8 +323,9 @@ void event_handle_xkb_notify(xcb_generic_event_t* event) {
 
         getGlobals().xkb_reload_keymap = true;
 
-        if (new_keyboard_event->changed & XCB_XKB_NKN_DETAIL_KEYCODES)
+        if (new_keyboard_event->changed & XCB_XKB_NKN_DETAIL_KEYCODES) {
             getGlobals().xkb_map_changed = true;
+        }
         xkb_schedule_refresh();
         break;
     }
@@ -403,9 +415,10 @@ void xkb_init(void) {
 /** Frees resources allocated by xkb_init()
  */
 void xkb_free(void) {
-    if (getGlobals().have_xkb)
+    if (getGlobals().have_xkb) {
         // unsubscribe from all events
         xcb_xkb_select_events(getGlobals().connection, XCB_XKB_ID_USE_CORE_KBD, 0, 0, 0, 0, 0, 0);
+    }
     xkb_free_keymap();
 }
 

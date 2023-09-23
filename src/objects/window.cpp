@@ -68,8 +68,9 @@ lua_class_t window_class;
 LUA_CLASS_FUNCS(window, window_class)
 
 static xcb_window_t window_get(window_t* window) {
-    if (window->frame_window != XCB_NONE)
+    if (window->frame_window != XCB_NONE) {
         return window->frame_window;
+    }
     return window->window;
 }
 
@@ -132,12 +133,13 @@ void window_set_opacity(lua_State* L, int idx, double opacity) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_window_set_opacity(lua_State* L, window_t* window) {
-    if (lua_isnil(L, -1))
+    if (lua_isnil(L, -1)) {
         window_set_opacity(L, -3, -1);
-    else {
+    } else {
         double d = luaL_checknumber(L, -1);
-        if (d >= 0 && d <= 1)
+        if (d >= 0 && d <= 1) {
             window_set_opacity(L, -3, d);
+        }
     }
     return 0;
 }
@@ -148,17 +150,19 @@ static int luaA_window_set_opacity(lua_State* L, window_t* window) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_window_get_opacity(lua_State* L, window_t* window) {
-    if (window->opacity >= 0)
+    if (window->opacity >= 0) {
         lua_pushnumber(L, window->opacity);
-    else
+    } else {
         /* Let's always return some "good" value */
         lua_pushnumber(L, 1);
+    }
     return 1;
 }
 
 void window_border_refresh(window_t* window) {
-    if (!window->border_need_update)
+    if (!window->border_need_update) {
         return;
+    }
     window->border_need_update = false;
     xwindow_set_border_color(window_get(window), &window->border_color);
     if (window->window) {
@@ -194,14 +198,16 @@ void window_set_border_width(lua_State* L, int idx, int width) {
     auto window = (window_t*)luaA_checkudata(L, idx, &window_class);
     uint16_t old_width = window->border_width;
 
-    if (width == window->border_width || width < 0)
+    if (width == window->border_width || width < 0) {
         return;
+    }
 
     window->border_need_update = true;
     window->border_width = width;
 
-    if (window->border_width_callback)
+    if (window->border_width_callback) {
         (*window->border_width_callback)(window, old_width, width);
+    }
 
     luaA_object_emit_signal(L, idx, "property::border_width", 0);
 }
@@ -241,43 +247,44 @@ int luaA_window_set_type(lua_State* L, window_t* w) {
     window_type_t type;
     const char* buf = luaL_checkstring(L, -1);
 
-    if (A_STREQ(buf, "desktop"))
+    if (A_STREQ(buf, "desktop")) {
         type = WINDOW_TYPE_DESKTOP;
-    else if (A_STREQ(buf, "dock"))
+    } else if (A_STREQ(buf, "dock")) {
         type = WINDOW_TYPE_DOCK;
-    else if (A_STREQ(buf, "splash"))
+    } else if (A_STREQ(buf, "splash")) {
         type = WINDOW_TYPE_SPLASH;
-    else if (A_STREQ(buf, "dialog"))
+    } else if (A_STREQ(buf, "dialog")) {
         type = WINDOW_TYPE_DIALOG;
-    else if (A_STREQ(buf, "menu"))
+    } else if (A_STREQ(buf, "menu")) {
         type = WINDOW_TYPE_MENU;
-    else if (A_STREQ(buf, "toolbar"))
+    } else if (A_STREQ(buf, "toolbar")) {
         type = WINDOW_TYPE_TOOLBAR;
-    else if (A_STREQ(buf, "utility"))
+    } else if (A_STREQ(buf, "utility")) {
         type = WINDOW_TYPE_UTILITY;
-    else if (A_STREQ(buf, "dropdown_menu"))
+    } else if (A_STREQ(buf, "dropdown_menu")) {
         type = WINDOW_TYPE_DROPDOWN_MENU;
-    else if (A_STREQ(buf, "popup_menu"))
+    } else if (A_STREQ(buf, "popup_menu")) {
         type = WINDOW_TYPE_POPUP_MENU;
-    else if (A_STREQ(buf, "tooltip"))
+    } else if (A_STREQ(buf, "tooltip")) {
         type = WINDOW_TYPE_TOOLTIP;
-    else if (A_STREQ(buf, "notification"))
+    } else if (A_STREQ(buf, "notification")) {
         type = WINDOW_TYPE_NOTIFICATION;
-    else if (A_STREQ(buf, "combo"))
+    } else if (A_STREQ(buf, "combo")) {
         type = WINDOW_TYPE_COMBO;
-    else if (A_STREQ(buf, "dnd"))
+    } else if (A_STREQ(buf, "dnd")) {
         type = WINDOW_TYPE_DND;
-    else if (A_STREQ(buf, "normal"))
+    } else if (A_STREQ(buf, "normal")) {
         type = WINDOW_TYPE_NORMAL;
-    else {
+    } else {
         luaA_warn(L, "Unknown window type '%s'", buf);
         return 0;
     }
 
     if (w->type != type) {
         w->type = type;
-        if (w->window != XCB_WINDOW_NONE)
+        if (w->window != XCB_WINDOW_NONE) {
             ewmh_update_window_type(w->window, window_translate_type(w->type));
+        }
         luaA_object_emit_signal(L, -3, "property::type", 0);
     }
 
@@ -332,22 +339,24 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
                              xcb_get_property_unchecked(
                                getGlobals().connection, false, window, prop->atom, type, 0, length),
                              NULL);
-    if (!reply)
+    if (!reply) {
         return 0;
+    }
 
     data = (const char*)xcb_get_property_value(reply);
 
-    if (prop->type == xproperty::PROP_STRING)
+    if (prop->type == xproperty::PROP_STRING) {
         lua_pushlstring(L, data, reply->value_len);
-    else {
+    } else {
         if (reply->value_len <= 0) {
             p_delete(&reply);
             return 0;
         }
-        if (prop->type == xproperty::PROP_NUMBER)
+        if (prop->type == xproperty::PROP_NUMBER) {
             lua_pushinteger(L, *(uint32_t*)data);
-        else
+        } else {
             lua_pushboolean(L, *(uint32_t*)data);
+        }
     }
 
     p_delete(&reply);

@@ -39,10 +39,11 @@ void eprint_version(void) {
     lua_getglobal(L, "_VERSION");
     lua_getglobal(L, "jit");
 
-    if (lua_istable(L, 2))
+    if (lua_istable(L, 2)) {
         lua_getfield(L, 2, "version");
-    else
+    } else {
         lua_pop(L, 1);
+    }
 
     /* Either push version number or error message onto stack */
     (void)luaL_dostring(L, "return require('lgi.version')");

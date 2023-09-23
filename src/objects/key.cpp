@@ -91,8 +91,9 @@ lua_class_t key_class;
  */
 
 static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
-    if (len <= 0 || !str)
+    if (len <= 0 || !str) {
         return;
+    }
 
     keyb_t* key = reinterpret_cast<keyb_t*>(luaA_checkudata(L, ud, &key_class));
 
@@ -130,8 +131,9 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
                 }
                 unicode = g_utf8_get_char(composed);
                 p_delete(&composed);
-            } else
+            } else {
                 unicode = g_utf8_get_char(str);
+            }
 
             if (unicode == (gunichar)-1 || unicode == (gunichar)-2) {
                 luaA_warn(
@@ -145,11 +147,11 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
              *
              * http://www.x.org/releases/X11R7.7/doc/xproto/x11protocol.html#keysym_encoding
              */
-            if (unicode <= 0x0ff)
+            if (unicode <= 0x0ff) {
                 key->keysym = unicode;
-            else if (unicode >= 0x100 && unicode <= 0x10ffff)
+            } else if (unicode >= 0x100 && unicode <= 0x10ffff) {
                 key->keysym = unicode | (1 << 24);
-            else {
+            } else {
                 luaA_warn(L,
                           "failed to convert \"%s\" into keysym (unicode out of range): \"%u\"",
                           str,
@@ -217,7 +219,7 @@ int luaA_pushmodifiers(lua_State* L, uint16_t modifiers) {
     lua_newtable(L);
     {
         int i = 1;
-        for (uint32_t maski = XCB_MOD_MASK_SHIFT; maski <= XCB_BUTTON_MASK_ANY; maski <<= 1)
+        for (uint32_t maski = XCB_MOD_MASK_SHIFT; maski <= XCB_BUTTON_MASK_ANY; maski <<= 1) {
             if (maski & modifiers) {
                 const char* mod;
                 size_t slen;
@@ -225,6 +227,7 @@ int luaA_pushmodifiers(lua_State* L, uint16_t modifiers) {
                 lua_pushlstring(L, mod, slen);
                 lua_rawseti(L, -2, i++);
             }
+        }
     }
     return 1;
 }
@@ -282,8 +285,9 @@ static int luaA_key_get_key(lua_State* L, keyb_t* k) {
         lua_pushlstring(L, buf, slen);
     } else {
         char* name = key_get_keysym_name(k->keysym);
-        if (!name)
+        if (!name) {
             return 0;
+        }
         lua_pushstring(L, name);
         p_delete(&name);
     }
@@ -292,8 +296,9 @@ static int luaA_key_get_key(lua_State* L, keyb_t* k) {
 
 static int luaA_key_get_keysym(lua_State* L, keyb_t* k) {
     char* name = key_get_keysym_name(k->keysym);
-    if (!name)
+    if (!name) {
         return 0;
+    }
     lua_pushstring(L, name);
     p_delete(&name);
     return 1;
