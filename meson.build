@@ -114,13 +114,13 @@ confdata.set('WITH_DBUS', true)
 confdata.set('WITH_XCB_ERRORS', false)
 confdata.set('HAS_EXECINFO', 1)
 
-config_h = configure_file(input: 'src/config.h.in', output: 'config.h', configuration:confdata, install:false)
+config_h = configure_file(input: 'templates/config.h.in', output: 'config.h', configuration:confdata, install:false)
 
 versdata = configuration_data()
 versdata.set('AWESOME_VERSION', '0.1')
 versdata.set('AWESOME_RELEASE', 'bouncy')
 versdata.set('AWESOME_API_LEVEL', 4)
-version_h = configure_file(input: 'src/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata, install: false)
+version_h = configure_file(input: 'templates/awesome-version-internal.h.in', output: 'awesome-version-internal.h', configuration:versdata, install: false)
 
 executable(
     'redundant',
