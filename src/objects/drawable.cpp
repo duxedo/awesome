@@ -28,6 +28,7 @@
  */
 
 #include "drawable.h"
+
 #include "common/luaobject.h"
 #include "globalconf.h"
 
@@ -104,10 +105,8 @@ static lua_class_t drawable_class;
 
 LUA_OBJECT_FUNCS(drawable_class, drawable_t, drawable)
 
-drawable_t *
-drawable_allocator(lua_State *L, drawable_refresh_callback *callback, void *data)
-{
-    drawable_t *d = drawable_new(L);
+drawable_t* drawable_allocator(lua_State* L, drawable_refresh_callback* callback, void* data) {
+    drawable_t* d = drawable_new(L);
     d->refresh_callback = callback;
     d->refresh_data = data;
     d->refreshed = false;
@@ -116,9 +115,7 @@ drawable_allocator(lua_State *L, drawable_refresh_callback *callback, void *data
     return d;
 }
 
-static void
-drawable_unset_surface(drawable_t *d)
-{
+static void drawable_unset_surface(drawable_t* d) {
     cairo_surface_finish(d->surface);
     cairo_surface_destroy(d->surface);
     if (d->pixmap)
@@ -128,30 +125,26 @@ drawable_unset_surface(drawable_t *d)
     d->pixmap = XCB_NONE;
 }
 
-static void
-drawable_wipe(drawable_t *d)
-{
-    drawable_unset_surface(d);
-}
+static void drawable_wipe(drawable_t* d) { drawable_unset_surface(d); }
 
-void
-drawable_set_geometry(lua_State *L, int didx, area_t geom)
-{
-    auto d = (drawable_t *)luaA_checkudata(L, didx, &drawable_class);
+void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
+    auto d = (drawable_t*)luaA_checkudata(L, didx, &drawable_class);
     area_t old = d->geometry;
     d->geometry = geom;
 
     bool area_changed = !AREA_EQUAL(old, geom);
     if (area_changed)
         drawable_unset_surface(d);
-    if (area_changed && geom.width > 0 && geom.height > 0)
-    {
+    if (area_changed && geom.width > 0 && geom.height > 0) {
         d->pixmap = xcb_generate_id(getGlobals().connection);
-        xcb_create_pixmap(getGlobals().connection, getGlobals().default_depth, d->pixmap,
-                          getGlobals().screen->root, geom.width, geom.height);
-        d->surface = cairo_xcb_surface_create(getGlobals().connection,
-                                              d->pixmap, getGlobals().visual,
-                                              geom.width, geom.height);
+        xcb_create_pixmap(getGlobals().connection,
+                          getGlobals().default_depth,
+                          d->pixmap,
+                          getGlobals().screen->root,
+                          geom.width,
+                          geom.height);
+        d->surface = cairo_xcb_surface_create(
+          getGlobals().connection, d->pixmap, getGlobals().visual, geom.width, geom.height);
         luaA_object_emit_signal(L, didx, "property::surface", 0);
     }
 
@@ -172,9 +165,7 @@ drawable_set_geometry(lua_State *L, int didx, area_t geom)
  * \param drawable The drawable object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawable_get_surface(lua_State *L, drawable_t *drawable)
-{
+static int luaA_drawable_get_surface(lua_State* L, drawable_t* drawable) {
     if (drawable->surface)
         /* Lua gets its own reference which it will have to destroy */
         lua_pushlightuserdata(L, cairo_surface_reference(drawable->surface));
@@ -189,10 +180,8 @@ luaA_drawable_get_surface(lua_State *L, drawable_t *drawable)
  * @method refresh
  * @noreturn
  */
-static int
-luaA_drawable_refresh(lua_State *L)
-{
-    drawable_t *drawable = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
+static int luaA_drawable_refresh(lua_State* L) {
+    drawable_t* drawable = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
     drawable->refreshed = true;
     (*drawable->refresh_callback)(drawable->refresh_data);
 
@@ -204,40 +193,35 @@ luaA_drawable_refresh(lua_State *L)
  * @treturn table A table with drawable coordinates and geometry.
  * @method geometry
  */
-static int
-luaA_drawable_geometry(lua_State *L)
-{
-    drawable_t *d = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
+static int luaA_drawable_geometry(lua_State* L) {
+    drawable_t* d = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
     return luaA_pusharea(L, d->geometry);
 }
 
-void
-drawable_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg drawable_methods[] =
-    {
-        LUA_CLASS_METHODS(drawable)
-        { NULL, NULL }
+void drawable_class_setup(lua_State* L) {
+    static const struct luaL_Reg drawable_methods[] = {
+      LUA_CLASS_METHODS(drawable){NULL, NULL}
     };
 
-    static const struct luaL_Reg drawable_meta[] =
-    {
-        LUA_OBJECT_META(drawable)
-        LUA_CLASS_META
-        { "refresh", luaA_drawable_refresh },
-        { "geometry", luaA_drawable_geometry },
-        { NULL, NULL },
+    static const struct luaL_Reg drawable_meta[] = {
+      LUA_OBJECT_META(drawable) LUA_CLASS_META{ "refresh",  luaA_drawable_refresh},
+      {"geometry", luaA_drawable_geometry},
+      {      NULL,                   NULL},
     };
 
-    luaA_class_setup(L, &drawable_class, "drawable", NULL,
-                     (lua_class_allocator_t) drawable_new,
-                     (lua_class_collector_t) drawable_wipe, NULL,
-                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-                     drawable_methods, drawable_meta);
-    drawable_class.add_property("surface",
-                            NULL,
-                            (lua_class_propfunc_t) luaA_drawable_get_surface,
-                            NULL);
+    luaA_class_setup(L,
+                     &drawable_class,
+                     "drawable",
+                     NULL,
+                     (lua_class_allocator_t)drawable_new,
+                     (lua_class_collector_t)drawable_wipe,
+                     NULL,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     drawable_methods,
+                     drawable_meta);
+    drawable_class.add_property(
+      "surface", NULL, (lua_class_propfunc_t)luaA_drawable_get_surface, NULL);
 }
 
 /* @DOC_cobject_COMMON@ */

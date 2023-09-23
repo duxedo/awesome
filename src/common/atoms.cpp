@@ -20,39 +20,33 @@
  */
 
 #include "common/atoms.h"
+
 #include "common/util.h"
 
-typedef struct
-{
-    const char *name;
+typedef struct {
+    const char* name;
     size_t len;
-    xcb_atom_t *atom;
+    xcb_atom_t* atom;
 } atom_item_t;
 
 #include "atoms-intern.h"
 
-void
-atoms_init(xcb_connection_t *conn)
-{
+void atoms_init(xcb_connection_t* conn) {
     unsigned int i;
     xcb_intern_atom_cookie_t cs[countof(ATOM_LIST)];
-    xcb_intern_atom_reply_t *r;
+    xcb_intern_atom_reply_t* r;
 
     /* Create the atom and get the reply in a XCB way (e.g. send all
      * the requests at the same time and then get the replies) */
-    for(i = 0; i < countof(ATOM_LIST); i++)
-	cs[i] = xcb_intern_atom_unchecked(conn,
-					  false,
-					  ATOM_LIST[i].len,
-					  ATOM_LIST[i].name);
+    for (i = 0; i < countof(ATOM_LIST); i++)
+        cs[i] = xcb_intern_atom_unchecked(conn, false, ATOM_LIST[i].len, ATOM_LIST[i].name);
 
-    for(i = 0; i < countof(ATOM_LIST); i++)
-    {
-	if(!(r = xcb_intern_atom_reply(conn, cs[i], NULL)))
-	    /* An error occurred, get reply for next atom */
-	    continue;
+    for (i = 0; i < countof(ATOM_LIST); i++) {
+        if (!(r = xcb_intern_atom_reply(conn, cs[i], NULL)))
+            /* An error occurred, get reply for next atom */
+            continue;
 
-	*ATOM_LIST[i].atom = r->atom;
+        *ATOM_LIST[i].atom = r->atom;
         p_delete(&r);
     }
 }

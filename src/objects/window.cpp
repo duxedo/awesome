@@ -52,6 +52,7 @@
  */
 
 #include "objects/window.h"
+
 #include "common/atoms.h"
 #include "common/xutil.h"
 #include "ewmh.h"
@@ -59,37 +60,29 @@
 #include "objects/screen.h"
 #include "property.h"
 #include "xwindow.h"
+
 #include <algorithm>
 #include <span>
 
 lua_class_t window_class;
 LUA_CLASS_FUNCS(window, window_class)
 
-static xcb_window_t
-window_get(window_t *window)
-{
+static xcb_window_t window_get(window_t* window) {
     if (window->frame_window != XCB_NONE)
         return window->frame_window;
     return window->window;
 }
 
-static void
-window_wipe(window_t *window)
-{
-    window->buttons.clear();
-}
+static void window_wipe(window_t* window) { window->buttons.clear(); }
 
 /** Get or set mouse buttons bindings on a window.
  * \param L The Lua VM state.
  * \return The number of elements pushed on the stack.
  */
-static int
-luaA_window_buttons(lua_State *L)
-{
-    auto window =(window_t *) luaA_checkudata(L, 1, &window_class);
+static int luaA_window_buttons(lua_State* L) {
+    auto window = (window_t*)luaA_checkudata(L, 1, &window_class);
 
-    if(lua_gettop(L) == 2)
-    {
+    if (lua_gettop(L) == 2) {
         luaA_button_array_set(L, 1, 2, &window->buttons);
         luaA_object_emit_signal(L, 1, "property::buttons", 0);
         xwindow_buttons_grab(window->window, window->buttons);
@@ -102,18 +95,15 @@ luaA_window_buttons(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_window_struts(lua_State *L)
-{
-    auto window =(window_t *) luaA_checkudata(L, 1, &window_class);
+static int luaA_window_struts(lua_State* L) {
+    auto window = (window_t*)luaA_checkudata(L, 1, &window_class);
 
-    if(lua_gettop(L) == 2)
-    {
+    if (lua_gettop(L) == 2) {
         luaA_tostrut(L, 2, &window->strut);
         ewmh_update_strut(window->window, &window->strut);
         luaA_object_emit_signal(L, 1, "property::struts", 0);
         /* We don't know the correct screen, update them all */
-        for(auto *s: getGlobals().screens) {
+        for (auto* s : getGlobals().screens) {
             screen_update_workarea(s);
         }
     }
@@ -126,13 +116,10 @@ luaA_window_struts(lua_State *L)
  * \param idx The index of the window on the stack.
  * \param opacity The opacity value.
  */
-void
-window_set_opacity(lua_State *L, int idx, double opacity)
-{
-    auto window = (window_t *)luaA_checkudata(L, idx, &window_class);
+void window_set_opacity(lua_State* L, int idx, double opacity) {
+    auto window = (window_t*)luaA_checkudata(L, idx, &window_class);
 
-    if(window->opacity != opacity)
-    {
+    if (window->opacity != opacity) {
         window->opacity = opacity;
         xwindow_set_opacity(window_get(window), opacity);
         luaA_object_emit_signal(L, idx, "property::opacity", 0);
@@ -144,15 +131,12 @@ window_set_opacity(lua_State *L, int idx, double opacity)
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_window_set_opacity(lua_State *L, window_t *window)
-{
-    if(lua_isnil(L, -1))
+static int luaA_window_set_opacity(lua_State* L, window_t* window) {
+    if (lua_isnil(L, -1))
         window_set_opacity(L, -3, -1);
-    else
-    {
+    else {
         double d = luaL_checknumber(L, -1);
-        if(d >= 0 && d <= 1)
+        if (d >= 0 && d <= 1)
             window_set_opacity(L, -3, d);
     }
     return 0;
@@ -163,10 +147,8 @@ luaA_window_set_opacity(lua_State *L, window_t *window)
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_window_get_opacity(lua_State *L, window_t *window)
-{
-    if(window->opacity >= 0)
+static int luaA_window_get_opacity(lua_State* L, window_t* window) {
+    if (window->opacity >= 0)
         lua_pushnumber(L, window->opacity);
     else
         /* Let's always return some "good" value */
@@ -174,15 +156,14 @@ luaA_window_get_opacity(lua_State *L, window_t *window)
     return 1;
 }
 
-void
-window_border_refresh(window_t *window)
-{
-    if(!window->border_need_update)
+void window_border_refresh(window_t* window) {
+    if (!window->border_need_update)
         return;
     window->border_need_update = false;
     xwindow_set_border_color(window_get(window), &window->border_color);
-    if(window->window) {
-        getConnection().configure_window(window_get(window), XCB_CONFIG_WINDOW_BORDER_WIDTH, window->border_width);
+    if (window->window) {
+        getConnection().configure_window(
+          window_get(window), XCB_CONFIG_WINDOW_BORDER_WIDTH, window->border_width);
     }
 }
 
@@ -191,15 +172,12 @@ window_border_refresh(window_t *window)
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_window_set_border_color(lua_State *L, window_t *window)
-{
+static int luaA_window_set_border_color(lua_State* L, window_t* window) {
     size_t len;
-    const char *color_name = luaL_checklstring(L, -1, &len);
+    const char* color_name = luaL_checklstring(L, -1, &len);
 
-    if(color_name &&
-       color_init_reply(color_init_unchecked(&window->border_color, color_name, len, getGlobals().visual)))
-    {
+    if (color_name && color_init_reply(color_init_unchecked(
+                        &window->border_color, color_name, len, getGlobals().visual))) {
         window->border_need_update = true;
         luaA_object_emit_signal(L, -3, "property::border_color", 0);
     }
@@ -212,19 +190,17 @@ luaA_window_set_border_color(lua_State *L, window_t *window)
  * \param idx The window index.
  * \param width The border width.
  */
-void
-window_set_border_width(lua_State *L, int idx, int width)
-{
-    auto window = (window_t *)luaA_checkudata(L, idx, &window_class);
+void window_set_border_width(lua_State* L, int idx, int width) {
+    auto window = (window_t*)luaA_checkudata(L, idx, &window_class);
     uint16_t old_width = window->border_width;
 
-    if(width == window->border_width || width < 0)
+    if (width == window->border_width || width < 0)
         return;
 
     window->border_need_update = true;
     window->border_width = width;
 
-    if(window->border_width_callback)
+    if (window->border_width_callback)
         (*window->border_width_callback)(window, old_width, width);
 
     luaA_object_emit_signal(L, idx, "property::border_width", 0);
@@ -235,55 +211,23 @@ window_set_border_width(lua_State *L, int idx, int width)
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_window_get_type(lua_State *L, window_t *w)
-{
-    switch(w->type)
-    {
-      case WINDOW_TYPE_DESKTOP:
-        lua_pushliteral(L, "desktop");
-        break;
-      case WINDOW_TYPE_DOCK:
-        lua_pushliteral(L, "dock");
-        break;
-      case WINDOW_TYPE_SPLASH:
-        lua_pushliteral(L, "splash");
-        break;
-      case WINDOW_TYPE_DIALOG:
-        lua_pushliteral(L, "dialog");
-        break;
-      case WINDOW_TYPE_MENU:
-        lua_pushliteral(L, "menu");
-        break;
-      case WINDOW_TYPE_TOOLBAR:
-        lua_pushliteral(L, "toolbar");
-        break;
-      case WINDOW_TYPE_UTILITY:
-        lua_pushliteral(L, "utility");
-        break;
-      case WINDOW_TYPE_DROPDOWN_MENU:
-        lua_pushliteral(L, "dropdown_menu");
-        break;
-      case WINDOW_TYPE_POPUP_MENU:
-        lua_pushliteral(L, "popup_menu");
-        break;
-      case WINDOW_TYPE_TOOLTIP:
-        lua_pushliteral(L, "tooltip");
-        break;
-      case WINDOW_TYPE_NOTIFICATION:
-        lua_pushliteral(L, "notification");
-        break;
-      case WINDOW_TYPE_COMBO:
-        lua_pushliteral(L, "combo");
-        break;
-      case WINDOW_TYPE_DND:
-        lua_pushliteral(L, "dnd");
-        break;
-      case WINDOW_TYPE_NORMAL:
-        lua_pushliteral(L, "normal");
-        break;
-      default:
-        return 0;
+int luaA_window_get_type(lua_State* L, window_t* w) {
+    switch (w->type) {
+    case WINDOW_TYPE_DESKTOP: lua_pushliteral(L, "desktop"); break;
+    case WINDOW_TYPE_DOCK: lua_pushliteral(L, "dock"); break;
+    case WINDOW_TYPE_SPLASH: lua_pushliteral(L, "splash"); break;
+    case WINDOW_TYPE_DIALOG: lua_pushliteral(L, "dialog"); break;
+    case WINDOW_TYPE_MENU: lua_pushliteral(L, "menu"); break;
+    case WINDOW_TYPE_TOOLBAR: lua_pushliteral(L, "toolbar"); break;
+    case WINDOW_TYPE_UTILITY: lua_pushliteral(L, "utility"); break;
+    case WINDOW_TYPE_DROPDOWN_MENU: lua_pushliteral(L, "dropdown_menu"); break;
+    case WINDOW_TYPE_POPUP_MENU: lua_pushliteral(L, "popup_menu"); break;
+    case WINDOW_TYPE_TOOLTIP: lua_pushliteral(L, "tooltip"); break;
+    case WINDOW_TYPE_NOTIFICATION: lua_pushliteral(L, "notification"); break;
+    case WINDOW_TYPE_COMBO: lua_pushliteral(L, "combo"); break;
+    case WINDOW_TYPE_DND: lua_pushliteral(L, "dnd"); break;
+    case WINDOW_TYPE_NORMAL: lua_pushliteral(L, "normal"); break;
+    default: return 0;
     }
     return 1;
 }
@@ -293,50 +237,46 @@ luaA_window_get_type(lua_State *L, window_t *w)
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_window_set_type(lua_State *L, window_t *w)
-{
+int luaA_window_set_type(lua_State* L, window_t* w) {
     window_type_t type;
-    const char *buf = luaL_checkstring(L, -1);
+    const char* buf = luaL_checkstring(L, -1);
 
     if (A_STREQ(buf, "desktop"))
         type = WINDOW_TYPE_DESKTOP;
-    else if(A_STREQ(buf, "dock"))
+    else if (A_STREQ(buf, "dock"))
         type = WINDOW_TYPE_DOCK;
-    else if(A_STREQ(buf, "splash"))
+    else if (A_STREQ(buf, "splash"))
         type = WINDOW_TYPE_SPLASH;
-    else if(A_STREQ(buf, "dialog"))
+    else if (A_STREQ(buf, "dialog"))
         type = WINDOW_TYPE_DIALOG;
-    else if(A_STREQ(buf, "menu"))
+    else if (A_STREQ(buf, "menu"))
         type = WINDOW_TYPE_MENU;
-    else if(A_STREQ(buf, "toolbar"))
+    else if (A_STREQ(buf, "toolbar"))
         type = WINDOW_TYPE_TOOLBAR;
-    else if(A_STREQ(buf, "utility"))
+    else if (A_STREQ(buf, "utility"))
         type = WINDOW_TYPE_UTILITY;
-    else if(A_STREQ(buf, "dropdown_menu"))
+    else if (A_STREQ(buf, "dropdown_menu"))
         type = WINDOW_TYPE_DROPDOWN_MENU;
-    else if(A_STREQ(buf, "popup_menu"))
+    else if (A_STREQ(buf, "popup_menu"))
         type = WINDOW_TYPE_POPUP_MENU;
-    else if(A_STREQ(buf, "tooltip"))
+    else if (A_STREQ(buf, "tooltip"))
         type = WINDOW_TYPE_TOOLTIP;
-    else if(A_STREQ(buf, "notification"))
+    else if (A_STREQ(buf, "notification"))
         type = WINDOW_TYPE_NOTIFICATION;
-    else if(A_STREQ(buf, "combo"))
+    else if (A_STREQ(buf, "combo"))
         type = WINDOW_TYPE_COMBO;
-    else if(A_STREQ(buf, "dnd"))
+    else if (A_STREQ(buf, "dnd"))
         type = WINDOW_TYPE_DND;
-    else if(A_STREQ(buf, "normal"))
+    else if (A_STREQ(buf, "normal"))
         type = WINDOW_TYPE_NORMAL;
-    else
-    {
+    else {
         luaA_warn(L, "Unknown window type '%s'", buf);
         return 0;
     }
 
-    if(w->type != type)
-    {
+    if (w->type != type) {
         w->type = type;
-        if(w->window != XCB_WINDOW_NONE)
+        if (w->window != XCB_WINDOW_NONE)
             ewmh_update_window_type(w->window, window_translate_type(w->type));
         luaA_object_emit_signal(L, -3, "property::type", 0);
     }
@@ -344,41 +284,33 @@ luaA_window_set_type(lua_State *L, window_t *w)
     return 0;
 }
 
-static const xproperty_t *
-luaA_find_xproperty(lua_State *L, int idx)
-{
-    const char *name = luaL_checkstring(L, idx);
+static const xproperty_t* luaA_find_xproperty(lua_State* L, int idx) {
+    const char* name = luaL_checkstring(L, idx);
 
-    auto it = std::ranges::find_if(getGlobals().xproperties, [name](const auto & prop) {
-            return prop.name == name;
-            });
-    if(it != getGlobals().xproperties.end()) {
+    auto it = std::ranges::find_if(getGlobals().xproperties,
+                                   [name](const auto& prop) { return prop.name == name; });
+    if (it != getGlobals().xproperties.end()) {
         return &(*it);
     }
     luaL_argerror(L, idx, "Unknown xproperty");
     return NULL;
 }
 
-int
-window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_idx)
-{
-    const xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
+int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int value_idx) {
+    const xproperty_t* prop = luaA_find_xproperty(L, prop_idx);
 
-    if(lua_isnil(L, value_idx))
-    {
+    if (lua_isnil(L, value_idx)) {
         xcb_delete_property(getGlobals().connection, window, prop->atom);
         return 0;
     }
-    if(prop->type == xproperty::PROP_STRING)
-    {
+    if (prop->type == xproperty::PROP_STRING) {
         size_t len = 0;
-        const char *data = luaL_checklstring(L, value_idx, &len);
+        const char* data = luaL_checklstring(L, value_idx, &len);
         getConnection().replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
-    } else if(prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN)
-    {
-        uint32_t data = (prop->type == xproperty::PROP_NUMBER) ?
-            luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX)
-            : luaA_checkboolean(L, value_idx);
+    } else if (prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN) {
+        uint32_t data = (prop->type == xproperty::PROP_NUMBER)
+                          ? luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX)
+                          : luaA_checkboolean(L, value_idx);
         getConnection().replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
     } else {
         fatal("Got an xproperty with invalid type");
@@ -386,38 +318,36 @@ window_set_xproperty(lua_State *L, xcb_window_t window, int prop_idx, int value_
     return 0;
 }
 
-int
-window_get_xproperty(lua_State *L, xcb_window_t window, int prop_idx)
-{
-    const xproperty_t *prop = luaA_find_xproperty(L, prop_idx);
+int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
+    const xproperty_t* prop = luaA_find_xproperty(L, prop_idx);
     xcb_atom_t type;
-    const char *data;
-    xcb_get_property_reply_t *reply;
+    const char* data;
+    xcb_get_property_reply_t* reply;
     uint32_t length;
 
     type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
-    reply = xcb_get_property_reply(getGlobals().connection,
-            xcb_get_property_unchecked(getGlobals().connection, false, window,
-                prop->atom, type, 0, length), NULL);
-    if(!reply)
+    reply =
+      xcb_get_property_reply(getGlobals().connection,
+                             xcb_get_property_unchecked(
+                               getGlobals().connection, false, window, prop->atom, type, 0, length),
+                             NULL);
+    if (!reply)
         return 0;
 
-    data = (const char *)xcb_get_property_value(reply);
+    data = (const char*)xcb_get_property_value(reply);
 
-    if(prop->type == xproperty::PROP_STRING)
+    if (prop->type == xproperty::PROP_STRING)
         lua_pushlstring(L, data, reply->value_len);
-    else
-    {
-        if(reply->value_len <= 0)
-        {
+    else {
+        if (reply->value_len <= 0) {
             p_delete(&reply);
             return 0;
         }
-        if(prop->type == xproperty::PROP_NUMBER)
-            lua_pushinteger(L, *(uint32_t *) data);
+        if (prop->type == xproperty::PROP_NUMBER)
+            lua_pushinteger(L, *(uint32_t*)data);
         else
-            lua_pushboolean(L, *(uint32_t *) data);
+            lua_pushboolean(L, *(uint32_t*)data);
     }
 
     p_delete(&reply);
@@ -430,10 +360,8 @@ window_get_xproperty(lua_State *L, xcb_window_t window, int prop_idx)
  * @param value The new value for the property
  * @function set_xproperty
  */
-static int
-luaA_window_set_xproperty(lua_State *L)
-{
-    auto w =(window_t *) luaA_checkudata(L, 1, &window_class);
+static int luaA_window_set_xproperty(lua_State* L) {
+    auto w = (window_t*)luaA_checkudata(L, 1, &window_class);
     return window_set_xproperty(L, w->window, 2, 3);
 }
 
@@ -442,10 +370,8 @@ luaA_window_set_xproperty(lua_State *L)
  * @param name The name of the X11 property
  * @function get_xproperty
  */
-static int
-luaA_window_get_xproperty(lua_State *L)
-{
-    auto w =(window_t *) luaA_checkudata(L, 1, &window_class);
+static int luaA_window_get_xproperty(lua_State* L) {
+    auto w = (window_t*)luaA_checkudata(L, 1, &window_class);
     return window_get_xproperty(L, w->window, 2);
 }
 
@@ -453,46 +379,27 @@ luaA_window_get_xproperty(lua_State *L)
  * @param type The type to return.
  * @return The EWMH atom for this type.
  */
-uint32_t
-window_translate_type(window_type_t type)
-{
-    switch(type)
-    {
-    case WINDOW_TYPE_NORMAL:
-        return _NET_WM_WINDOW_TYPE_NORMAL;
-    case WINDOW_TYPE_DESKTOP:
-        return _NET_WM_WINDOW_TYPE_DESKTOP;
-    case WINDOW_TYPE_DOCK:
-        return _NET_WM_WINDOW_TYPE_DOCK;
-    case WINDOW_TYPE_SPLASH:
-        return _NET_WM_WINDOW_TYPE_SPLASH;
-    case WINDOW_TYPE_DIALOG:
-        return _NET_WM_WINDOW_TYPE_DIALOG;
-    case WINDOW_TYPE_MENU:
-        return _NET_WM_WINDOW_TYPE_MENU;
-    case WINDOW_TYPE_TOOLBAR:
-        return _NET_WM_WINDOW_TYPE_TOOLBAR;
-    case WINDOW_TYPE_UTILITY:
-        return _NET_WM_WINDOW_TYPE_UTILITY;
-    case WINDOW_TYPE_DROPDOWN_MENU:
-        return _NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
-    case WINDOW_TYPE_POPUP_MENU:
-        return _NET_WM_WINDOW_TYPE_POPUP_MENU;
-    case WINDOW_TYPE_TOOLTIP:
-        return _NET_WM_WINDOW_TYPE_TOOLTIP;
-    case WINDOW_TYPE_NOTIFICATION:
-        return _NET_WM_WINDOW_TYPE_NOTIFICATION;
-    case WINDOW_TYPE_COMBO:
-        return _NET_WM_WINDOW_TYPE_COMBO;
-    case WINDOW_TYPE_DND:
-        return _NET_WM_WINDOW_TYPE_DND;
+uint32_t window_translate_type(window_type_t type) {
+    switch (type) {
+    case WINDOW_TYPE_NORMAL: return _NET_WM_WINDOW_TYPE_NORMAL;
+    case WINDOW_TYPE_DESKTOP: return _NET_WM_WINDOW_TYPE_DESKTOP;
+    case WINDOW_TYPE_DOCK: return _NET_WM_WINDOW_TYPE_DOCK;
+    case WINDOW_TYPE_SPLASH: return _NET_WM_WINDOW_TYPE_SPLASH;
+    case WINDOW_TYPE_DIALOG: return _NET_WM_WINDOW_TYPE_DIALOG;
+    case WINDOW_TYPE_MENU: return _NET_WM_WINDOW_TYPE_MENU;
+    case WINDOW_TYPE_TOOLBAR: return _NET_WM_WINDOW_TYPE_TOOLBAR;
+    case WINDOW_TYPE_UTILITY: return _NET_WM_WINDOW_TYPE_UTILITY;
+    case WINDOW_TYPE_DROPDOWN_MENU: return _NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
+    case WINDOW_TYPE_POPUP_MENU: return _NET_WM_WINDOW_TYPE_POPUP_MENU;
+    case WINDOW_TYPE_TOOLTIP: return _NET_WM_WINDOW_TYPE_TOOLTIP;
+    case WINDOW_TYPE_NOTIFICATION: return _NET_WM_WINDOW_TYPE_NOTIFICATION;
+    case WINDOW_TYPE_COMBO: return _NET_WM_WINDOW_TYPE_COMBO;
+    case WINDOW_TYPE_DND: return _NET_WM_WINDOW_TYPE_DND;
     }
     return _NET_WM_WINDOW_TYPE_NORMAL;
 }
 
-static int
-luaA_window_set_border_width(lua_State *L, window_t *c)
-{
+static int luaA_window_set_border_width(lua_State* L, window_t* c) {
     window_set_border_width(L, -3, round(luaA_checknumber_range(L, -1, 0, MAX_X11_SIZE)));
     return 0;
 }
@@ -501,44 +408,44 @@ LUA_OBJECT_EXPORT_PROPERTY(window, window_t, window, lua_pushinteger)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_color, luaA_pushcolor)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_width, lua_pushinteger)
 
-void
-window_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg window_methods[] =
-    {
-        { NULL, NULL }
+void window_class_setup(lua_State* L) {
+    static const struct luaL_Reg window_methods[] = {
+      {NULL, NULL}
     };
 
-    static const struct luaL_Reg window_meta[] =
-    {
-        { "struts", luaA_window_struts },
-        { "_buttons", luaA_window_buttons },
-        { "set_xproperty", luaA_window_set_xproperty },
-        { "get_xproperty", luaA_window_get_xproperty },
-        { NULL, NULL }
+    static const struct luaL_Reg window_meta[] = {
+      {       "struts",        luaA_window_struts},
+      {     "_buttons",       luaA_window_buttons},
+      {"set_xproperty", luaA_window_set_xproperty},
+      {"get_xproperty", luaA_window_get_xproperty},
+      {           NULL,                      NULL}
     };
 
-    luaA_class_setup(L, &window_class, "window", NULL,
-                     NULL, (lua_class_collector_t) window_wipe, NULL,
-                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-                     window_methods, window_meta);
+    luaA_class_setup(L,
+                     &window_class,
+                     "window",
+                     NULL,
+                     NULL,
+                     (lua_class_collector_t)window_wipe,
+                     NULL,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     window_methods,
+                     window_meta);
 
-    window_class.add_property("window",
-                            NULL,
-                            (lua_class_propfunc_t) luaA_window_get_window,
-                            NULL);
+    window_class.add_property("window", NULL, (lua_class_propfunc_t)luaA_window_get_window, NULL);
     window_class.add_property("_opacity",
-                            (lua_class_propfunc_t) luaA_window_set_opacity,
-                            (lua_class_propfunc_t) luaA_window_get_opacity,
-                            (lua_class_propfunc_t) luaA_window_set_opacity);
+                              (lua_class_propfunc_t)luaA_window_set_opacity,
+                              (lua_class_propfunc_t)luaA_window_get_opacity,
+                              (lua_class_propfunc_t)luaA_window_set_opacity);
     window_class.add_property("_border_color",
-                            (lua_class_propfunc_t) luaA_window_set_border_color,
-                            (lua_class_propfunc_t) luaA_window_get_border_color,
-                            (lua_class_propfunc_t) luaA_window_set_border_color);
+                              (lua_class_propfunc_t)luaA_window_set_border_color,
+                              (lua_class_propfunc_t)luaA_window_get_border_color,
+                              (lua_class_propfunc_t)luaA_window_set_border_color);
     window_class.add_property("_border_width",
-                            (lua_class_propfunc_t) luaA_window_set_border_width,
-                            (lua_class_propfunc_t) luaA_window_get_border_width,
-                            (lua_class_propfunc_t) luaA_window_set_border_width);
+                              (lua_class_propfunc_t)luaA_window_set_border_width,
+                              (lua_class_propfunc_t)luaA_window_get_border_width,
+                              (lua_class_propfunc_t)luaA_window_set_border_width);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

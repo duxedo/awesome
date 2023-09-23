@@ -23,12 +23,12 @@
 #define AWESOME_STRUT_H
 
 #include "common/luahdr.h"
-#include <stdint.h>
+
 #include <stdbool.h>
+#include <stdint.h>
 
 /* Strut */
-typedef struct
-{
+typedef struct {
     uint16_t left, right, top, bottom;
     uint16_t left_start_y, left_end_y;
     uint16_t right_start_y, right_end_y;
@@ -40,25 +40,14 @@ typedef struct
  * \param strut A strut structure.
  * \return A boolean value, true if the strut has strut information.
  */
-static inline bool
-strut_has_value(strut_t *strut)
-{
-    return (strut->left
-            || strut->right
-            || strut->top
-            || strut->bottom
-            || strut->left_start_y
-            || strut->left_end_y
-            || strut->right_start_y
-            || strut->right_end_y
-            || strut->top_start_x
-            || strut->top_end_x
-            || strut->bottom_start_x
-            || strut->bottom_end_x);
+static inline bool strut_has_value(strut_t* strut) {
+    return (strut->left || strut->right || strut->top || strut->bottom || strut->left_start_y ||
+            strut->left_end_y || strut->right_start_y || strut->right_end_y || strut->top_start_x ||
+            strut->top_end_x || strut->bottom_start_x || strut->bottom_end_x);
 }
 
-int luaA_pushstrut(lua_State *, strut_t);
-void luaA_tostrut(lua_State *, int, strut_t *);
+int luaA_pushstrut(lua_State*, strut_t);
+void luaA_tostrut(lua_State*, int, strut_t*);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

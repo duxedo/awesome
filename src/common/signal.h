@@ -20,52 +20,39 @@
  */
 #pragma once
 
-#include <string_view>
-#include <vector>
-#include <unordered_map>
-#include <string>
 #include <algorithm>
+#include <string>
+#include <string_view>
+#include <unordered_map>
+#include <vector>
 
-struct signal_t
-{
+struct signal_t {
     std::vector<const void*> functions;
 };
 struct SignalHash {
     using is_transparent = void;
-    size_t operator()(const std::string& s) const {
-        return std::hash<std::string_view>{}(s);
-    }
-    size_t operator()(const std::string_view& s) const {
-        return std::hash<std::string_view>{}(s);
-    }
-    size_t operator()(const char* s) const {
-        return std::hash<std::string_view>{}(s);
-    }
+    size_t operator()(const std::string& s) const { return std::hash<std::string_view>{}(s); }
+    size_t operator()(const std::string_view& s) const { return std::hash<std::string_view>{}(s); }
+    size_t operator()(const char* s) const { return std::hash<std::string_view>{}(s); }
 };
 
 struct SignalEq {
     using is_transparent = void;
-    size_t operator()(const std::string& s, const std::string& r) const {
-        return s == r;
-    }
-    size_t operator()(const std::string_view& s, const std::string& r) const {
-        return s == r;
-    }
-    size_t operator()(const char* s, const std::string& r) const {
-        return r == s;
-    }
+    size_t operator()(const std::string& s, const std::string& r) const { return s == r; }
+    size_t operator()(const std::string_view& s, const std::string& r) const { return s == r; }
+    size_t operator()(const char* s, const std::string& r) const { return r == s; }
 };
 
-struct Signals : public std::unordered_map<std::string, signal_t, SignalHash, SignalEq> {
-/** Connect a signal inside a signal array.
- * You are in charge of reference counting.
- * \param arr The signal array.
- * \param name The signal name.
- * \param ref The reference to add.
- */
+struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, SignalEq> {
+    /** Connect a signal inside a signal array.
+     * You are in charge of reference counting.
+     * \param arr The signal array.
+     * \param name The signal name.
+     * \param ref The reference to add.
+     */
     void connect(const std::string_view& name, const void* ref) {
         auto it = this->find(name);
-        if(it == this->end()) {
+        if (it == this->end()) {
             std::string nm(name.begin(), name.end());
             auto [it, done] = this->try_emplace(nm, signal_t{});
             it->second.functions.push_back(ref);
@@ -73,23 +60,22 @@ struct Signals : public std::unordered_map<std::string, signal_t, SignalHash, Si
         }
         it->second.functions.push_back(ref);
     }
-/** Disconnect a signal inside a signal array.
- * You are in charge of reference counting.
- * \param arr The signal array.
- * \param name The signal name.
- * \param ref The reference to remove.
- */
+    /** Disconnect a signal inside a signal array.
+     * You are in charge of reference counting.
+     * \param arr The signal array.
+     * \param name The signal name.
+     * \param ref The reference to remove.
+     */
     bool disconnect(const std::string_view& name, const void* ref) {
         auto it = this->find(name);
-        if(it == this->end()) {
+        if (it == this->end()) {
             return false;
         }
         auto funIt = std::remove(it->second.functions.begin(), it->second.functions.end(), ref);
-        if(funIt == it->second.functions.end()) {
+        if (funIt == it->second.functions.end()) {
             return false;
         }
         it->second.functions.erase(funIt);
         return true;
     }
 };
-

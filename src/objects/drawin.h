@@ -23,32 +23,31 @@
 #ifndef AWESOME_OBJECTS_DRAWIN_H
 #define AWESOME_OBJECTS_DRAWIN_H
 
-#include "objects/window.h"
 #include "objects/drawable.h"
+#include "objects/window.h"
 
 /** Drawin type */
-struct drawin_t
-{
+struct drawin_t {
     WINDOW_OBJECT_HEADER
     /** Ontop */
     bool ontop;
     /** Visible */
     bool visible;
     /** Cursor */
-    char *cursor;
+    char* cursor;
     /** The drawable for this drawin. */
-    drawable_t *drawable;
+    drawable_t* drawable;
     /** The window geometry. */
     area_t geometry;
     /** Do we have a pending geometry change that still needs to be applied? */
     bool geometry_dirty;
 };
 
-drawin_t * drawin_getbywin(xcb_window_t);
-void drawin_refresh_pixmap_partial(drawin_t *, int16_t, int16_t, uint16_t, uint16_t);
-void luaA_drawin_systray_kickout(lua_State *);
+drawin_t* drawin_getbywin(xcb_window_t);
+void drawin_refresh_pixmap_partial(drawin_t*, int16_t, int16_t, uint16_t, uint16_t);
+void luaA_drawin_systray_kickout(lua_State*);
 
-void drawin_class_setup(lua_State *);
+void drawin_class_setup(lua_State*);
 
 extern lua_class_t drawin_class;
 

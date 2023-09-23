@@ -24,9 +24,9 @@
 
 typedef struct client_t client_t;
 
-void stack_client_remove(client_t *);
-void stack_client_push(client_t *);
-void stack_client_append(client_t *);
+void stack_client_remove(client_t*);
+void stack_client_push(client_t*);
+void stack_client_append(client_t*);
 void stack_windows(void);
 void stack_refresh(void);
 

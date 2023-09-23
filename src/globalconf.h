@@ -23,32 +23,28 @@
 #include <cstdlib>
 #include <xcb/xproto.h>
 #define SN_API_NOT_YET_FROZEN
-#include <libsn/sn.h>
-
-#include <glib.h>
-#include "xcbcpp/xcb.h"
-#include <X11/Xresource.h>
-#include <set>
-
 #include "config.h"
 #include "property.h"
+#include "xcbcpp/xcb.h"
+
+#include <X11/Xresource.h>
+#include <glib.h>
+#include <libsn/sn.h>
+#include <set>
 #ifdef WITH_XCB_ERRORS
 #include <xcb/xcb_errors.h>
 #endif
 
-#include "objects/key.h"
 #include "common/xembed.h"
+#include "objects/key.h"
 
-#define ROOT_WINDOW_EVENT_MASK \
-    (const uint32_t []) { \
-        XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY \
-      | XCB_EVENT_MASK_ENTER_WINDOW \
-      | XCB_EVENT_MASK_LEAVE_WINDOW \
-      | XCB_EVENT_MASK_STRUCTURE_NOTIFY \
-      | XCB_EVENT_MASK_BUTTON_PRESS \
-      | XCB_EVENT_MASK_BUTTON_RELEASE \
-      | XCB_EVENT_MASK_FOCUS_CHANGE \
-      | XCB_EVENT_MASK_PROPERTY_CHANGE \
+#define ROOT_WINDOW_EVENT_MASK                                                      \
+    (const uint32_t[]) {                                                            \
+        XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | \
+          XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |               \
+          XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_BUTTON_PRESS |           \
+          XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_FOCUS_CHANGE |             \
+          XCB_EVENT_MASK_PROPERTY_CHANGE                                            \
     }
 
 struct drawable_t;
@@ -64,39 +60,36 @@ struct sequence_pair_t {
     xcb_void_cookie_t end;
 };
 
-void tag_unref_simplified(tag_t *);
+void tag_unref_simplified(tag_t*);
 
 struct TagDeleter {
-    void operator()(tag_t* tag) {
-        tag_unref_simplified(tag);
-    }
+    void operator()(tag_t* tag) { tag_unref_simplified(tag); }
 };
 
 using tag_ptr = std::unique_ptr<tag_t, TagDeleter>;
 
 /** Main configuration structure */
-class Globals
-{
-    public:
+class Globals {
+  public:
     /** Connection ref */
     XCB::Connection _connection;
     xcb_connection_t*& connection = _connection.connection;
     /** X Resources DB */
-    xcb_xrm_database_t *xrmdb = nullptr;
+    xcb_xrm_database_t* xrmdb = nullptr;
     /** Default screen number */
     int default_screen = 0;
     /** xcb-cursor context */
-    xcb_cursor_context_t *cursor_ctx = nullptr;
+    xcb_cursor_context_t* cursor_ctx = nullptr;
 #ifdef WITH_XCB_ERRORS
     /** xcb-errors context */
-    xcb_errors_context_t *errors_ctx;
+    xcb_errors_context_t* errors_ctx;
 #endif
     /** Keys symbol table */
-    xcb_key_symbols_t *keysyms = nullptr;
+    xcb_key_symbols_t* keysyms = nullptr;
     /** Logical screens */
     std::vector<screen_t*> screens;
     /** The primary screen, access through screen_get_primary() */
-    screen_t *primary_screen = nullptr;
+    screen_t* primary_screen = nullptr;
     /** Root window key bindings */
     std::vector<keyb_t*> keys;
     /** Root window mouse bindings */
@@ -136,37 +129,33 @@ class Globals
     /** Clients list */
     std::vector<client_t*> clients;
     /** Embedded windows */
-    private:
-        std::vector<client_t*> stack = {};
-    public:
-        const std::vector<client_t*>& getStack() {
-            return stack;
-        }
-        std::vector<client_t*>& refStack() {
-            return stack;
-        }
+  private:
+    std::vector<client_t*> stack = {};
+
+  public:
+    const std::vector<client_t*>& getStack() { return stack; }
+    std::vector<client_t*>& refStack() { return stack; }
 
     std::vector<XEmbed::window> embedded;
     /** Stack client history */
     /** Lua VM state (opaque to avoid mis-use, see globalconf_get_lua_State()) */
     struct {
-        lua_State *real_L_dont_use_directly = nullptr;
+        lua_State* real_L_dont_use_directly = nullptr;
     } L;
     /** All errors messages from loading config files */
     std::string startup_errors;
     /** main loop that awesome is running on */
-    GMainLoop *loop = nullptr;
+    GMainLoop* loop = nullptr;
     /** The key grabber function */
     int keygrabber = LUA_REFNIL;
     /** The mouse pointer grabber function */
     int mousegrabber = LUA_REFNIL;
     /** The drawable that currently contains the pointer */
-    drawable_t *drawable_under_mouse = nullptr;
+    drawable_t* drawable_under_mouse = nullptr;
     /** Input focus information */
-    struct
-    {
+    struct {
         /** Focused client */
-        client_t *client = nullptr;
+        client_t* client = nullptr;
         /** Is there a focus change pending? */
         bool need_update = false;
         /** When nothing has the input focus, this window actually is focused */
@@ -175,42 +164,40 @@ class Globals
     /** Drawins */
     std::vector<drawin_t*> drawins;
     /** The startup notification display struct */
-    SnDisplay *sndisplay = nullptr;
+    SnDisplay* sndisplay = nullptr;
     /** Latest timestamp we got from the X server */
-    private:
+  private:
     xcb_timestamp_t timestamp = 0;
-    public:
-    xcb_timestamp_t get_timestamp() const {
-        return timestamp;
-    }
 
-    template<typename EventT>
+  public:
+    xcb_timestamp_t get_timestamp() const { return timestamp; }
+
+    template <typename EventT>
     requires(std::is_same_v<decltype(timestamp), decltype(std::declval<EventT>().time)>)
     void update_timestamp(const EventT* ev) {
         timestamp = ev->time;
     }
 
     /** Window that contains the systray */
-    struct
-    {
+    struct {
         xcb_window_t window = 0;
         /** Atom for _NET_SYSTEM_TRAY_%d */
         xcb_atom_t atom = 0;
         /** Do we own the systray selection? */
         bool registered = false;
         /** Systray window parent */
-        drawin_t *parent = nullptr;
+        drawin_t* parent = nullptr;
         /** Background color */
         uint32_t background_pixel = 0;
     } systray;
     /** The monitor of startup notifications */
-    SnMonitorContext *snmonitor = nullptr;
+    SnMonitorContext* snmonitor = nullptr;
     /** The visual, used to draw */
-    xcb_visualtype_t *visual = nullptr;
+    xcb_visualtype_t* visual = nullptr;
     /** The screen's default visual */
-    xcb_visualtype_t *default_visual = nullptr;
+    xcb_visualtype_t* default_visual = nullptr;
     /** The screen's information */
-    xcb_screen_t *screen = nullptr;
+    xcb_screen_t* screen = nullptr;
     /** A graphic context. */
     xcb_gcontext_t gc = 0;
     /** Our default depth */
@@ -224,9 +211,9 @@ class Globals
     /** List of registered xproperties */
     std::set<xproperty> xproperties;
     /* xkb context */
-    struct xkb_context *xkb_ctx = nullptr;
+    struct xkb_context* xkb_ctx = nullptr;
     /* xkb state of dead keys on keyboard */
-    struct xkb_state *xkb_state = nullptr;
+    struct xkb_state* xkb_state = nullptr;
     /* Do we have a pending xkb update call? */
     bool xkb_update_pending = false;
     /* Do we have a pending reload? */
@@ -238,27 +225,27 @@ class Globals
     /** The preferred size of client icons for this screen */
     uint32_t preferred_icon_size = 0;
     /** Cached wallpaper information */
-    cairo_surface_t *wallpaper = nullptr;
+    cairo_surface_t* wallpaper = nullptr;
     /** List of enter/leave events to ignore */
     std::vector<sequence_pair_t> ignore_enter_leave_events;
-    xcb_void_cookie_t pending_enter_leave_begin = { 0 };
+    xcb_void_cookie_t pending_enter_leave_begin = {0};
     /** List of windows to be destroyed later */
     std::vector<xcb_window_t> destroy_later_windows;
     /** Pending event that still needs to be handled */
-    xcb_generic_event_t *pending_event = nullptr;
+    xcb_generic_event_t* pending_event = nullptr;
     /** The exit code that main() will return with */
     int exit_code = EXIT_SUCCESS;
     /** The Global API level */
     int api_level = 0;
 };
 
-Globals & getGlobals();
-XCB::Connection & getConnection();
+Globals& getGlobals();
+XCB::Connection& getConnection();
 
 /** You should always use this as lua_State *L = globalconf_get_lua_State().
  * That way it becomes harder to introduce coroutine-related problems.
  */
-static inline lua_State *globalconf_get_lua_State(void) {
+static inline lua_State* globalconf_get_lua_State(void) {
     return getGlobals().L.real_L_dont_use_directly;
 }
 

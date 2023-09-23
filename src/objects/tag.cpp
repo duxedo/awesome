@@ -19,7 +19,7 @@
  *
  */
 
- /** Labelled container where `client` objects can be stored.
+/** Labelled container where `client` objects can be stored.
  *
  * What is a tag?
  * ==============
@@ -197,12 +197,14 @@
  */
 
 #include "tag.h"
-#include "globalconf.h"
-#include "screen.h"
+
 #include "banning.h"
 #include "client.h"
 #include "ewmh.h"
+#include "globalconf.h"
 #include "luaa.h"
+#include "screen.h"
+
 #include <algorithm>
 
 lua_class_t tag_class;
@@ -302,17 +304,12 @@ lua_class_t tag_class;
  * @staticfct set_newindex_miss_handler
  */
 
-
-void
-tag_unref_simplified(tag_t *tag)
-{
-    lua_State *L = globalconf_get_lua_State();
+void tag_unref_simplified(tag_t* tag) {
+    lua_State* L = globalconf_get_lua_State();
     luaA_object_unref(L, tag);
 }
 
-static void
-tag_wipe(tag_t *tag)
-{
+static void tag_wipe(tag_t* tag) {
     tag->clients.clear();
     p_delete(&(tag->name));
 }
@@ -325,15 +322,12 @@ OBJECT_EXPORT_PROPERTY(tag, tag_t, name)
  * \param udx The index of the tag on the stack.
  * \param view Set selected or not.
  */
-static void
-tag_view(lua_State *L, int udx, bool view)
-{
-    tag_t *tag = (tag_t*)luaA_checkudata(L, udx, &tag_class);
-    if(tag->selected != view)
-    {
+static void tag_view(lua_State* L, int udx, bool view) {
+    tag_t* tag = (tag_t*)luaA_checkudata(L, udx, &tag_class);
+    if (tag->selected != view) {
         tag->selected = view;
         banning_need_update();
-        for(auto *screen: getGlobals().screens) {
+        for (auto* screen : getGlobals().screens) {
             screen_update_workarea(screen);
         }
 
@@ -341,10 +335,8 @@ tag_view(lua_State *L, int udx, bool view)
     }
 }
 
-static void
-tag_client_emit_signal(tag_t *t, client_t *c, const char *signame)
-{
-    lua_State *L = globalconf_get_lua_State();
+static void tag_client_emit_signal(tag_t* t, client_t* c, const char* signame) {
+    lua_State* L = globalconf_get_lua_State();
     luaA_object_push(L, c);
     luaA_object_push(L, t);
     /* emit signal on client, with new tag as argument */
@@ -362,14 +354,11 @@ tag_client_emit_signal(tag_t *t, client_t *c, const char *signame)
  * \param L The Lua VM state.
  * \param c the client to tag
  */
-void
-tag_client(lua_State *L, client_t *c)
-{
-    tag_t *t = (tag_t *)luaA_object_ref_class(L, -1, &tag_class);
+void tag_client(lua_State* L, client_t* c) {
+    tag_t* t = (tag_t*)luaA_object_ref_class(L, -1, &tag_class);
 
     /* don't tag twice */
-    if(is_client_tagged(c, t))
-    {
+    if (is_client_tagged(c, t)) {
         luaA_object_unref(L, t);
         return;
     }
@@ -386,12 +375,10 @@ tag_client(lua_State *L, client_t *c)
  * \param c the client to tag
  * \param t the tag to tag the client with
  */
-void
-untag_client(client_t *c, tag_t *t)
-{
-    for(size_t i = 0; i < t->clients.size(); i++) {
-        if(t->clients[i] == c) {
-            lua_State *L = globalconf_get_lua_State();
+void untag_client(client_t* c, tag_t* t) {
+    for (size_t i = 0; i < t->clients.size(); i++) {
+        if (t->clients[i] == c) {
+            lua_State* L = globalconf_get_lua_State();
             t->clients.erase(t->clients.begin() + i);
             banning_need_update();
             ewmh_client_update_desktop(c);
@@ -408,11 +395,9 @@ untag_client(client_t *c, tag_t *t)
  * \param t the tag
  * \return true if the client is tagged with the tag, false otherwise.
  */
-bool
-is_client_tagged(client_t *c, tag_t *t)
-{
-    for(size_t i = 0; i < t->clients.size(); i++) {
-        if(t->clients[i] == c) {
+bool is_client_tagged(client_t* c, tag_t* t) {
+    for (size_t i = 0; i < t->clients.size(); i++) {
+        if (t->clients[i] == c) {
             return true;
         }
     }
@@ -423,25 +408,22 @@ is_client_tagged(client_t *c, tag_t *t)
 /** Get the index of the tag with focused client or first selected
  * \return Its index
  */
-int
-tags_get_current_or_first_selected_index(void)
-{
+int tags_get_current_or_first_selected_index(void) {
     /* Consider "current desktop" a tag, that has focused window,
      * basically a tag user actively interacts with.
      * If no focused windows are present, fallback to first selected.
      */
-    if(getGlobals().focus.client)
-    {
-        for(int i = 0; i < (int)getGlobals().tags.size(); i++) {
-            auto & tag = getGlobals().tags[i];
-            if(tag->selected && is_client_tagged(getGlobals().focus.client, tag.get())) {
+    if (getGlobals().focus.client) {
+        for (int i = 0; i < (int)getGlobals().tags.size(); i++) {
+            auto& tag = getGlobals().tags[i];
+            if (tag->selected && is_client_tagged(getGlobals().focus.client, tag.get())) {
                 return i;
             }
         }
     }
-    for(int i = 0; i < (int)getGlobals().tags.size(); i++) {
-        auto & tag = getGlobals().tags[i];
-        if(tag->selected) {
+    for (int i = 0; i < (int)getGlobals().tags.size(); i++) {
+        auto& tag = getGlobals().tags[i];
+        if (tag->selected) {
             return i;
         }
     }
@@ -454,11 +436,7 @@ tags_get_current_or_first_selected_index(void)
  * \lparam A name.
  * \lreturn A new tag object.
  */
-static int
-luaA_tag_new(lua_State *L)
-{
-    return luaA_class_new(L, &tag_class);
-}
+static int luaA_tag_new(lua_State* L) { return luaA_class_new(L, &tag_class); }
 
 /** Get or set the clients attached to this tag.
  *
@@ -467,26 +445,21 @@ luaA_tag_new(lua_State *L)
  * @treturn table A table with the clients attached to this tags.
  * @method clients
  */
-static int
-luaA_tag_clients(lua_State *L)
-{
-    tag_t *tag = (tag_t *)luaA_checkudata(L, 1, &tag_class);
-    auto & clients = tag->clients;
+static int luaA_tag_clients(lua_State* L) {
+    tag_t* tag = (tag_t*)luaA_checkudata(L, 1, &tag_class);
+    auto& clients = tag->clients;
     size_t i;
 
-    if(lua_gettop(L) == 2)
-    {
+    if (lua_gettop(L) == 2) {
         luaA_checktable(L, 2);
-        for(size_t j = 0; j < clients.size(); j++)
-        {
-            client_t *c = clients[j];
+        for (size_t j = 0; j < clients.size(); j++) {
+            client_t* c = clients[j];
 
             /* Only untag if we aren't going to add this tag again */
             bool found = false;
             lua_pushnil(L);
-            while(lua_next(L, 2))
-            {
-                client_t *tc = (client_t *)luaA_checkudata(L, -1, &client_class);
+            while (lua_next(L, 2)) {
+                client_t* tc = (client_t*)luaA_checkudata(L, -1, &client_class);
                 /* Pop the value from lua_next */
                 lua_pop(L, 1);
                 if (tc != c)
@@ -497,15 +470,14 @@ luaA_tag_clients(lua_State *L)
                 found = true;
                 break;
             }
-            if(!found) {
+            if (!found) {
                 untag_client(c, tag);
                 j--;
             }
         }
         lua_pushnil(L);
-        while(lua_next(L, 2))
-        {
-            client_t *c = (client_t *)luaA_checkudata(L, -1, &client_class);
+        while (lua_next(L, 2)) {
+            client_t* c = (client_t*)luaA_checkudata(L, -1, &client_class);
             /* push tag on top of the stack */
             lua_pushvalue(L, 1);
             tag_client(L, c);
@@ -514,8 +486,7 @@ luaA_tag_clients(lua_State *L)
     }
 
     lua_createtable(L, clients.size(), 0);
-    for(i = 0; i < clients.size(); i++)
-    {
+    for (i = 0; i < clients.size(); i++) {
         luaA_object_push(L, clients[i]);
         lua_rawseti(L, -2, i + 1);
     }
@@ -532,10 +503,8 @@ LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, activated, lua_pushboolean)
  * \param tag The tag to name.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_tag_set_name(lua_State *L, tag_t *tag)
-{
-    const char *buf = luaL_checkstring(L, -1);
+static int luaA_tag_set_name(lua_State* L, tag_t* tag) {
+    const char* buf = luaL_checkstring(L, -1);
     p_delete(&tag->name);
     tag->name = a_strdup(buf);
     luaA_object_emit_signal(L, -3, "property::name", 0);
@@ -548,9 +517,7 @@ luaA_tag_set_name(lua_State *L, tag_t *tag)
  * \param tag The tag to set the selection status for.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_tag_set_selected(lua_State *L, tag_t *tag)
-{
+static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
     tag_view(L, -3, luaA_checkboolean(L, -1));
     return 0;
 }
@@ -560,32 +527,25 @@ luaA_tag_set_selected(lua_State *L, tag_t *tag)
  * \param tag The tag to set the activated status for.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_tag_set_activated(lua_State *L, tag_t *tag)
-{
+static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
     bool activated = luaA_checkboolean(L, -1);
-    if(activated == tag->activated)
+    if (activated == tag->activated)
         return 0;
 
     tag->activated = activated;
-    if(activated)
-    {
+    if (activated) {
         lua_pushvalue(L, -3);
         getGlobals().tags.emplace_back((tag_t*)luaA_object_ref_class(L, -1, &tag_class));
-    }
-    else
-    {
-        auto it = std::ranges::find_if(getGlobals().tags, [tag](const auto & tagptr) {
-            return tagptr.get() == tag;
-        });
-        if(it != getGlobals().tags.end()) {
+    } else {
+        auto it = std::ranges::find_if(getGlobals().tags,
+                                       [tag](const auto& tagptr) { return tagptr.get() == tag; });
+        if (it != getGlobals().tags.end()) {
             auto tmp = std::move(*it);
             (void)tmp.release();
             getGlobals().tags.erase(it);
         }
 
-        if (tag->selected)
-        {
+        if (tag->selected) {
             tag->selected = false;
             luaA_object_emit_signal(L, -3, "property::selected", 0);
             banning_need_update();
@@ -600,42 +560,40 @@ luaA_tag_set_activated(lua_State *L, tag_t *tag)
     return 0;
 }
 
-void
-tag_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg tag_methods[] =
-    {
-        LUA_CLASS_METHODS(tag)
-        { "__call", luaA_tag_new },
-        { NULL, NULL }
+void tag_class_setup(lua_State* L) {
+    static const struct luaL_Reg tag_methods[] = {
+      LUA_CLASS_METHODS(tag){"__call", luaA_tag_new},
+      {    NULL,         NULL}
     };
 
-    static const struct luaL_Reg tag_meta[] =
-    {
-        LUA_OBJECT_META(tag)
-        LUA_CLASS_META
-        { "clients", luaA_tag_clients },
-        { NULL, NULL },
+    static const struct luaL_Reg tag_meta[] = {
+      LUA_OBJECT_META(tag) LUA_CLASS_META{"clients", luaA_tag_clients},
+      {     NULL,             NULL},
     };
 
-    luaA_class_setup(L, &tag_class, "tag", NULL,
-                     (lua_class_allocator_t) tag_new,
-                     (lua_class_collector_t) tag_wipe,
+    luaA_class_setup(L,
+                     &tag_class,
+                     "tag",
                      NULL,
-                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-                     tag_methods, tag_meta);
+                     (lua_class_allocator_t)tag_new,
+                     (lua_class_collector_t)tag_wipe,
+                     NULL,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     tag_methods,
+                     tag_meta);
     tag_class.add_property("name",
-                            (lua_class_propfunc_t) luaA_tag_set_name,
-                            (lua_class_propfunc_t) luaA_tag_get_name,
-                            (lua_class_propfunc_t) luaA_tag_set_name);
+                           (lua_class_propfunc_t)luaA_tag_set_name,
+                           (lua_class_propfunc_t)luaA_tag_get_name,
+                           (lua_class_propfunc_t)luaA_tag_set_name);
     tag_class.add_property("selected",
-                            (lua_class_propfunc_t) luaA_tag_set_selected,
-                            (lua_class_propfunc_t) luaA_tag_get_selected,
-                            (lua_class_propfunc_t) luaA_tag_set_selected);
+                           (lua_class_propfunc_t)luaA_tag_set_selected,
+                           (lua_class_propfunc_t)luaA_tag_get_selected,
+                           (lua_class_propfunc_t)luaA_tag_set_selected);
     tag_class.add_property("activated",
-                            (lua_class_propfunc_t) luaA_tag_set_activated,
-                            (lua_class_propfunc_t) luaA_tag_get_activated,
-                            (lua_class_propfunc_t) luaA_tag_set_activated);
+                           (lua_class_propfunc_t)luaA_tag_set_activated,
+                           (lua_class_propfunc_t)luaA_tag_get_activated,
+                           (lua_class_propfunc_t)luaA_tag_set_activated);
 }
 
 /* @DOC_cobject_COMMON@ */

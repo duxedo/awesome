@@ -27,9 +27,10 @@
  */
 
 #include "selection.h"
-#include "globalconf.h"
+
 #include "common/atoms.h"
 #include "event.h"
+#include "globalconf.h"
 #include "xwindow.h"
 
 #include <xcb/xcb_atom.h>
@@ -49,40 +50,49 @@ static xcb_window_t selection_window = XCB_NONE;
  * \luastack
  * \lreturn A string with the current X selection buffer.
  */
-static int
-luaA_selection_get(lua_State *L)
-{
+static int luaA_selection_get(lua_State* L) {
     luaA_deprecate(L, "selection.getter(\"PRIMARY\", \"UTF8_STRING\")");
-    if(selection_window == XCB_NONE)
-    {
-        xcb_screen_t *screen = getGlobals().screen;
+    if (selection_window == XCB_NONE) {
+        xcb_screen_t* screen = getGlobals().screen;
         uint32_t mask = XCB_CW_BACK_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
-        uint32_t values[] = { screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE };
+        uint32_t values[] = {screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE};
 
         selection_window = xcb_generate_id(getGlobals().connection);
 
-        xcb_create_window(getGlobals().connection, screen->root_depth, selection_window, screen->root,
-                          0, 0, 1, 1, 0, XCB_COPY_FROM_PARENT, screen->root_visual,
-                          mask, values);
+        xcb_create_window(getGlobals().connection,
+                          screen->root_depth,
+                          selection_window,
+                          screen->root,
+                          0,
+                          0,
+                          1,
+                          1,
+                          0,
+                          XCB_COPY_FROM_PARENT,
+                          screen->root_visual,
+                          mask,
+                          values);
         xwindow_set_class_instance(selection_window);
         xwindow_set_name_static(selection_window, "Awesome selection window");
     }
 
-    xcb_convert_selection(getGlobals().connection, selection_window,
-                          XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, getGlobals().get_timestamp());
+    xcb_convert_selection(getGlobals().connection,
+                          selection_window,
+                          XCB_ATOM_PRIMARY,
+                          UTF8_STRING,
+                          XSEL_DATA,
+                          getGlobals().get_timestamp());
     xcb_flush(getGlobals().connection);
 
-    xcb_generic_event_t *event;
+    xcb_generic_event_t* event;
 
-    while(true)
-    {
+    while (true) {
         event = xcb_wait_for_event(getGlobals().connection);
 
-        if(!event)
+        if (!event)
             return 0;
 
-        if(XCB_EVENT_RESPONSE_TYPE(event) != XCB_SELECTION_NOTIFY)
-        {
+        if (XCB_EVENT_RESPONSE_TYPE(event) != XCB_SELECTION_NOTIFY) {
             /* \todo Eventually, this may be rewritten with adding a static
              * buffer, then a event handler for XCB_SELECTION_NOTIFY, then call
              * xcb_event_poll_for_event_loop() and awesome_refresh(),
@@ -97,34 +107,25 @@ luaA_selection_get(lua_State *L)
             continue;
         }
 
-        xcb_selection_notify_event_t *event_notify =
-            (xcb_selection_notify_event_t *) event;
+        xcb_selection_notify_event_t* event_notify = (xcb_selection_notify_event_t*)event;
 
-        if(event_notify->selection == XCB_ATOM_PRIMARY
-           && event_notify->property != XCB_NONE)
-        {
+        if (event_notify->selection == XCB_ATOM_PRIMARY && event_notify->property != XCB_NONE) {
             xcb_icccm_get_text_property_reply_t prop;
-            xcb_get_property_cookie_t cookie =
-                xcb_icccm_get_text_property(getGlobals().connection,
-					    event_notify->requestor,
-					    event_notify->property);
+            xcb_get_property_cookie_t cookie = xcb_icccm_get_text_property(
+              getGlobals().connection, event_notify->requestor, event_notify->property);
 
-            if(xcb_icccm_get_text_property_reply(getGlobals().connection,
-						 cookie, &prop, NULL))
-	      {
+            if (xcb_icccm_get_text_property_reply(getGlobals().connection, cookie, &prop, NULL)) {
                 lua_pushlstring(L, prop.name, prop.name_len);
 
                 xcb_icccm_get_text_property_reply_wipe(&prop);
 
-                xcb_delete_property(getGlobals().connection,
-                                    event_notify->requestor,
-                                    event_notify->property);
+                xcb_delete_property(
+                  getGlobals().connection, event_notify->requestor, event_notify->property);
 
                 p_delete(&event);
 
                 return 1;
-            }
-            else
+            } else
                 break;
         }
     }
@@ -134,8 +135,7 @@ luaA_selection_get(lua_State *L)
 }
 
 static void
-move_global_to_table(lua_State *L, int index, const char *global_name, const char *local_name)
-{
+move_global_to_table(lua_State* L, int index, const char* global_name, const char* local_name) {
     index = luaA_absindex(L, index);
 
     /* Get the global */
@@ -150,9 +150,7 @@ move_global_to_table(lua_State *L, int index, const char *global_name, const cha
     lua_setglobal(L, global_name);
 }
 
-void
-selection_setup(lua_State *L)
-{
+void selection_setup(lua_State* L) {
     /* This table will be the "selection" global */
     lua_newtable(L);
 

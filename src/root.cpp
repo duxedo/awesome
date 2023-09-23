@@ -34,32 +34,28 @@
  * @coreclassmod root
  */
 
-#include "globalconf.h"
-
 #include "common/atoms.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
+#include "globalconf.h"
+#include "globals.h"
+#include "math.h"
 #include "objects/button.h"
 #include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
-#include "math.h"
-#include "globals.h"
-
-#include <xcb/xtest.h>
-#include <xcb/xcb_aux.h>
 #include <cairo-xcb.h>
+#include <xcb/xcb_aux.h>
+#include <xcb/xtest.h>
 
-static int miss_index_handler    = LUA_REFNIL;
+static int miss_index_handler = LUA_REFNIL;
 static int miss_newindex_handler = LUA_REFNIL;
-static int miss_call_handler     = LUA_REFNIL;
+static int miss_call_handler = LUA_REFNIL;
 
-static void
-root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p)
-{
+static void root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p) {
     xcb_get_property_cookie_t prop_c;
-    xcb_get_property_reply_t *prop_r;
-    const xcb_screen_t *screen = getGlobals().screen;
+    xcb_get_property_reply_t* prop_r;
+    const xcb_screen_t* screen = getGlobals().screen;
 
     /* We now have the pattern painted to the pixmap p. Now turn p into the root
      * window's background pixmap.
@@ -67,8 +63,8 @@ root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p)
     c.change_attributes(screen->root, XCB_CW_BACK_PIXMAP, &p);
     xcb_clear_area(c.getConnection(), 0, screen->root, 0, 0, 0, 0);
 
-    prop_c = xcb_get_property_unchecked(c.connection, false,
-            screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
+    prop_c = xcb_get_property_unchecked(
+      c.connection, false, screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
 
     /* Theoretically, this should be enough to set the wallpaper. However, to
      * make pseudo-transparency work, clients need a way to get the wallpaper.
@@ -79,30 +75,27 @@ root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p)
 
     /* Now make sure that the old wallpaper is freed (but only do this for ESETROOT_PMAP_ID) */
     prop_r = xcb_get_property_reply(c.connection, prop_c, NULL);
-    if (prop_r && prop_r->value_len)
-    {
-        xcb_pixmap_t *rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
+    if (prop_r && prop_r->value_len) {
+        xcb_pixmap_t* rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
         if (rootpix)
             xcb_kill_client(c.getConnection(), *rootpix);
     }
     p_delete(&prop_r);
 }
 
-static bool
-root_set_wallpaper(cairo_pattern_t *pattern)
-{
-    lua_State *L = globalconf_get_lua_State();
-    xcb_connection_t *c = xcb_connect(NULL, NULL);
+static bool root_set_wallpaper(cairo_pattern_t* pattern) {
+    lua_State* L = globalconf_get_lua_State();
+    xcb_connection_t* c = xcb_connect(NULL, NULL);
     xcb_pixmap_t p = xcb_generate_id(c);
     /* globalconf.connection should be connected to the same X11 server, so we
      * can just use the info from that other connection.
      */
-    const xcb_screen_t *screen = getGlobals().screen;
+    const xcb_screen_t* screen = getGlobals().screen;
     uint16_t width = screen->width_in_pixels;
     uint16_t height = screen->height_in_pixels;
     bool result = false;
-    cairo_surface_t *surface;
-    cairo_t *cr;
+    cairo_surface_t* surface;
+    cairo_t* cr;
 
     auto disconnect = [c]() {
         xcb_aux_sync(c);
@@ -125,7 +118,8 @@ root_set_wallpaper(cairo_pattern_t *pattern)
      * it can tell the X server to copy between the (possible) old pixmap and
      * the new one directly and doesn't need GetImage and PutImage.
      */
-    surface = cairo_xcb_surface_create(getGlobals().connection, p, draw_default_visual(screen), width, height);
+    surface = cairo_xcb_surface_create(
+      getGlobals().connection, p, draw_default_visual(screen), width, height);
     cr = cairo_create(surface);
     /* Paint the pattern to the surface */
     cairo_set_source(cr, pattern);
@@ -139,7 +133,8 @@ root_set_wallpaper(cairo_pattern_t *pattern)
     xcb_grab_server(getGlobals().connection);
     getConnection().clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
     root_set_wallpaper_pixmap(getConnection(), p);
-    getConnection().change_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
+    getConnection().change_attributes(
+      getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
 
     /* Make sure our pixmap is not destroyed when we disconnect. */
@@ -155,68 +150,68 @@ root_set_wallpaper(cairo_pattern_t *pattern)
     return result;
 }
 
-void
-root_update_wallpaper(void)
-{
+void root_update_wallpaper(void) {
     xcb_get_property_cookie_t prop_c;
-    xcb_get_property_reply_t *prop_r;
+    xcb_get_property_reply_t* prop_r;
     xcb_get_geometry_cookie_t geom_c;
-    xcb_get_geometry_reply_t *geom_r;
-    xcb_pixmap_t *rootpix;
+    xcb_get_geometry_reply_t* geom_r;
+    xcb_pixmap_t* rootpix;
 
     cairo_surface_destroy(getGlobals().wallpaper);
     getGlobals().wallpaper = NULL;
 
-    prop_c = xcb_get_property_unchecked(getGlobals().connection, false,
-            getGlobals().screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
+    prop_c = xcb_get_property_unchecked(getGlobals().connection,
+                                        false,
+                                        getGlobals().screen->root,
+                                        _XROOTPMAP_ID,
+                                        XCB_ATOM_PIXMAP,
+                                        0,
+                                        1);
     prop_r = xcb_get_property_reply(getGlobals().connection, prop_c, NULL);
 
-    if (!prop_r || !prop_r->value_len)
-    {
+    if (!prop_r || !prop_r->value_len) {
         p_delete(&prop_r);
         return;
     }
 
     rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
-    if (!rootpix)
-    {
+    if (!rootpix) {
         p_delete(&prop_r);
         return;
     }
 
     geom_c = xcb_get_geometry_unchecked(getGlobals().connection, *rootpix);
     geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL);
-    if (!geom_r)
-    {
+    if (!geom_r) {
         p_delete(&prop_r);
         return;
     }
 
     /* Only the default visual makes sense, so just the default depth */
-    if (geom_r->depth != draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id))
+    if (geom_r->depth !=
+        draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id))
         warn("Got a pixmap with depth %d, but the default depth is %d, continuing anyway",
-                geom_r->depth, draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
+             geom_r->depth,
+             draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
 
     getGlobals().wallpaper = cairo_xcb_surface_create(getGlobals().connection,
-                                                    *rootpix,
-                                                    getGlobals().default_visual,
-                                                    geom_r->width,
-                                                    geom_r->height);
+                                                      *rootpix,
+                                                      getGlobals().default_visual,
+                                                      geom_r->width,
+                                                      geom_r->height);
 
     p_delete(&prop_r);
     p_delete(&geom_r);
 }
 
-static xcb_keycode_t
-_string_to_key_code(const char *s)
-{
+static xcb_keycode_t _string_to_key_code(const char* s) {
     xcb_keysym_t keysym;
-    xcb_keycode_t *keycodes;
+    xcb_keycode_t* keycodes;
 
-    keysym   = XStringToKeysym(s);
+    keysym = XStringToKeysym(s);
     keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, keysym);
 
-    if(keycodes) {
+    if (keycodes) {
         return keycodes[0]; /* XXX only returning the first is probably not
                              * the best */
     } else {
@@ -244,9 +239,9 @@ _string_to_key_code(const char *s)
  *   <th align='center'>Other key name</th>
  *  </tr>
  *  <tr><td> Mod4</td><td align='center'> Super_L </td><td align='center'> Super_R </td></tr>
- *  <tr><td> Control </td><td align='center'> Control_L </td><td align='center'> Control_R </td></tr>
- *  <tr><td> Shift </td><td align='center'> Shift_L </td><td align='center'> Shift_R </td></tr>
- *  <tr><td> Mod1</td><td align='center'> Alt_L </td><td align='center'> Alt_R </td></tr>
+ *  <tr><td> Control </td><td align='center'> Control_L </td><td align='center'> Control_R
+ * </td></tr> <tr><td> Shift </td><td align='center'> Shift_L </td><td align='center'> Shift_R
+ * </td></tr> <tr><td> Mod1</td><td align='center'> Alt_L </td><td align='center'> Alt_R </td></tr>
  * </table>
  *
  * Note that this is valid for most of the modern "western" keyboard layouts.
@@ -283,55 +278,42 @@ _string_to_key_code(const char *s)
  * @noreturn
  * @staticfct fake_input
  */
-static int
-luaA_root_fake_input(lua_State *L)
-{
-    if(!getGlobals().have_xtest)
-    {
+static int luaA_root_fake_input(lua_State* L) {
+    if (!getGlobals().have_xtest) {
         luaA_warn(L, "XTest extension is not available, cannot fake input.");
         return 0;
     }
 
-    const char *stype = luaL_checkstring(L, 1);
+    const char* stype = luaL_checkstring(L, 1);
     uint8_t type, detail;
     int x = 0, y = 0;
 
-    if (A_STREQ(stype, "key_press"))
-    {
+    if (A_STREQ(stype, "key_press")) {
         type = XCB_KEY_PRESS;
-        if(lua_type(L, 2) == LUA_TSTRING) {
+        if (lua_type(L, 2) == LUA_TSTRING) {
             detail = _string_to_key_code(lua_tostring(L, 2)); /* keysym */
         } else {
             detail = luaL_checkinteger(L, 2); /* keycode */
         }
-    }
-    else if(A_STREQ(stype, "key_release"))
-    {
+    } else if (A_STREQ(stype, "key_release")) {
         type = XCB_KEY_RELEASE;
-        if(lua_type(L, 2) == LUA_TSTRING) {
+        if (lua_type(L, 2) == LUA_TSTRING) {
             detail = _string_to_key_code(lua_tostring(L, 2)); /* keysym */
         } else {
             detail = luaL_checkinteger(L, 2); /* keycode */
         }
-    }
-    else if(A_STREQ(stype, "button_press"))
-    {
+    } else if (A_STREQ(stype, "button_press")) {
         type = XCB_BUTTON_PRESS;
         detail = luaL_checkinteger(L, 2); /* button number */
-    }
-    else if(A_STREQ(stype, "button_release"))
-    {
+    } else if (A_STREQ(stype, "button_release")) {
         type = XCB_BUTTON_RELEASE;
         detail = luaL_checkinteger(L, 2); /* button number */
-    }
-    else if(A_STREQ(stype, "motion_notify"))
-    {
+    } else if (A_STREQ(stype, "motion_notify")) {
         type = XCB_MOTION_NOTIFY;
         detail = luaA_checkboolean(L, 2); /* relative to the current position or not */
         x = round(luaA_checknumber_range(L, 3, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         y = round(luaA_checknumber_range(L, 4, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    }
-    else
+    } else
         return 0;
 
     xcb_test_fake_input(getGlobals().connection,
@@ -339,7 +321,8 @@ luaA_root_fake_input(lua_State *L)
                         detail,
                         0, /* This is a delay, not a timestamp! */
                         XCB_NONE,
-                        x, y,
+                        x,
+                        y,
                         0);
     return 0;
 }
@@ -353,33 +336,29 @@ luaA_root_fake_input(lua_State *L)
  * @tablerowtype A list of `awful.key` objects.
  * @see awful.key
  */
-static int
-luaA_root_keys(lua_State *L)
-{
-    if(lua_gettop(L) == 1)
-    {
+static int luaA_root_keys(lua_State* L) {
+    if (lua_gettop(L) == 1) {
         luaA_checktable(L, 1);
 
-        for(auto *key: getGlobals().keys) {
+        for (auto* key : getGlobals().keys) {
             luaA_object_unref(L, key);
         }
 
         getGlobals().keys.clear();
 
         lua_pushnil(L);
-        while(lua_next(L, 1)) {
+        while (lua_next(L, 1)) {
             getGlobals().keys.push_back((keyb_t*)luaA_object_ref_class(L, -1, &key_class));
         }
 
-        xcb_screen_t *s = getGlobals().screen;
+        xcb_screen_t* s = getGlobals().screen;
         xwindow_grabkeys(s->root, getGlobals().keys);
 
         return 1;
     }
 
     lua_createtable(L, getGlobals().keys.size(), 0);
-    for(size_t i = 0; i < getGlobals().keys.size(); i++)
-    {
+    for (size_t i = 0; i < getGlobals().keys.size(); i++) {
         luaA_object_push(L, getGlobals().keys[i]);
         lua_rawseti(L, -2, i + 1);
     }
@@ -404,22 +383,19 @@ luaA_root_keys(lua_State *L)
  * }
  */
 
-static int
-luaA_root_buttons(lua_State *L)
-{
+static int luaA_root_buttons(lua_State* L) {
     auto& buttons = getGlobals().buttons;
-    if(lua_gettop(L) == 1)
-    {
+    if (lua_gettop(L) == 1) {
         luaA_checktable(L, 1);
 
-        for(auto * button: buttons) {
+        for (auto* button : buttons) {
             luaA_object_unref(L, button);
         }
 
         buttons.clear();
 
         lua_pushnil(L);
-        while(lua_next(L, 1)) {
+        while (lua_next(L, 1)) {
             buttons.push_back((button_t*)luaA_object_ref(L, -1));
         }
 
@@ -427,8 +403,7 @@ luaA_root_buttons(lua_State *L)
     }
 
     lua_createtable(L, buttons.size(), 0);
-    for(size_t i = 0; i < buttons.size(); i++)
-    {
+    for (size_t i = 0; i < buttons.size(); i++) {
         luaA_object_push(L, buttons[i]);
         lua_rawseti(L, -2, i + 1);
     }
@@ -446,22 +421,16 @@ luaA_root_buttons(lua_State *L)
  * @noreturn
  * @staticfct cursor
  */
-static int
-luaA_root_cursor(lua_State *L)
-{
-    const char *cursor_name = luaL_checkstring(L, 1);
+static int luaA_root_cursor(lua_State* L) {
+    const char* cursor_name = luaL_checkstring(L, 1);
     uint16_t cursor_font = xcursor_font_fromstr(cursor_name);
 
-    if(cursor_font)
-    {
-        uint32_t change_win_vals[] = { xcursor_new(getGlobals().cursor_ctx, cursor_font) };
+    if (cursor_font) {
+        uint32_t change_win_vals[] = {xcursor_new(getGlobals().cursor_ctx, cursor_font)};
 
-        xcb_change_window_attributes(getGlobals().connection,
-                                     getGlobals().screen->root,
-                                     XCB_CW_CURSOR,
-                                     change_win_vals);
-    }
-    else
+        xcb_change_window_attributes(
+          getGlobals().connection, getGlobals().screen->root, XCB_CW_CURSOR, change_win_vals);
+    } else
         luaA_warn(L, "invalid cursor %s", cursor_name);
 
     return 0;
@@ -472,13 +441,10 @@ luaA_root_cursor(lua_State *L)
  * @treturn table A table with all drawins.
  * @staticfct drawins
  */
-static int
-luaA_root_drawins(lua_State *L)
-{
+static int luaA_root_drawins(lua_State* L) {
     lua_createtable(L, getGlobals().drawins.size(), 0);
 
-    for(size_t i = 0; i < getGlobals().drawins.size(); i++)
-    {
+    for (size_t i = 0; i < getGlobals().drawins.size(); i++) {
         luaA_object_push(L, getGlobals().drawins[i]);
         lua_rawseti(L, -2, i + 1);
     }
@@ -493,23 +459,20 @@ luaA_root_drawins(lua_State *L)
  * @deprecated wallpaper
  * @see awful.wallpaper
  */
-static int
-luaA_root_wallpaper(lua_State *L)
-{
-    if(lua_gettop(L) == 1)
-    {
+static int luaA_root_wallpaper(lua_State* L) {
+    if (lua_gettop(L) == 1) {
         /* Avoid `error()s` down the line. If this happens during
          * initialization, AwesomeWM can be stuck in an infinite loop */
-        if(lua_isnil(L, -1))
+        if (lua_isnil(L, -1))
             return 0;
 
-        cairo_pattern_t *pattern = (cairo_pattern_t *)lua_touserdata(L, -1);
+        cairo_pattern_t* pattern = (cairo_pattern_t*)lua_touserdata(L, -1);
         lua_pushboolean(L, root_set_wallpaper(pattern));
         /* Don't return the wallpaper, it's too easy to get memleaks */
         return 1;
     }
 
-    if(getGlobals().wallpaper == NULL)
+    if (getGlobals().wallpaper == NULL)
         return 0;
 
     /* lua has to make sure this surface gets destroyed */
@@ -517,19 +480,17 @@ luaA_root_wallpaper(lua_State *L)
     return 1;
 }
 
-
 /** Get the content of the root window as a cairo surface.
  *
  * @property content
- * @tparam raw_surface content A cairo surface with the root window content (aka the whole surface from every screens).
+ * @tparam raw_surface content A cairo surface with the root window content (aka the whole surface
+ * from every screens).
  * @propertydefault This is the live content. Use `gears.surface(root.content)` to
  *  take a screenshot.
  * @see gears.surface
  */
-static int
-luaA_root_get_content(lua_State *L)
-{
-    cairo_surface_t *surface;
+static int luaA_root_get_content(lua_State* L) {
+    cairo_surface_t* surface;
 
     surface = cairo_xcb_surface_create(getGlobals().connection,
                                        getGlobals().screen->root,
@@ -541,16 +502,13 @@ luaA_root_get_content(lua_State *L)
     return 1;
 }
 
-
 /** Get the size of the root window.
  *
  * @treturn integer Width of the root window.
  * @treturn integer height of the root window.
  * @staticfct size
  */
-static int
-luaA_root_size(lua_State *L)
-{
+static int luaA_root_size(lua_State* L) {
     lua_pushinteger(L, getGlobals().screen->width_in_pixels);
     lua_pushinteger(L, getGlobals().screen->height_in_pixels);
     return 2;
@@ -562,9 +520,7 @@ luaA_root_size(lua_State *L)
  * @treturn integer height of the root window, in millimeters.
  * @staticfct size_mm
  */
-static int
-luaA_root_size_mm(lua_State *L)
-{
+static int luaA_root_size_mm(lua_State* L) {
     lua_pushinteger(L, getGlobals().screen->width_in_millimeters);
     lua_pushinteger(L, getGlobals().screen->height_in_millimeters);
     return 2;
@@ -574,12 +530,9 @@ luaA_root_size_mm(lua_State *L)
  * @treturn table A table with all tags.
  * @staticfct tags
  */
-static int
-luaA_root_tags(lua_State *L)
-{
+static int luaA_root_tags(lua_State* L) {
     lua_createtable(L, getGlobals().tags.size(), 0);
-    for(int i = 0; i < (int)getGlobals().tags.size(); i++)
-    {
+    for (int i = 0; i < (int)getGlobals().tags.size(); i++) {
         luaA_object_push(L, getGlobals().tags[i].get());
         lua_rawseti(L, -2, i + 1);
     }
@@ -588,29 +541,23 @@ luaA_root_tags(lua_State *L)
 }
 
 /**
-* Add a custom call handler.
-*/
-static int
-luaA_root_set_call_handler(lua_State *L)
-{
+ * Add a custom call handler.
+ */
+static int luaA_root_set_call_handler(lua_State* L) {
     return luaA_registerfct(L, 1, &miss_call_handler);
 }
 
 /**
-* Add a custom property handler (getter).
-*/
-static int
-luaA_root_set_index_miss_handler(lua_State *L)
-{
+ * Add a custom property handler (getter).
+ */
+static int luaA_root_set_index_miss_handler(lua_State* L) {
     return luaA_registerfct(L, 1, &miss_index_handler);
 }
 
 /**
-* Add a custom property handler (setter).
-*/
-static int
-luaA_root_set_newindex_miss_handler(lua_State *L)
-{
+ * Add a custom property handler (setter).
+ */
+static int luaA_root_set_newindex_miss_handler(lua_State* L) {
     return luaA_registerfct(L, 1, &miss_newindex_handler);
 }
 
@@ -619,9 +566,7 @@ luaA_root_set_newindex_miss_handler(lua_State *L)
  * \return The number of elements pushed on stack.
  * \luastack
  */
-static int
-luaA_root_index(lua_State *L)
-{
+static int luaA_root_index(lua_State* L) {
     if (miss_index_handler != LUA_REFNIL)
         return luaA_call_handler(L, miss_index_handler);
 
@@ -632,37 +577,33 @@ luaA_root_index(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_root_newindex(lua_State *L)
-{
+static int luaA_root_newindex(lua_State* L) {
     /* Call the lua root property handler */
     if (miss_newindex_handler != LUA_REFNIL)
         return luaA_call_handler(L, miss_newindex_handler);
 
     return Lua::default_newindex(L);
 }
-[[gnu::used]] const struct luaL_Reg awesome_root_methods[] =
-{
-    { "_buttons", luaA_root_buttons },
-    { "_keys", luaA_root_keys },
-    { "cursor", luaA_root_cursor },
-    { "fake_input", luaA_root_fake_input },
-    { "drawins", luaA_root_drawins },
-    { "_wallpaper", luaA_root_wallpaper },
-    { "content", luaA_root_get_content},
-    { "size", luaA_root_size },
-    { "size_mm", luaA_root_size_mm },
-    { "tags", luaA_root_tags },
-    { "__index", luaA_root_index },
-    { "__newindex", luaA_root_newindex },
-    { "set_index_miss_handler", luaA_root_set_index_miss_handler},
-    { "set_call_handler", luaA_root_set_call_handler},
-    { "set_newindex_miss_handler", luaA_root_set_newindex_miss_handler},
+[[gnu::used]] const struct luaL_Reg awesome_root_methods[] = {
+  {                 "_buttons",                   luaA_root_buttons},
+  {                    "_keys",                      luaA_root_keys},
+  {                   "cursor",                    luaA_root_cursor},
+  {               "fake_input",                luaA_root_fake_input},
+  {                  "drawins",                   luaA_root_drawins},
+  {               "_wallpaper",                 luaA_root_wallpaper},
+  {                  "content",               luaA_root_get_content},
+  {                     "size",                      luaA_root_size},
+  {                  "size_mm",                   luaA_root_size_mm},
+  {                     "tags",                      luaA_root_tags},
+  {                  "__index",                     luaA_root_index},
+  {               "__newindex",                  luaA_root_newindex},
+  {   "set_index_miss_handler",    luaA_root_set_index_miss_handler},
+  {         "set_call_handler",          luaA_root_set_call_handler},
+  {"set_newindex_miss_handler", luaA_root_set_newindex_miss_handler},
 
-    { NULL, NULL }
+  {                       NULL,                                NULL}
 };
-[[gnu::used]] const struct luaL_Reg awesome_root_meta[] =
-{
-    { NULL, NULL }
+[[gnu::used]] const struct luaL_Reg awesome_root_meta[] = {
+  {NULL, NULL}
 };
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

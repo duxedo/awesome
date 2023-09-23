@@ -22,9 +22,9 @@
 #ifndef AWESOME_COMMON_VERSION_H
 #define AWESOME_COMMON_VERSION_H
 
-void eprint_version(void) __attribute__ ((noreturn));
-const char *awesome_version_string(void);
-const char *awesome_release_string(void);
+void eprint_version(void) __attribute__((noreturn));
+const char* awesome_version_string(void);
+const char* awesome_release_string(void);
 int awesome_default_api_level(void);
 
 #endif

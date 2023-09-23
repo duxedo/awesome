@@ -20,14 +20,14 @@
  */
 
 #include "objects/selection_acquire.h"
-#include "objects/selection_transfer.h"
+
 #include "common/luaobject.h"
 #include "globalconf.h"
+#include "objects/selection_transfer.h"
 
 #define REGISTRY_ACQUIRE_TABLE_INDEX "awesome_selection_acquires"
 
-typedef struct selection_acquire_t
-{
+typedef struct selection_acquire_t {
     LUA_OBJECT_HEADER
     /** The selection that is being owned. */
     xcb_atom_t selection;
@@ -40,24 +40,18 @@ typedef struct selection_acquire_t
 static lua_class_t selection_acquire_class;
 LUA_OBJECT_FUNCS(selection_acquire_class, selection_acquire_t, selection_acquire)
 
-static void
-luaA_pushatom(lua_State *L, xcb_atom_t atom)
-{
-    lua_pushnumber(L, atom);
-}
+static void luaA_pushatom(lua_State* L, xcb_atom_t atom) { lua_pushnumber(L, atom); }
 
-static int
-selection_acquire_find_by_window(lua_State *L, xcb_window_t window)
-{
+static int selection_acquire_find_by_window(lua_State* L, xcb_window_t window) {
     /* Iterate over all active selection acquire objects */
     lua_pushliteral(L, REGISTRY_ACQUIRE_TABLE_INDEX);
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_pushnil(L);
     while (lua_next(L, -2) != 0) {
         if (lua_type(L, -1) == LUA_TUSERDATA) {
-            selection_acquire_t *selection = reinterpret_cast<selection_acquire_t*>(lua_touserdata(L, -1));
-            if (selection->window == window)
-            {
+            selection_acquire_t* selection =
+              reinterpret_cast<selection_acquire_t*>(lua_touserdata(L, -1));
+            if (selection->window == window) {
                 /* Remove table and key */
                 lua_remove(L, -2);
                 lua_remove(L, -2);
@@ -73,10 +67,9 @@ selection_acquire_find_by_window(lua_State *L, xcb_window_t window)
     return 0;
 }
 
-static void
-selection_release(lua_State *L, int ud)
-{
-    selection_acquire_t *selection = reinterpret_cast<selection_acquire_t*>(luaA_checkudata(L, ud, &selection_acquire_class));
+static void selection_release(lua_State* L, int ud) {
+    selection_acquire_t* selection =
+      reinterpret_cast<selection_acquire_t*>(luaA_checkudata(L, ud, &selection_acquire_class));
 
     luaA_object_emit_signal(L, ud, "release", 0);
 
@@ -96,10 +89,8 @@ selection_release(lua_State *L, int ud)
     lua_pop(L, 1);
 }
 
-void
-selection_handle_selectionclear(xcb_selection_clear_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
+void selection_handle_selectionclear(xcb_selection_clear_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
 
     if (selection_acquire_find_by_window(L, ev->owner) == 0)
         return;
@@ -108,36 +99,31 @@ selection_handle_selectionclear(xcb_selection_clear_event_t *ev)
     lua_pop(L, 1);
 }
 
-void
-selection_handle_selectionrequest(xcb_selection_request_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
+void selection_handle_selectionrequest(xcb_selection_request_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
 
     if (ev->property == XCB_NONE)
         /* Obsolete client */
         ev->property = ev->target;
 
-    if (selection_acquire_find_by_window(L, ev->owner) == 0)
-    {
+    if (selection_acquire_find_by_window(L, ev->owner) == 0) {
         selection_transfer_reject(ev->requestor, ev->selection, ev->target, ev->time);
         return;
     }
 
-    selection_transfer_begin(L, -1, ev->requestor, ev->selection, ev->target,
-            ev->property, ev->time);
+    selection_transfer_begin(
+      L, -1, ev->requestor, ev->selection, ev->target, ev->property, ev->time);
 
     lua_pop(L, 1);
 }
 
-static int
-luaA_selection_acquire_new(lua_State *L)
-{
+static int luaA_selection_acquire_new(lua_State* L) {
     size_t name_length;
-    const char *name;
-    xcb_intern_atom_reply_t *reply;
-    xcb_get_selection_owner_reply_t *selection_reply;
+    const char* name;
+    xcb_intern_atom_reply_t* reply;
+    xcb_get_selection_owner_reply_t* selection_reply;
     xcb_atom_t name_atom;
-    selection_acquire_t *selection;
+    selection_acquire_t* selection;
 
     luaA_checktable(L, 2);
     lua_pushliteral(L, "selection");
@@ -145,26 +131,37 @@ luaA_selection_acquire_new(lua_State *L)
     name = luaL_checklstring(L, -1, &name_length);
 
     /* Get the atom identifying the selection */
-    reply = xcb_intern_atom_reply(getGlobals().connection,
-            xcb_intern_atom_unchecked(getGlobals().connection, false, name_length, name),
-            NULL);
+    reply = xcb_intern_atom_reply(
+      getGlobals().connection,
+      xcb_intern_atom_unchecked(getGlobals().connection, false, name_length, name),
+      NULL);
     name_atom = reply ? reply->atom : XCB_NONE;
     p_delete(&reply);
 
     /* Create a selection object */
-    selection = (selection_acquire_t *) selection_acquire_class.allocator(L);
+    selection = (selection_acquire_t*)selection_acquire_class.allocator(L);
     selection->selection = name_atom;
     selection->timestamp = getGlobals().get_timestamp();
     selection->window = xcb_generate_id(getGlobals().connection);
-    xcb_create_window(getGlobals().connection, getGlobals().screen->root_depth,
-            selection->window, getGlobals().screen->root, -1, -1, 1, 1, 0,
-            XCB_COPY_FROM_PARENT, getGlobals().screen->root_visual, 0, NULL);
+    xcb_create_window(getGlobals().connection,
+                      getGlobals().screen->root_depth,
+                      selection->window,
+                      getGlobals().screen->root,
+                      -1,
+                      -1,
+                      1,
+                      1,
+                      0,
+                      XCB_COPY_FROM_PARENT,
+                      getGlobals().screen->root_visual,
+                      0,
+                      NULL);
 
     /* Try to acquire the selection */
-    xcb_set_selection_owner(getGlobals().connection, selection->window, name_atom, selection->timestamp);
-    selection_reply = xcb_get_selection_owner_reply(getGlobals().connection,
-            xcb_get_selection_owner(getGlobals().connection, name_atom),
-            NULL);
+    xcb_set_selection_owner(
+      getGlobals().connection, selection->window, name_atom, selection->timestamp);
+    selection_reply = xcb_get_selection_owner_reply(
+      getGlobals().connection, xcb_get_selection_owner(getGlobals().connection, name_atom), NULL);
     if (selection_reply == NULL || selection_reply->owner != selection->window) {
         /* Acquiring the selection failed, return nothing */
         p_delete(&selection_reply);
@@ -196,36 +193,26 @@ luaA_selection_acquire_new(lua_State *L)
     return 1;
 }
 
-static int
-luaA_selection_acquire_release(lua_State *L)
-{
+static int luaA_selection_acquire_release(lua_State* L) {
     luaA_checkudata(L, 1, &selection_acquire_class);
     selection_release(L, 1);
 
     return 0;
 }
 
-static bool
-selection_acquire_checker(selection_acquire_t *selection)
-{
+static bool selection_acquire_checker(selection_acquire_t* selection) {
     return selection->selection != XCB_NONE;
 }
 
-void
-selection_acquire_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg selection_acquire_methods[] =
-    {
-        { "__call", luaA_selection_acquire_new },
-        { NULL, NULL }
+void selection_acquire_class_setup(lua_State* L) {
+    static const struct luaL_Reg selection_acquire_methods[] = {
+      {"__call", luaA_selection_acquire_new},
+      {    NULL,                       NULL}
     };
 
-    static const struct luaL_Reg selection_acquire_meta[] =
-    {
-        LUA_OBJECT_META(selection_acquire)
-        LUA_CLASS_META
-        { "release", luaA_selection_acquire_release },
-        { NULL, NULL }
+    static const struct luaL_Reg selection_acquire_meta[] = {
+      LUA_OBJECT_META(selection_acquire) LUA_CLASS_META{"release", luaA_selection_acquire_release},
+      {     NULL,                           NULL}
     };
 
     /* Store a table in the registry that tracks active selection_acquire_t. */
@@ -233,11 +220,17 @@ selection_acquire_class_setup(lua_State *L)
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(L, &selection_acquire_class, "selection_acquire", NULL,
-            (lua_class_allocator_t) selection_acquire_new, NULL,
-            (lua_class_checker_t) selection_acquire_checker,
-            Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-            selection_acquire_methods, selection_acquire_meta);
+    luaA_class_setup(L,
+                     &selection_acquire_class,
+                     "selection_acquire",
+                     NULL,
+                     (lua_class_allocator_t)selection_acquire_new,
+                     NULL,
+                     (lua_class_checker_t)selection_acquire_checker,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     selection_acquire_methods,
+                     selection_acquire_meta);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -19,6 +19,7 @@
  *
  */
 #include "globalconf.h"
+
 #include <filesystem>
 #include <optional>
 #include <vector>
@@ -27,11 +28,11 @@ namespace Options {
  * Initialization values extracted from the command line or modeline.
  */
 typedef enum {
-    INIT_FLAG_NONE           = 0x0,
-    INIT_FLAG_RUN_TEST       = 0x1,
-    INIT_FLAG_ARGB           = 0x1 << 1,
-    INIT_FLAG_REPLACE_WM     = 0x1 << 2,
-    INIT_FLAG_AUTO_SCREEN    = 0x1 << 3,
+    INIT_FLAG_NONE = 0x0,
+    INIT_FLAG_RUN_TEST = 0x1,
+    INIT_FLAG_ARGB = 0x1 << 1,
+    INIT_FLAG_REPLACE_WM = 0x1 << 2,
+    INIT_FLAG_AUTO_SCREEN = 0x1 << 3,
     INIT_FLAG_ALLOW_FALLBACK = 0x1 << 4,
     INIT_FLAG_FORCE_CMD_ARGS = 0x1 << 5,
 } awesome_init_config_t;
@@ -43,7 +44,8 @@ struct ConfigResult {
     Paths searchPaths;
 };
 
-char *options_detect_shebang(int argc, char **argv);
-bool options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int *init_flags, Paths & paths);
-ConfigResult options_check_args(int argc, char **argv, int *init_flags);
+char* options_detect_shebang(int argc, char** argv);
+bool options_init_config(
+  xdgHandle* xdg, char* execpath, const char* configpath, int* init_flags, Paths& paths);
+ConfigResult options_check_args(int argc, char** argv, int* init_flags);
 }

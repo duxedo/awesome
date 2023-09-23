@@ -20,10 +20,10 @@
  */
 
 #include "common/luaclass.h"
+
 #include "common/luaobject.h"
 
 #define CONNECTED_SUFFIX "::connected"
-
 
 /** Convert a object to a udata if possible.
  * \param L The Lua VM state.
@@ -31,22 +31,21 @@
  * \param class The wanted class.
  * \return A pointer to the object, NULL otherwise.
  */
-void *
-luaA_toudata(lua_State *L, int ud, lua_class_t *cls)
-{
-    if(void *p = lua_touserdata(L, ud); p && lua_getmetatable(L, ud)) /* does it have a metatable? */
+void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
+    if (void* p = lua_touserdata(L, ud);
+        p && lua_getmetatable(L, ud)) /* does it have a metatable? */
     {
         /* Get the lua_class_t that matches this metatable */
         lua_rawget(L, LUA_REGISTRYINDEX);
-        lua_class_t *metatable_class = reinterpret_cast<lua_class_t*>(lua_touserdata(L, -1));
+        lua_class_t* metatable_class = reinterpret_cast<lua_class_t*>(lua_touserdata(L, -1));
 
         /* remove lightuserdata (lua_class pointer) */
         lua_pop(L, 1);
 
         /* Now, check that the class given in argument is the same as the
          * metatable's object, or one of its parent (inheritance) */
-        for(; metatable_class; metatable_class = metatable_class->parent) {
-            if(metatable_class == cls) {
+        for (; metatable_class; metatable_class = metatable_class->parent) {
+            if (metatable_class == cls) {
                 return p;
             }
         }
@@ -59,13 +58,11 @@ luaA_toudata(lua_State *L, int ud, lua_class_t *cls)
  * \param ud The object index on the stack.
  * \param class The wanted class.
  */
-void *
-luaA_checkudata(lua_State *L, int ud, lua_class_t *cls)
-{
-    lua_object_t *p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
-    if(!p)
+void* luaA_checkudata(lua_State* L, int ud, lua_class_t* cls) {
+    lua_object_t* p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
+    if (!p)
         luaA_typerror(L, ud, cls->name);
-    else if(cls->checker && !cls->checker(p))
+    else if (cls->checker && !cls->checker(p))
         luaL_error(L, "invalid object");
     return p;
 }
@@ -74,16 +71,13 @@ luaA_checkudata(lua_State *L, int ud, lua_class_t *cls)
  * \param L The Lua VM state.
  * \param idx The index of the object on the stack.
  */
-lua_class_t *
-luaA_class_get(lua_State *L, int idx)
-{
+lua_class_t* luaA_class_get(lua_State* L, int idx) {
     int type = lua_type(L, idx);
 
-    if(type == LUA_TUSERDATA && lua_getmetatable(L, idx))
-    {
+    if (type == LUA_TUSERDATA && lua_getmetatable(L, idx)) {
         /* Use the metatable has key to get the class from registry */
         lua_rawget(L, LUA_REGISTRYINDEX);
-        lua_class_t *cls = reinterpret_cast<lua_class_t*>(lua_touserdata(L, -1));
+        lua_class_t* cls = reinterpret_cast<lua_class_t*>(lua_touserdata(L, -1));
         lua_pop(L, 1);
         return cls;
     }
@@ -95,45 +89,38 @@ luaA_class_get(lua_State *L, int idx)
  * \param L The Lua VM state.
  * \param idx The index of the object on the stack.
  */
-const char *
-luaA_typename(lua_State *L, int idx)
-{
+const char* luaA_typename(lua_State* L, int idx) {
     int type = lua_type(L, idx);
 
-    if(type == LUA_TUSERDATA)
-    {
-        lua_class_t *lua_class = luaA_class_get(L, idx);
-        if(lua_class)
+    if (type == LUA_TUSERDATA) {
+        lua_class_t* lua_class = luaA_class_get(L, idx);
+        if (lua_class)
             return lua_class->name;
     }
 
     return lua_typename(L, type);
 }
 
-void
-luaA_openlib(lua_State *L, const char *name,
-             const struct luaL_Reg methods[],
-             const struct luaL_Reg meta[])
-{
-    luaL_newmetatable(L, name);                                        /* 1 */
+void luaA_openlib(lua_State* L,
+                  const char* name,
+                  const struct luaL_Reg methods[],
+                  const struct luaL_Reg meta[]) {
+    luaL_newmetatable(L, name);     /* 1 */
     lua_pushvalue(L, -1);           /* dup metatable                      2 */
     lua_setfield(L, -2, "__index"); /* metatable.__index = metatable      1 */
 
-    luaA_setfuncs(L, meta);                                            /* 1 */
-    luaA_registerlib(L, name, methods);                                /* 2 */
-    lua_pushvalue(L, -1);           /* dup self as metatable              3 */
-    lua_setmetatable(L, -2);        /* set self as metatable              2 */
+    luaA_setfuncs(L, meta);             /* 1 */
+    luaA_registerlib(L, name, methods); /* 2 */
+    lua_pushvalue(L, -1);               /* dup self as metatable              3 */
+    lua_setmetatable(L, -2);            /* set self as metatable              2 */
     lua_pop(L, 2);
 }
-
 
 /** Newindex meta function for objects after they were GC'd.
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_class_newindex_invalid(lua_State *L)
-{
+static int luaA_class_newindex_invalid(lua_State* L) {
     return luaL_error(L, "attempt to index an object that was already garbage collected");
 }
 
@@ -141,12 +128,9 @@ luaA_class_newindex_invalid(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_class_index_invalid(lua_State *L)
-{
-    const char *attr = luaL_checkstring(L, 2);
-    if (A_STREQ(attr, "valid"))
-    {
+static int luaA_class_index_invalid(lua_State* L) {
+    const char* attr = luaL_checkstring(L, 2);
+    if (A_STREQ(attr, "valid")) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -157,17 +141,15 @@ luaA_class_index_invalid(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_class_gc(lua_State *L)
-{
-    lua_object_t *item = reinterpret_cast<lua_object_t*>(lua_touserdata(L, 1));
+static int luaA_class_gc(lua_State* L) {
+    lua_object_t* item = reinterpret_cast<lua_object_t*>(lua_touserdata(L, 1));
     item->signals.clear();
     /* Get the object class */
-    lua_class_t *cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
+    lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
     cls->instances--;
     /* Call the collector function of the class, and all its parent classes */
-    for(; cls; cls = cls->parent)
-        if(cls->collector)
+    for (; cls; cls = cls->parent)
+        if (cls->collector)
             cls->collector(item);
     /* Unset its metatable so that e.g. luaA_toudata() will no longer accept
      * this object. This is needed since other __gc methods can still use this.
@@ -197,18 +179,17 @@ luaA_class_gc(lua_State *L)
  * \param methods The methods to set on the class table.
  * \param meta The meta-methods to set on the class objects.
  */
-void
-luaA_class_setup(lua_State *L, lua_class_t *cls,
-                 const char *name,
-                 lua_class_t *parent,
-                 lua_class_allocator_t allocator,
-                 lua_class_collector_t collector,
-                 lua_class_checker_t checker,
-                 lua_class_propfunc_t index_miss_property,
-                 lua_class_propfunc_t newindex_miss_property,
-                 const struct luaL_Reg methods[],
-                 const struct luaL_Reg meta[])
-{
+void luaA_class_setup(lua_State* L,
+                      lua_class_t* cls,
+                      const char* name,
+                      lua_class_t* parent,
+                      lua_class_allocator_t allocator,
+                      lua_class_collector_t collector,
+                      lua_class_checker_t checker,
+                      lua_class_propfunc_t index_miss_property,
+                      lua_class_propfunc_t newindex_miss_property,
+                      const struct luaL_Reg methods[],
+                      const struct luaL_Reg meta[]) {
     /* Create the object metatable */
     lua_newtable(L);
     /* Register it with class pointer as key in the registry
@@ -231,10 +212,10 @@ luaA_class_setup(lua_State *L, lua_class_t *cls,
 
     lua_setfield(L, -2, "__index"); /* metatable.__index = metatable      1 */
 
-    luaA_setfuncs(L, meta);                                            /* 1 */
-    luaA_registerlib(L, name, methods);                                /* 2 */
-    lua_pushvalue(L, -1);           /* dup self as metatable              3 */
-    lua_setmetatable(L, -2);        /* set self as metatable              2 */
+    luaA_setfuncs(L, meta);             /* 1 */
+    luaA_registerlib(L, name, methods); /* 2 */
+    lua_pushvalue(L, -1);               /* dup self as metatable              3 */
+    lua_setmetatable(L, -2);            /* set self as metatable              2 */
     lua_pop(L, 2);
 
     cls->collector = collector;
@@ -250,17 +231,18 @@ luaA_class_setup(lua_State *L, lua_class_t *cls,
     cls->newindex_miss_handler = LUA_REFNIL;
 }
 
-void
-luaA_class_connect_signal(lua_State *L, lua_class_t *lua_class, const std::string_view& name, lua_CFunction fn)
-{
+void luaA_class_connect_signal(lua_State* L,
+                               lua_class_t* lua_class,
+                               const std::string_view& name,
+                               lua_CFunction fn) {
     lua_pushcfunction(L, fn);
     luaA_class_connect_signal_from_stack(L, lua_class, name, -1);
 }
 
-void
-luaA_class_connect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
-                                     const std::string_view& name, int ud)
-{
+void luaA_class_connect_signal_from_stack(lua_State* L,
+                                          lua_class_t* lua_class,
+                                          const std::string_view& name,
+                                          int ud) {
     luaA_checkfunction(L, ud);
 
     /* Duplicate the function in the stack */
@@ -282,21 +264,21 @@ luaA_class_connect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
     lua_class->signals.connect(name, luaA_object_ref(L, ud));
 }
 
-void
-luaA_class_disconnect_signal_from_stack(lua_State *L, lua_class_t *lua_class,
-                                        const std::string_view& name, int ud)
-{
+void luaA_class_disconnect_signal_from_stack(lua_State* L,
+                                             lua_class_t* lua_class,
+                                             const std::string_view& name,
+                                             int ud) {
     luaA_checkfunction(L, ud);
-    void *ref = (void *) lua_topointer(L, ud);
+    void* ref = (void*)lua_topointer(L, ud);
     if (lua_class->signals.disconnect(name, ref))
-        luaA_object_unref(L, (void *) ref);
+        luaA_object_unref(L, (void*)ref);
     lua_remove(L, ud);
 }
 
-void
-luaA_class_emit_signal(lua_State *L, lua_class_t *lua_class,
-                       const std::string_view& name, int nargs)
-{
+void luaA_class_emit_signal(lua_State* L,
+                            lua_class_t* lua_class,
+                            const std::string_view& name,
+                            int nargs) {
     signal_object_emit(L, &lua_class->signals, name, nargs);
 }
 
@@ -306,13 +288,10 @@ luaA_class_emit_signal(lua_State *L, lua_class_t *lua_class,
  * \param idxfield The index of the field (attribute) to get.
  * \return The number of element pushed on stack.
  */
-int
-luaA_usemetatable(lua_State *L, int idxobj, int idxfield)
-{
-    lua_class_t *cls = luaA_class_get(L, idxobj);
+int luaA_usemetatable(lua_State* L, int idxobj, int idxfield) {
+    lua_class_t* cls = luaA_class_get(L, idxobj);
 
-    for(; cls; cls = cls->parent)
-    {
+    for (; cls; cls = cls->parent) {
         /* Push the cls */
         lua_pushlightuserdata(L, cls);
         /* Get its metatable from registry */
@@ -322,8 +301,7 @@ luaA_usemetatable(lua_State *L, int idxobj, int idxfield)
         /* Get the field in the metatable */
         lua_rawget(L, -2);
         /* Do we have a field like that? */
-        if(!lua_isnil(L, -1))
-        {
+        if (!lua_isnil(L, -1)) {
             /* Yes, so remove the metatable and return it! */
             lua_remove(L, -2);
             return 1;
@@ -335,25 +313,22 @@ luaA_usemetatable(lua_State *L, int idxobj, int idxfield)
     return 0;
 }
 
-
 /** Get a property of a object.
  * \param L The Lua VM state.
  * \param lua_class The Lua class.
  * \param fieldidx The index of the field name.
  * \return The object property if found, NULL otherwise.
  */
-static const lua_class_property_t *
-luaA_class_property_get(lua_State *L, lua_class_t *lua_class, int fieldidx)
-{
+static const lua_class_property_t*
+luaA_class_property_get(lua_State* L, lua_class_t* lua_class, int fieldidx) {
     /* Lookup the property using token */
-    const char *attr = luaL_checkstring(L, fieldidx);
+    const char* attr = luaL_checkstring(L, fieldidx);
 
     /* Look for the property in the class; if not found, go in the parent class. */
-    for(; lua_class; lua_class = lua_class->parent)
-    {
+    for (; lua_class; lua_class = lua_class->parent) {
         Properties::iterator it = lua_class->properties.find(attr);
 
-        if(it != lua_class->properties.end()) {
+        if (it != lua_class->properties.end()) {
             return &(*it);
         }
     }
@@ -365,22 +340,20 @@ luaA_class_property_get(lua_State *L, lua_class_t *lua_class, int fieldidx)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_class_index(lua_State *L)
-{
+int luaA_class_index(lua_State* L) {
     /* Try to use metatable first. */
-    if(luaA_usemetatable(L, 1, 2))
+    if (luaA_usemetatable(L, 1, 2))
         return 1;
 
-    lua_class_t *cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
+    lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
     /* Is this the special 'valid' property? This is the only property
      * accessible for invalid objects and thus needs special handling. */
-    const char *attr = luaL_checkstring(L, 2);
-    if (A_STREQ(attr, "valid"))
-    {
-        void *p = luaA_toudata(L, 1, cls);
-        lua_pushboolean(L, p && (!cls->checker || cls->checker(reinterpret_cast<lua_object_t*>(p))));
+    const char* attr = luaL_checkstring(L, 2);
+    if (A_STREQ(attr, "valid")) {
+        void* p = luaA_toudata(L, 1, cls);
+        lua_pushboolean(L,
+                        p && (!cls->checker || cls->checker(reinterpret_cast<lua_object_t*>(p))));
         return 1;
     }
 
@@ -388,15 +361,12 @@ luaA_class_index(lua_State *L)
 
     /* This is the table storing the object private variables.
      */
-    if (A_STREQ(attr, "_private"))
-    {
+    if (A_STREQ(attr, "_private")) {
         luaA_checkudata(L, 1, cls);
         luaA_getuservalue(L, 1);
         lua_getfield(L, -1, "data");
         return 1;
-    }
-    else if (A_STREQ(attr, "data"))
-    {
+    } else if (A_STREQ(attr, "data")) {
         luaA_deprecate(L, "Use `._private` instead of `.data`");
         luaA_checkudata(L, 1, cls);
         luaA_getuservalue(L, 1);
@@ -405,17 +375,15 @@ luaA_class_index(lua_State *L)
     }
 
     /* Property does exist and has an index callback */
-    if(prop)
-    {
-        if(prop->index)
+    if (prop) {
+        if (prop->index)
             return prop->index(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
-    }
-    else
-    {
-        if(cls->index_miss_handler != LUA_REFNIL)
+    } else {
+        if (cls->index_miss_handler != LUA_REFNIL)
             return luaA_call_handler(L, cls->index_miss_handler);
-        if(cls->index_miss_property)
-            return cls->index_miss_property(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        if (cls->index_miss_property)
+            return cls->index_miss_property(
+              L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
     }
 
     return 0;
@@ -425,29 +393,25 @@ luaA_class_index(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_class_newindex(lua_State *L)
-{
+int luaA_class_newindex(lua_State* L) {
     /* Try to use metatable first. */
-    if(luaA_usemetatable(L, 1, 2))
+    if (luaA_usemetatable(L, 1, 2))
         return 1;
 
-    lua_class_t *cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
+    lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
     auto prop = luaA_class_property_get(L, cls, 2);
 
     /* Property does exist and has a newindex callback */
-    if(prop)
-    {
-        if(prop->newindex)
+    if (prop) {
+        if (prop->newindex)
             return prop->newindex(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
-    }
-    else
-    {
-        if(cls->newindex_miss_handler != LUA_REFNIL)
+    } else {
+        if (cls->newindex_miss_handler != LUA_REFNIL)
             return luaA_call_handler(L, cls->newindex_miss_handler);
-        if(cls->newindex_miss_property)
-            return cls->newindex_miss_property(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        if (cls->newindex_miss_property)
+            return cls->newindex_miss_property(
+              L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
     }
 
     return 0;
@@ -457,28 +421,24 @@ luaA_class_newindex(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_class_new(lua_State *L, lua_class_t *lua_class)
-{
+int luaA_class_new(lua_State* L, lua_class_t* lua_class) {
     /* Check we have a table that should contains some properties */
     luaA_checktable(L, 2);
 
     /* Create a new object */
-    lua_object_t *object = lua_class->allocator(L);
+    lua_object_t* object = lua_class->allocator(L);
 
     /* Push the first key before iterating */
     lua_pushnil(L);
     /* Iterate over the property keys */
-    while(lua_next(L, 2))
-    {
+    while (lua_next(L, 2)) {
         /* Check that the key is a string.
          * We cannot call tostring blindly or Lua will convert a key that is a
          * number TO A STRING, confusing lua_next() */
-        if(lua_isstring(L, -2))
-        {
+        if (lua_isstring(L, -2)) {
             auto prop = luaA_class_property_get(L, lua_class, -2);
 
-            if(prop && prop->newobj)
+            if (prop && prop->newobj)
                 prop->newobj(L, object);
         }
         /* Remove value */

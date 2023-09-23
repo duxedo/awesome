@@ -24,7 +24,7 @@
 
 #include "common/luahdr.h"
 
-extern "C" int luaA_xrdb_get_value(lua_State *L);
+extern "C" int luaA_xrdb_get_value(lua_State* L);
 
 #endif
 

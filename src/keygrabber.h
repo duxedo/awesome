@@ -23,12 +23,12 @@
 #define AWESOME_KEYGRABBER_H
 
 #include "common/luahdr.h"
-#include <xcb/xcb.h>
 
 #include <stdbool.h>
+#include <xcb/xcb.h>
 
-int luaA_keygrabber_stop(lua_State *);
-bool keygrabber_handlekpress(lua_State *, xcb_key_press_event_t *);
+int luaA_keygrabber_stop(lua_State*);
+bool keygrabber_handlekpress(lua_State*, xcb_key_press_event_t*);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
