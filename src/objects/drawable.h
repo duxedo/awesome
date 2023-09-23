@@ -26,30 +26,29 @@
 #include "common/luaclass.h"
 #include "draw.h"
 
-typedef void drawable_refresh_callback(void *);
+typedef void drawable_refresh_callback(void*);
 
 /** drawable type */
-struct drawable_t
-{
+struct drawable_t {
     LUA_OBJECT_HEADER
     /** The pixmap we are drawing to. */
     xcb_pixmap_t pixmap;
     /** Surface for drawing. */
-    cairo_surface_t *surface;
+    cairo_surface_t* surface;
     /** The geometry of the drawable (in root window coordinates). */
     area_t geometry;
     /** Surface contents are undefined if this is false. */
     bool refreshed;
     /** Callback for refreshing. */
-    drawable_refresh_callback *refresh_callback;
+    drawable_refresh_callback* refresh_callback;
     /** Data for refresh callback. */
-    void *refresh_data;
+    void* refresh_data;
 };
 typedef struct drawable_t drawable_t;
 
-drawable_t *drawable_allocator(lua_State *, drawable_refresh_callback *, void *);
-void drawable_set_geometry(lua_State *, int, area_t);
-void drawable_class_setup(lua_State *);
+drawable_t* drawable_allocator(lua_State*, drawable_refresh_callback*, void*);
+void drawable_set_geometry(lua_State*, int, area_t);
+void drawable_class_setup(lua_State*);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

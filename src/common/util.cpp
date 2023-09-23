@@ -22,17 +22,15 @@
 
 #include "common/util.h"
 
+#include <errno.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <stdarg.h>
 #include <sys/wait.h>
-#include <unistd.h>
-#include <limits.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <time.h>
+#include <unistd.h>
 
-const char *
-a_current_time_str(void)
-{
+const char* a_current_time_str(void) {
     static char buffer[25];
     time_t now;
     struct tm tm;
@@ -47,9 +45,7 @@ a_current_time_str(void)
 
 /** Print error and exit with EXIT_FAILURE code.
  */
-void
-_fatal(int line, const char *fct, const char *fmt, ...)
-{
+void _fatal(int line, const char* fct, const char* fmt, ...) {
     va_list ap;
 
     va_start(ap, fmt);
@@ -62,9 +58,7 @@ _fatal(int line, const char *fct, const char *fmt, ...)
 
 /** Print error message on stderr.
  */
-void
-_warn(int line, const char *fct, const char *fmt, ...)
-{
+void _warn(int line, const char* fct, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
     fprintf(stderr, "%sW: awesome: %s:%d: ", a_current_time_str(), fct, line);
@@ -84,14 +78,11 @@ _warn(int line, const char *fct, const char *fmt, ...)
  * \param[in]  l        maximum number of chars to copy.
  *
  * \return minimum of  \c src \e length and \c l.
-*/
-ssize_t
-a_strncpy(char *dst, ssize_t n, const char *src, ssize_t l)
-{
+ */
+ssize_t a_strncpy(char* dst, ssize_t n, const char* src, ssize_t l) {
     ssize_t len = MIN(a_strlen(src), l);
 
-    if (n > 0)
-    {
+    if (n > 0) {
         ssize_t dlen = MIN(n - 1, len);
         memcpy(dst, src, dlen);
         dst[dlen] = '\0';
@@ -111,13 +102,10 @@ a_strncpy(char *dst, ssize_t n, const char *src, ssize_t l)
  * \return \c src \e length. If this value is \>= \c n then the copy was
  *         truncated.
  */
-ssize_t
-a_strcpy(char *dst, ssize_t n, const char *src)
-{
+ssize_t a_strcpy(char* dst, ssize_t n, const char* src) {
     ssize_t len = a_strlen(src);
 
-    if (n > 0)
-    {
+    if (n > 0) {
         ssize_t dlen = MIN(n - 1, len);
         memcpy(dst, src, dlen);
         dst[dlen] = '\0';
@@ -129,12 +117,10 @@ a_strcpy(char *dst, ssize_t n, const char *src)
 /** Execute a command and replace the current process.
  * \param cmd The command to execute.
  */
-void
-a_exec(const char *cmd)
-{
-    static const char *shell = NULL;
+void a_exec(const char* cmd) {
+    static const char* shell = NULL;
 
-    if(!shell && !(shell = getenv("SHELL")))
+    if (!shell && !(shell = getenv("SHELL")))
         shell = "/bin/sh";
 
     execlp(shell, shell, "-c", cmd, NULL);

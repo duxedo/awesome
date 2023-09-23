@@ -20,22 +20,20 @@
  */
 
 #include "banning.h"
+
 #include "globalconf.h"
 #include "objects/client.h"
 
 /** Reban windows following current selected tags.
  */
-void
-banning_need_update(void)
-{
+void banning_need_update(void) {
     /* We update the complete banning only once per main loop to avoid
      * excessive updates...  */
     getGlobals().need_lazy_banning = true;
 
     /* But if a client will be banned in our next update we unfocus it now. */
-    for(auto * c: getGlobals().clients)
-    {
-        if(!client_isvisible(c)) {
+    for (auto* c : getGlobals().clients) {
+        if (!client_isvisible(c)) {
             client_ban_unfocus(c);
         }
     }
@@ -43,24 +41,22 @@ banning_need_update(void)
 
 /** Check all clients if they need to rebanned
  */
-void
-banning_refresh(void)
-{
+void banning_refresh(void) {
     if (!getGlobals().need_lazy_banning)
         return;
 
     getGlobals().need_lazy_banning = false;
 
-    for(auto * c: getGlobals().clients) {
-        if(client_isvisible(c)) {
+    for (auto* c : getGlobals().clients) {
+        if (client_isvisible(c)) {
             client_unban(c);
         }
     }
 
     /* Some people disliked the short flicker of background, so we first unban everything.
      * Afterwards we ban everything we don't want. This should avoid that. */
-    for(auto *c: getGlobals().clients) {
-        if(!client_isvisible(c)) {
+    for (auto* c : getGlobals().clients) {
+        if (!client_isvisible(c)) {
             client_ban(c);
         }
     }

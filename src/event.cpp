@@ -20,37 +20,38 @@
  */
 
 #include "event.h"
+
 #include "awesome.h"
+#include "common/atoms.h"
 #include "common/xembed.h"
-#include "globalconf.h"
-#include "property.h"
-#include "objects/tag.h"
-#include "objects/selection_getter.h"
-#include "objects/drawin.h"
-#include "objects/selection_acquire.h"
-#include "objects/selection_watcher.h"
-#include "xwindow.h"
+#include "common/xutil.h"
 #include "ewmh.h"
-#include "objects/client.h"
+#include "globalconf.h"
 #include "keygrabber.h"
-#include "mousegrabber.h"
 #include "luaa.h"
+#include "mousegrabber.h"
+#include "objects/client.h"
+#include "objects/drawin.h"
+#include "objects/screen.h"
+#include "objects/selection_acquire.h"
+#include "objects/selection_getter.h"
+#include "objects/selection_watcher.h"
+#include "objects/tag.h"
+#include "property.h"
 #include "systray.h"
 #include "xkb.h"
-#include "objects/screen.h"
-#include "common/atoms.h"
-#include "common/xutil.h"
+#include "xwindow.h"
 
 #include <bits/ranges_util.h>
 #include <map>
 #include <set>
 #include <vector>
-#include <xcb/xcb.h>
 #include <xcb/randr.h>
 #include <xcb/shape.h>
+#include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
-#include <xcb/xcb_icccm.h>
 #include <xcb/xcb_event.h>
+#include <xcb/xcb_icccm.h>
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wkeyword-macro"
@@ -64,60 +65,50 @@
 #include <xcb/xfixes.h>
 
 #define DO_EVENT_HOOK_CALLBACK(type, xcbtype, xcbeventprefix, arraytype, match) \
-    static void \
-    event_##xcbtype##_callback(xcb_##xcbtype##_press_event_t *ev, \
-                               const arraytype& arr, \
-                               lua_State *L, \
-                               int oud, \
-                               int nargs, \
-                               void *data) \
-    { \
-        int abs_oud = oud < 0 ? ((lua_gettop(L) + 1) + oud) : oud; \
-        int item_matching = 0; \
-        for(auto * item: arr) \
-            if(match(ev, item, data)) \
-            { \
-                if(oud) \
-                    luaA_object_push_item(L, abs_oud, item); \
-                else \
-                    luaA_object_push(L, item); \
-                item_matching++; \
-            } \
-        for(; item_matching > 0; item_matching--) \
-        { \
-            switch(ev->response_type) \
-            { \
-              case xcbeventprefix##_PRESS: \
-                for(int i = 0; i < nargs; i++) \
-                    lua_pushvalue(L, - nargs - item_matching); \
-                luaA_object_emit_signal(L, - nargs - 1, "press", nargs); \
-                break; \
-              case xcbeventprefix##_RELEASE: \
-                for(int i = 0; i < nargs; i++) \
-                    lua_pushvalue(L, - nargs - item_matching); \
-                luaA_object_emit_signal(L, - nargs - 1, "release", nargs); \
-                break; \
-            } \
-            lua_pop(L, 1); \
-        } \
-        lua_pop(L, nargs); \
+    static void event_##xcbtype##_callback(xcb_##xcbtype##_press_event_t* ev,   \
+                                           const arraytype& arr,                \
+                                           lua_State* L,                        \
+                                           int oud,                             \
+                                           int nargs,                           \
+                                           void* data) {                        \
+        int abs_oud = oud < 0 ? ((lua_gettop(L) + 1) + oud) : oud;              \
+        int item_matching = 0;                                                  \
+        for (auto* item : arr)                                                  \
+            if (match(ev, item, data)) {                                        \
+                if (oud)                                                        \
+                    luaA_object_push_item(L, abs_oud, item);                    \
+                else                                                            \
+                    luaA_object_push(L, item);                                  \
+                item_matching++;                                                \
+            }                                                                   \
+        for (; item_matching > 0; item_matching--) {                            \
+            switch (ev->response_type) {                                        \
+            case xcbeventprefix##_PRESS:                                        \
+                for (int i = 0; i < nargs; i++)                                 \
+                    lua_pushvalue(L, -nargs - item_matching);                   \
+                luaA_object_emit_signal(L, -nargs - 1, "press", nargs);         \
+                break;                                                          \
+            case xcbeventprefix##_RELEASE:                                      \
+                for (int i = 0; i < nargs; i++)                                 \
+                    lua_pushvalue(L, -nargs - item_matching);                   \
+                luaA_object_emit_signal(L, -nargs - 1, "release", nargs);       \
+                break;                                                          \
+            }                                                                   \
+            lua_pop(L, 1);                                                      \
+        }                                                                       \
+        lua_pop(L, nargs);                                                      \
     }
 
-static bool
-event_key_match(xcb_key_press_event_t *ev, keyb_t *k, void *data)
-{
+static bool event_key_match(xcb_key_press_event_t* ev, keyb_t* k, void* data) {
     assert(data);
-    xcb_keysym_t keysym = *(xcb_keysym_t *) data;
-    return (((k->keycode && ev->detail == k->keycode)
-             || (k->keysym && keysym == k->keysym))
-            && (k->modifiers == XCB_BUTTON_MASK_ANY || k->modifiers == ev->state));
+    xcb_keysym_t keysym = *(xcb_keysym_t*)data;
+    return (((k->keycode && ev->detail == k->keycode) || (k->keysym && keysym == k->keysym)) &&
+            (k->modifiers == XCB_BUTTON_MASK_ANY || k->modifiers == ev->state));
 }
 
-static bool
-event_button_match(xcb_button_press_event_t *ev, button_t *b, void *data)
-{
-    return ((!b->button || ev->detail == b->button)
-            && (b->modifiers == XCB_BUTTON_MASK_ANY || b->modifiers == ev->state));
+static bool event_button_match(xcb_button_press_event_t* ev, button_t* b, void* data) {
+    return ((!b->button || ev->detail == b->button) &&
+            (b->modifiers == XCB_BUTTON_MASK_ANY || b->modifiers == ev->state));
 }
 
 DO_EVENT_HOOK_CALLBACK(button_t, button, XCB_BUTTON, std::vector<button_t*>, event_button_match)
@@ -129,22 +120,18 @@ DO_EVENT_HOOK_CALLBACK(keyb_t, key, XCB_KEY, std::vector<keyb_t*>, event_key_mat
  * \param mask The mask buttons.
  * \return True if the event was handled.
  */
-static bool
-event_handle_mousegrabber(int x, int y, uint16_t mask)
-{
-    if(getGlobals().mousegrabber != LUA_REFNIL)
-    {
-        lua_State *L = globalconf_get_lua_State();
+static bool event_handle_mousegrabber(int x, int y, uint16_t mask) {
+    if (getGlobals().mousegrabber != LUA_REFNIL) {
+        lua_State* L = globalconf_get_lua_State();
         mousegrabber_handleevent(L, x, y, mask);
         lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().mousegrabber);
-        if(!luaA_dofunction(L, 1, 1))
-        {
+        if (!luaA_dofunction(L, 1, 1)) {
             warn("Stopping mousegrabber.");
             luaA_mousegrabber_stop(L);
         } else {
-            if(!lua_isboolean(L, -1) || !lua_toboolean(L, -1))
+            if (!lua_isboolean(L, -1) || !lua_toboolean(L, -1))
                 luaA_mousegrabber_stop(L);
-            lua_pop(L, 1);  /* pop returned value */
+            lua_pop(L, 1); /* pop returned value */
         }
         return true;
     }
@@ -156,20 +143,12 @@ event_handle_mousegrabber(int x, int y, uint16_t mask)
  * \param L The Lua VM state.
  * \param ev The event to handle.
  */
-static void
-event_emit_button(lua_State *L, xcb_button_press_event_t *ev)
-{
-    const char *name;
-    switch(XCB_EVENT_RESPONSE_TYPE(ev))
-    {
-    case XCB_BUTTON_PRESS:
-        name = "button::press";
-        break;
-    case XCB_BUTTON_RELEASE:
-        name = "button::release";
-        break;
-    default:
-        fatal("Invalid event type");
+static void event_emit_button(lua_State* L, xcb_button_press_event_t* ev) {
+    const char* name;
+    switch (XCB_EVENT_RESPONSE_TYPE(ev)) {
+    case XCB_BUTTON_PRESS: name = "button::press"; break;
+    case XCB_BUTTON_RELEASE: name = "button::release"; break;
+    default: fatal("Invalid event type");
     }
 
     /* Push the event's info */
@@ -184,12 +163,10 @@ event_emit_button(lua_State *L, xcb_button_press_event_t *ev)
 /** The button press event handler.
  * \param ev The event.
  */
-static void
-event_handle_button(xcb_button_press_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
-    client_t *c;
-    drawin_t *drawin;
+static void event_handle_button(xcb_button_press_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
+    client_t* c;
+    drawin_t* drawin;
 
     getGlobals().update_timestamp(ev);
 
@@ -202,7 +179,7 @@ event_handle_button(xcb_button_press_event_t *ev)
             state |= change;
         else
             state &= ~change;
-        if(event_handle_mousegrabber(ev->root_x, ev->root_y, state))
+        if (event_handle_mousegrabber(ev->root_x, ev->root_y, state))
             return;
     }
 
@@ -212,13 +189,10 @@ event_handle_button(xcb_button_press_event_t *ev)
      * drop them */
     ev->state &= 0x00ff;
 
-    if((drawin = drawin_getbywin(ev->event))
-       || (drawin = drawin_getbywin(ev->child)))
-    {
+    if ((drawin = drawin_getbywin(ev->event)) || (drawin = drawin_getbywin(ev->child))) {
         /* If the drawin is child, then x,y are
          * relative to root window */
-        if(drawin->window == ev->child)
-        {
+        if (drawin->window == ev->child) {
             ev->event_x -= drawin->geometry.x + drawin->border_width;
             ev->event_y -= drawin->geometry.y + drawin->border_width;
         }
@@ -237,22 +211,16 @@ event_handle_button(xcb_button_press_event_t *ev)
          * Use AsyncPointer instead of ReplayPointer so that the event is
          * "eaten" instead of being handled again on the root window.
          */
-        if(ev->child == XCB_NONE)
-            xcb_allow_events(getGlobals().connection,
-                             XCB_ALLOW_ASYNC_POINTER,
-                             ev->time);
-    }
-    else if((c = client_getbyframewin(ev->event)) || (c = client_getbywin(ev->event)))
-    {
+        if (ev->child == XCB_NONE)
+            xcb_allow_events(getGlobals().connection, XCB_ALLOW_ASYNC_POINTER, ev->time);
+    } else if ((c = client_getbyframewin(ev->event)) || (c = client_getbywin(ev->event))) {
         /* For clicks inside of c->window, we get two events. Once because of a
          * passive grab on c->window and then again for c->frame_window.
          * Ignore the second event (identifiable by ev->child != XCB_NONE).
          */
-        if (ev->event != c->frame_window || ev->child == XCB_NONE)
-        {
+        if (ev->event != c->frame_window || ev->child == XCB_NONE) {
             luaA_object_push(L, c);
-            if (c->window == ev->event)
-            {
+            if (c->window == ev->event) {
                 /* Button event into the client itself (not titlebar), translate
                  * into the frame window.
                  */
@@ -262,12 +230,10 @@ event_handle_button(xcb_button_press_event_t *ev)
             /* And handle the button raw button event */
             event_emit_button(L, ev);
             /* then check if a titlebar was "hit" */
-            if (c->frame_window == ev->event)
-            {
+            if (c->frame_window == ev->event) {
                 int x = ev->event_x, y = ev->event_y;
-                drawable_t *d = client_get_drawable_offset(c, &x, &y);
-                if (d)
-                {
+                drawable_t* d = client_get_drawable_offset(c, &x, &y);
+                if (d) {
                     /* Copy the event so that we can fake x/y */
                     xcb_button_press_event_t event = *ev;
                     event.event_x = x;
@@ -280,56 +246,43 @@ event_handle_button(xcb_button_press_event_t *ev)
             /* then check if any button objects match */
             event_button_callback(ev, c->buttons, L, -1, 1, NULL);
         }
-        xcb_allow_events(getGlobals().connection,
-                         XCB_ALLOW_REPLAY_POINTER,
-                         ev->time);
-    }
-    else if(ev->child == XCB_NONE && getGlobals().screen->root == ev->event)
-    {
+        xcb_allow_events(getGlobals().connection, XCB_ALLOW_REPLAY_POINTER, ev->time);
+    } else if (ev->child == XCB_NONE && getGlobals().screen->root == ev->event) {
         event_button_callback(ev, getGlobals().buttons, L, 0, 0, NULL);
         return;
     }
 }
 
-static void
-event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev)
-{
+static void event_handle_configurerequest_configure_window(xcb_configure_request_event_t* ev) {
     uint16_t config_win_mask = 0;
     std::array<uint32_t, 7> config_win_vals;
     unsigned short i = 0;
 
-    if(ev->value_mask & XCB_CONFIG_WINDOW_X)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_X) {
         config_win_mask |= XCB_CONFIG_WINDOW_X;
         config_win_vals[i++] = ev->x;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_Y)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_Y) {
         config_win_mask |= XCB_CONFIG_WINDOW_Y;
         config_win_vals[i++] = ev->y;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_WIDTH)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_WIDTH) {
         config_win_mask |= XCB_CONFIG_WINDOW_WIDTH;
         config_win_vals[i++] = ev->width;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_HEIGHT)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_HEIGHT) {
         config_win_mask |= XCB_CONFIG_WINDOW_HEIGHT;
         config_win_vals[i++] = ev->height;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH) {
         config_win_mask |= XCB_CONFIG_WINDOW_BORDER_WIDTH;
         config_win_vals[i++] = ev->border_width;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_SIBLING)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_SIBLING) {
         config_win_mask |= XCB_CONFIG_WINDOW_SIBLING;
         config_win_vals[i++] = ev->sibling;
     }
-    if(ev->value_mask & XCB_CONFIG_WINDOW_STACK_MODE)
-    {
+    if (ev->value_mask & XCB_CONFIG_WINDOW_STACK_MODE) {
         config_win_mask |= XCB_CONFIG_WINDOW_STACK_MODE;
         config_win_vals[i++] = ev->stack_mode;
     }
@@ -340,16 +293,12 @@ event_handle_configurerequest_configure_window(xcb_configure_request_event_t *ev
 /** The configure event handler.
  * \param ev The event.
  */
-static void
-event_handle_configurerequest(xcb_configure_request_event_t *ev)
-{
-    client_t *c;
+static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
+    client_t* c;
 
-    if((c = client_getbywin(ev->window)))
-    {
-        lua_State *L = globalconf_get_lua_State();
-        if(ev->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH)
-        {
+    if ((c = client_getbywin(ev->window))) {
+        lua_State* L = globalconf_get_lua_State();
+        if (ev->value_mask & XCB_CONFIG_WINDOW_BORDER_WIDTH) {
             luaA_object_push(L, c);
             window_set_border_width(L, -1, ev->border_width);
             lua_pop(L, 1);
@@ -367,16 +316,14 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
         uint16_t deco_bottom = bw + tb_bottom;
         int16_t diff_w = 0, diff_h = 0;
 
-        if(ev->value_mask & XCB_CONFIG_WINDOW_WIDTH)
-        {
+        if (ev->value_mask & XCB_CONFIG_WINDOW_WIDTH) {
             uint16_t old_w = geometry.width;
             geometry.width = ev->width;
             /* The ConfigureRequest specifies the size of the client window, we want the frame */
             geometry.width += tb_left + tb_right;
             diff_w = geometry.width - old_w;
         }
-        if(ev->value_mask & XCB_CONFIG_WINDOW_HEIGHT)
-        {
+        if (ev->value_mask & XCB_CONFIG_WINDOW_HEIGHT) {
             uint16_t old_h = geometry.height;
             geometry.height = ev->height;
             /* The ConfigureRequest specifies the size of the client window, we want the frame */
@@ -385,29 +332,44 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
         }
 
         /* If the client resizes without moving itself, apply window gravity */
-        if(c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY)
-        {
-            xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity, 0, 0, diff_w, diff_h, &geometry.x, &geometry.y);
+        if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY) {
+            xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity,
+                                          0,
+                                          0,
+                                          diff_w,
+                                          diff_h,
+                                          &geometry.x,
+                                          &geometry.y);
         }
-        if(ev->value_mask & XCB_CONFIG_WINDOW_X)
-        {
+        if (ev->value_mask & XCB_CONFIG_WINDOW_X) {
             geometry.x = ev->x;
-            if(c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY)
-                xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity, deco_left, 0, deco_right, 0, &geometry.x, NULL);
+            if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY)
+                xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity,
+                                              deco_left,
+                                              0,
+                                              deco_right,
+                                              0,
+                                              &geometry.x,
+                                              NULL);
         }
-        if(ev->value_mask & XCB_CONFIG_WINDOW_Y)
-        {
+        if (ev->value_mask & XCB_CONFIG_WINDOW_Y) {
             geometry.y = ev->y;
-            if(c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY)
-                xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity, 0, deco_top, 0, deco_bottom, NULL, &geometry.y);
+            if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY)
+                xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity,
+                                              0,
+                                              deco_top,
+                                              0,
+                                              deco_bottom,
+                                              NULL,
+                                              &geometry.y);
         }
 
         c->got_configure_request = true;
 
         /* Request the changes to be applied */
         luaA_object_push(L, c);
-        lua_pushstring(L, "ewmh");     /* context */
-        lua_newtable(L);               /* props */
+        lua_pushstring(L, "ewmh"); /* context */
+        lua_newtable(L);           /* props */
 
         /* area, it needs to be directly in the `hints` table to comply with
            the "protocol"
@@ -430,9 +392,10 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
 
         luaA_object_emit_signal(L, -3, "request::geometry", 2);
         lua_pop(L, 1);
-    }
-    else if (std::find_if(getGlobals().embedded.begin(), getGlobals().embedded.end(), [xwin = ev->window](const auto & win) { return win.win == xwin;}) != getGlobals().embedded.end())
-    {
+    } else if (std::find_if(getGlobals().embedded.begin(),
+                            getGlobals().embedded.end(),
+                            [xwin = ev->window](const auto& win) { return win.win == xwin; }) !=
+               getGlobals().embedded.end()) {
         /* Ignore this so that systray icons cannot resize themselves.
          * We decide their size!
          * However, Xembed says that we act like a WM to the embedded window and
@@ -440,44 +403,39 @@ event_handle_configurerequest(xcb_configure_request_event_t *ev)
          * window that its configure request was denied.
          */
         xcb_get_geometry_cookie_t geom_cookie =
-            xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
-        xcb_translate_coordinates_cookie_t coords_cookie =
-            xcb_translate_coordinates_unchecked(getGlobals().connection,
-                    ev->window, getGlobals().screen->root, 0, 0);
-        xcb_get_geometry_reply_t *geom =
-            xcb_get_geometry_reply(getGlobals().connection, geom_cookie, NULL);
-        xcb_translate_coordinates_reply_t *coords =
-            xcb_translate_coordinates_reply(getGlobals().connection, coords_cookie, NULL);
+          xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
+        xcb_translate_coordinates_cookie_t coords_cookie = xcb_translate_coordinates_unchecked(
+          getGlobals().connection, ev->window, getGlobals().screen->root, 0, 0);
+        xcb_get_geometry_reply_t* geom =
+          xcb_get_geometry_reply(getGlobals().connection, geom_cookie, NULL);
+        xcb_translate_coordinates_reply_t* coords =
+          xcb_translate_coordinates_reply(getGlobals().connection, coords_cookie, NULL);
 
-        if (geom && coords)
-        {
+        if (geom && coords) {
             xwindow_configure(ev->window,
-                    (area_t) { .x = coords->dst_x,
-                               .y = coords->dst_y,
-                               .width = geom->width,
-                               .height = geom->height },
-                    0);
+                              (area_t){.x = coords->dst_x,
+                                       .y = coords->dst_y,
+                                       .width = geom->width,
+                                       .height = geom->height},
+                              0);
         }
         p_delete(&geom);
         p_delete(&coords);
-    }
-    else
+    } else
         event_handle_configurerequest_configure_window(ev);
 }
 
 /** The configure notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_configurenotify(xcb_configure_notify_event_t *ev)
-{
-    xcb_screen_t *screen = getGlobals().screen;
+static void event_handle_configurenotify(xcb_configure_notify_event_t* ev) {
+    xcb_screen_t* screen = getGlobals().screen;
 
-    if(ev->window == screen->root)
+    if (ev->window == screen->root)
         screen_schedule_refresh();
 
     /* Copy what XRRUpdateConfiguration() would do: Update the configuration */
-    if(ev->window == screen->root) {
+    if (ev->window == screen->root) {
         screen->width_in_pixels = ev->width;
         screen->height_in_pixels = ev->height;
     }
@@ -486,39 +444,32 @@ event_handle_configurenotify(xcb_configure_notify_event_t *ev)
 /** The destroy notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_destroynotify(xcb_destroy_notify_event_t *ev)
-{
-    client_t *c;
+static void event_handle_destroynotify(xcb_destroy_notify_event_t* ev) {
+    client_t* c;
 
-    if((c = client_getbywin(ev->window))) {
+    if ((c = client_getbywin(ev->window))) {
         client_unmanage(c, CLIENT_UNMANAGE_DESTROYED);
-    }
-    else if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; }))
-    {
+    } else if (std::erase_if(getGlobals().embedded,
+                             [xwin = ev->window](const auto& win) { return win.win == xwin; })) {
         Lua::systray_invalidate();
     }
 }
 
 /** Record that the given drawable contains the pointer.
  */
-void
-event_drawable_under_mouse(lua_State *L, int ud)
-{
-    void *d;
+void event_drawable_under_mouse(lua_State* L, int ud) {
+    void* d;
 
     lua_pushvalue(L, ud);
     d = luaA_object_ref(L, -1);
 
-    if (d == getGlobals().drawable_under_mouse)
-    {
+    if (d == getGlobals().drawable_under_mouse) {
         /* Nothing to do */
         luaA_object_unref(L, d);
         return;
     }
 
-    if (getGlobals().drawable_under_mouse != NULL)
-    {
+    if (getGlobals().drawable_under_mouse != NULL) {
         /* Emit leave on previous drawable */
         luaA_object_push(L, getGlobals().drawable_under_mouse);
         luaA_object_emit_signal(L, -1, "mouse::leave", 0);
@@ -528,10 +479,9 @@ event_drawable_under_mouse(lua_State *L, int ud)
         luaA_object_unref(L, getGlobals().drawable_under_mouse);
         getGlobals().drawable_under_mouse = NULL;
     }
-    if (d != NULL)
-    {
+    if (d != NULL) {
         /* Reference the drawable for leave event later */
-        getGlobals().drawable_under_mouse = (drawable_t *)d;
+        getGlobals().drawable_under_mouse = (drawable_t*)d;
 
         /* Emit enter */
         luaA_object_emit_signal(L, ud, "mouse::enter", 0);
@@ -541,20 +491,17 @@ event_drawable_under_mouse(lua_State *L, int ud)
 /** The motion notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_motionnotify(xcb_motion_notify_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
-    drawin_t *w;
-    client_t *c;
+static void event_handle_motionnotify(xcb_motion_notify_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
+    drawin_t* w;
+    client_t* c;
 
     getGlobals().update_timestamp(ev);
 
-    if(event_handle_mousegrabber(ev->root_x, ev->root_y, ev->state))
+    if (event_handle_mousegrabber(ev->root_x, ev->root_y, ev->state))
         return;
 
-    if((c = client_getbyframewin(ev->event)))
-    {
+    if ((c = client_getbyframewin(ev->event))) {
         luaA_object_push(L, c);
         lua_pushinteger(L, ev->event_x);
         lua_pushinteger(L, ev->event_y);
@@ -562,9 +509,8 @@ event_handle_motionnotify(xcb_motion_notify_event_t *ev)
 
         /* now check if a titlebar was "hit" */
         int x = ev->event_x, y = ev->event_y;
-        drawable_t *d = client_get_drawable_offset(c, &x, &y);
-        if (d)
-        {
+        drawable_t* d = client_get_drawable_offset(c, &x, &y);
+        if (d) {
             luaA_object_push_item(L, -1, d);
             event_drawable_under_mouse(L, -1);
             lua_pushinteger(L, x);
@@ -575,8 +521,7 @@ event_handle_motionnotify(xcb_motion_notify_event_t *ev)
         lua_pop(L, 1);
     }
 
-    if((w = drawin_getbywin(ev->event)))
-    {
+    if ((w = drawin_getbywin(ev->event))) {
         luaA_object_push(L, w);
         luaA_object_push_item(L, -1, w->drawable);
         event_drawable_under_mouse(L, -1);
@@ -590,11 +535,9 @@ event_handle_motionnotify(xcb_motion_notify_event_t *ev)
 /** The leave notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_leavenotify(xcb_leave_notify_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
-    client_t *c;
+static void event_handle_leavenotify(xcb_leave_notify_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
+    client_t* c;
 
     getGlobals().update_timestamp(ev);
 
@@ -603,11 +546,10 @@ event_handle_leavenotify(xcb_leave_notify_event_t *ev)
      * activated/deactivated. Everything will be "back to normal" after the
      * grab.
      */
-    if(ev->mode != XCB_NOTIFY_MODE_NORMAL)
+    if (ev->mode != XCB_NOTIFY_MODE_NORMAL)
         return;
 
-    if((c = client_getbyframewin(ev->event)))
-    {
+    if ((c = client_getbyframewin(ev->event))) {
         /* The window was left in some way, so definitely no titlebar has the
          * mouse cursor.
          */
@@ -620,12 +562,12 @@ event_handle_leavenotify(xcb_leave_notify_event_t *ev)
          * is in the actual child window. Thus, ignore detail=Inferior for
          * leaving client windows.
          */
-        if(ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
+        if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
             luaA_object_push(L, c);
             luaA_object_emit_signal(L, -1, "mouse::leave", 0);
             lua_pop(L, 1);
         }
-    } else if(ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
+    } else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
         /* Some window was left. This must be a drawin. Ignore detail=Inferior,
          * because this means that some child window now contains the mouse
          * cursor, i.e. a systray window. Everything else is a real 'leave'.
@@ -639,12 +581,10 @@ event_handle_leavenotify(xcb_leave_notify_event_t *ev)
 /** The enter notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_enternotify(xcb_enter_notify_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
-    client_t *c;
-    drawin_t *drawin;
+static void event_handle_enternotify(xcb_enter_notify_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
+    client_t* c;
+    drawin_t* drawin;
 
     getGlobals().update_timestamp(ev);
 
@@ -653,7 +593,7 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
      * activated/deactivated. Everything will be "back to normal" after the
      * grab.
      */
-    if(ev->mode != XCB_NOTIFY_MODE_NORMAL)
+    if (ev->mode != XCB_NOTIFY_MODE_NORMAL)
         return;
 
     /*
@@ -665,36 +605,32 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
      * "outside of the actual client window".
      */
 
-    if(ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && (drawin = drawin_getbywin(ev->event)))
-    {
+    if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && (drawin = drawin_getbywin(ev->event))) {
         luaA_object_push(L, drawin);
         luaA_object_push_item(L, -1, drawin->drawable);
         event_drawable_under_mouse(L, -1);
         lua_pop(L, 2);
     }
 
-    if((c = client_getbyframewin(ev->event)))
-    {
+    if ((c = client_getbyframewin(ev->event))) {
         luaA_object_push(L, c);
         /* Detail=Inferior means that a child of the frame window now contains
          * the mouse cursor, i.e. the actual client now has the cursor. All
          * other details mean that the client itself was really left.
          */
-        if(ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
+        if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR) {
             luaA_object_emit_signal(L, -1, "mouse::enter", 0);
         }
 
-        drawable_t *d = client_get_drawable(c, ev->event_x, ev->event_y);
-        if (d)
-        {
+        drawable_t* d = client_get_drawable(c, ev->event_x, ev->event_y);
+        if (d) {
             luaA_object_push_item(L, -1, d);
         } else {
             lua_pushnil(L);
         }
         event_drawable_under_mouse(L, -1);
         lua_pop(L, 2);
-    }
-    else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && ev->event == getGlobals().screen->root) {
+    } else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && ev->event == getGlobals().screen->root) {
         /* When there are multiple X screens with awesome running separate
          * instances, reset focus.
          */
@@ -705,60 +641,50 @@ event_handle_enternotify(xcb_enter_notify_event_t *ev)
 /** The focus in event handler.
  * \param ev The event.
  */
-static void
-event_handle_focusin(xcb_focus_in_event_t *ev)
-{
+static void event_handle_focusin(xcb_focus_in_event_t* ev) {
     if (ev->event == getGlobals().screen->root) {
         /* Received focus in for root window, refocusing the focused window */
         getGlobals().focus.need_update = true;
     }
 
-    if (ev->mode == XCB_NOTIFY_MODE_GRAB
-            || ev->mode == XCB_NOTIFY_MODE_UNGRAB)
+    if (ev->mode == XCB_NOTIFY_MODE_GRAB || ev->mode == XCB_NOTIFY_MODE_UNGRAB)
         /* Ignore focus changes due to keyboard grabs */
         return;
 
     /* Events that we are interested in: */
-    switch(ev->detail)
-    {
-        /* These are events that jump between root windows.
-         */
-        case XCB_NOTIFY_DETAIL_ANCESTOR:
-        case XCB_NOTIFY_DETAIL_INFERIOR:
+    switch (ev->detail) {
+    /* These are events that jump between root windows.
+     */
+    case XCB_NOTIFY_DETAIL_ANCESTOR:
+    case XCB_NOTIFY_DETAIL_INFERIOR:
 
-        /* These are events that jump between clients.
-         * Virtual events ensure we always get an event on our top-level window.
-         */
-        case XCB_NOTIFY_DETAIL_NONLINEAR_VIRTUAL:
-        case XCB_NOTIFY_DETAIL_NONLINEAR:
-          {
-            client_t *c;
+    /* These are events that jump between clients.
+     * Virtual events ensure we always get an event on our top-level window.
+     */
+    case XCB_NOTIFY_DETAIL_NONLINEAR_VIRTUAL:
+    case XCB_NOTIFY_DETAIL_NONLINEAR: {
+        client_t* c;
 
-            if((c = client_getbywin(ev->event))) {
-                /* If there is still a pending focus change, do it now. */
-                client_focus_refresh();
-                client_focus_update(c);
-            }
-          }
-        /* all other events are ignored */
-        default:
-            break;
+        if ((c = client_getbywin(ev->event))) {
+            /* If there is still a pending focus change, do it now. */
+            client_focus_refresh();
+            client_focus_update(c);
+        }
+    }
+    /* all other events are ignored */
+    default: break;
     }
 }
 
 /** The expose event handler.
  * \param ev The event.
  */
-static void
-event_handle_expose(xcb_expose_event_t *ev)
-{
-    drawin_t *drawin;
-    client_t *client;
+static void event_handle_expose(xcb_expose_event_t* ev) {
+    drawin_t* drawin;
+    client_t* client;
 
-    if((drawin = drawin_getbywin(ev->window)))
-        drawin_refresh_pixmap_partial(drawin,
-                                      ev->x, ev->y,
-                                      ev->width, ev->height);
+    if ((drawin = drawin_getbywin(ev->window)))
+        drawin_refresh_pixmap_partial(drawin, ev->x, ev->y, ev->width, ev->height);
     if ((client = client_getbyframewin(ev->window)))
         client_refresh_partial(client, ev->x, ev->y, ev->width, ev->height);
 }
@@ -766,36 +692,27 @@ event_handle_expose(xcb_expose_event_t *ev)
 /** The key press event handler.
  * \param ev The event.
  */
-static void
-event_handle_key(xcb_key_press_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
+static void event_handle_key(xcb_key_press_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
     getGlobals().update_timestamp(ev);
 
-    if(getGlobals().keygrabber != LUA_REFNIL)
-    {
-        if(keygrabber_handlekpress(L, ev))
-        {
+    if (getGlobals().keygrabber != LUA_REFNIL) {
+        if (keygrabber_handlekpress(L, ev)) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().keygrabber);
 
-            if(!luaA_dofunction(L, 3, 0))
-            {
+            if (!luaA_dofunction(L, 3, 0)) {
                 warn("Stopping keygrabber.");
                 luaA_keygrabber_stop(L);
             }
         }
-    }
-    else
-    {
+    } else {
         /* get keysym ignoring all modifiers */
         xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().keysyms, ev->detail, 0);
-        client_t *c;
-        if((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event)))
-        {
+        client_t* c;
+        if ((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event))) {
             luaA_object_push(L, c);
             event_key_callback(ev, c->keys, L, -1, 1, &keysym);
-        }
-        else
+        } else
             event_key_callback(ev, getGlobals().keys, L, 0, 0, &keysym);
     }
 }
@@ -803,27 +720,27 @@ event_handle_key(xcb_key_press_event_t *ev)
 /** The map request event handler.
  * \param ev The event.
  */
-static void
-event_handle_maprequest(xcb_map_request_event_t *ev)
-{
-    client_t *c;
+static void event_handle_maprequest(xcb_map_request_event_t* ev) {
+    client_t* c;
     xcb_get_window_attributes_cookie_t wa_c;
-    xcb_get_window_attributes_reply_t *wa_r;
+    xcb_get_window_attributes_reply_t* wa_r;
     xcb_get_geometry_cookie_t geom_c;
-    xcb_get_geometry_reply_t *geom_r;
+    xcb_get_geometry_reply_t* geom_r;
 
     wa_c = xcb_get_window_attributes_unchecked(getGlobals().connection, ev->window);
 
-    if(!(wa_r = xcb_get_window_attributes_reply(getGlobals().connection, wa_c, NULL)))
+    if (!(wa_r = xcb_get_window_attributes_reply(getGlobals().connection, wa_c, NULL)))
         return;
 
-    if(wa_r->override_redirect)
+    if (wa_r->override_redirect)
         goto bailout;
 
-    if(auto em = std::ranges::find_if(getGlobals().embedded, [xwin = ev->window](const auto & win){ return win.win == xwin; }); em != getGlobals().embedded.end())
-    {
+    if (auto em = std::ranges::find_if(
+          getGlobals().embedded, [xwin = ev->window](const auto& win) { return win.win == xwin; });
+        em != getGlobals().embedded.end()) {
         xcb_map_window(getGlobals().connection, ev->window);
-        XEmbed::xembed_window_activate(getGlobals().connection, ev->window, getGlobals().get_timestamp());
+        XEmbed::xembed_window_activate(
+          getGlobals().connection, ev->window, getGlobals().get_timestamp());
         /* The correct way to set this is via the _XEMBED_INFO property. Neither
          * of the XEMBED not the systray spec talk about mapping windows.
          * Apparently, Qt doesn't care and does not set an _XEMBED_INFO
@@ -831,26 +748,20 @@ event_handle_maprequest(xcb_map_request_event_t *ev)
          */
         em->info.flags |= static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
         Lua::systray_invalidate();
-    }
-    else if((c = client_getbywin(ev->window)))
-    {
+    } else if ((c = client_getbywin(ev->window))) {
         /* Check that it may be visible, but not asked to be hidden */
-        if(client_on_selected_tags(c) && !c->hidden)
-        {
-            lua_State *L = globalconf_get_lua_State();
+        if (client_on_selected_tags(c) && !c->hidden) {
+            lua_State* L = globalconf_get_lua_State();
             luaA_object_push(L, c);
             client_set_minimized(L, -1, false);
             lua_pop(L, 1);
             /* it will be raised, so just update ourself */
             client_raise(c);
         }
-    }
-    else
-    {
+    } else {
         geom_c = xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
 
-        if(!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL)))
-        {
+        if (!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL))) {
             goto bailout;
         }
 
@@ -866,21 +777,17 @@ bailout:
 /** The unmap notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_unmapnotify(xcb_unmap_notify_event_t *ev)
-{
-    client_t *c;
+static void event_handle_unmapnotify(xcb_unmap_notify_event_t* ev) {
+    client_t* c;
 
-    if((c = client_getbywin(ev->window)))
+    if ((c = client_getbywin(ev->window)))
         client_unmanage(c, CLIENT_UNMANAGE_UNMAP);
 }
 
 /** The randr screen change notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_randr_screen_change_notify(xcb_randr_screen_change_notify_event_t *ev)
-{
+static void event_handle_randr_screen_change_notify(xcb_randr_screen_change_notify_event_t* ev) {
     /* Ignore events for other roots (do we get them at all?) */
     if (ev->root != getGlobals().screen->root)
         return;
@@ -895,7 +802,8 @@ event_handle_randr_screen_change_notify(xcb_randr_screen_change_notify_event_t *
         getGlobals().screen->width_in_pixels = ev->width;
         getGlobals().screen->width_in_millimeters = ev->mwidth;
         getGlobals().screen->height_in_pixels = ev->height;
-        getGlobals().screen->height_in_millimeters = ev->mheight;;
+        getGlobals().screen->height_in_millimeters = ev->mheight;
+        ;
     }
 
     screen_schedule_refresh();
@@ -903,41 +811,34 @@ event_handle_randr_screen_change_notify(xcb_randr_screen_change_notify_event_t *
 
 /** XRandR event handler for RRNotify subtype XRROutputChangeNotifyEvent
  */
-static void
-event_handle_randr_output_change_notify(xcb_randr_notify_event_t *ev)
-{
-    if(ev->subCode == XCB_RANDR_NOTIFY_OUTPUT_CHANGE) {
+static void event_handle_randr_output_change_notify(xcb_randr_notify_event_t* ev) {
+    if (ev->subCode == XCB_RANDR_NOTIFY_OUTPUT_CHANGE) {
         xcb_randr_output_t output = ev->u.oc.output;
         uint8_t connection = ev->u.oc.connection;
-        const char *connection_str = NULL;
-        xcb_randr_get_output_info_reply_t *info;
-        lua_State *L = globalconf_get_lua_State();
+        const char* connection_str = NULL;
+        xcb_randr_get_output_info_reply_t* info;
+        lua_State* L = globalconf_get_lua_State();
 
         /* The following explicitly uses XCB_CURRENT_TIME since we want to know
          * the final state of the connection. There could be more notification
          * events underway and using some "old" timestamp causes problems.
          */
-        info = xcb_randr_get_output_info_reply(getGlobals().connection,
-            xcb_randr_get_output_info_unchecked(getGlobals().connection,
-                output,
-                XCB_CURRENT_TIME),
-            NULL);
-        if(!info)
+        info = xcb_randr_get_output_info_reply(
+          getGlobals().connection,
+          xcb_randr_get_output_info_unchecked(getGlobals().connection, output, XCB_CURRENT_TIME),
+          NULL);
+        if (!info)
             return;
 
-        switch(connection) {
-            case XCB_RANDR_CONNECTION_CONNECTED:
-                connection_str = "Connected";
-                break;
-            case XCB_RANDR_CONNECTION_DISCONNECTED:
-                connection_str = "Disconnected";
-                break;
-            default:
-                connection_str = "Unknown";
-                break;
+        switch (connection) {
+        case XCB_RANDR_CONNECTION_CONNECTED: connection_str = "Connected"; break;
+        case XCB_RANDR_CONNECTION_DISCONNECTED: connection_str = "Disconnected"; break;
+        default: connection_str = "Unknown"; break;
         }
 
-        lua_pushlstring(L, (char *)xcb_randr_get_output_info_name(info), xcb_randr_get_output_info_name_length(info));
+        lua_pushlstring(L,
+                        (char*)xcb_randr_get_output_info_name(info),
+                        xcb_randr_get_output_info_name_length(info));
         lua_pushstring(L, connection_str);
         signal_object_emit(L, &global_signals, "screen::change", 2);
 
@@ -948,17 +849,13 @@ event_handle_randr_output_change_notify(xcb_randr_notify_event_t *ev)
     }
 }
 
-
 /** The shape notify event handler.
  * \param ev The event.
  */
-static void
-event_handle_shape_notify(xcb_shape_notify_event_t *ev)
-{
-    client_t *c = client_getbywin(ev->affected_window);
-    if (c)
-    {
-        lua_State *L = globalconf_get_lua_State();
+static void event_handle_shape_notify(xcb_shape_notify_event_t* ev) {
+    client_t* c = client_getbywin(ev->affected_window);
+    if (c) {
+        lua_State* L = globalconf_get_lua_State();
         luaA_object_push(L, c);
         if (ev->shape_kind == XCB_SHAPE_SK_BOUNDING)
             luaA_object_emit_signal(L, -1, "property::shape_client_bounding", 0);
@@ -971,60 +868,48 @@ event_handle_shape_notify(xcb_shape_notify_event_t *ev)
 /** The client message event handler.
  * \param ev The event.
  */
-static void
-event_handle_clientmessage(xcb_client_message_event_t *ev)
-{
+static void event_handle_clientmessage(xcb_client_message_event_t* ev) {
     /* check for startup notification messages */
-    if(sn_xcb_display_process_event(getGlobals().sndisplay, (xcb_generic_event_t *) ev))
+    if (sn_xcb_display_process_event(getGlobals().sndisplay, (xcb_generic_event_t*)ev))
         return;
 
-    if(ev->type == WM_CHANGE_STATE)
-    {
-        client_t *c;
-        if((c = client_getbywin(ev->window))
-           && ev->format == 32
-           && ev->data.data32[0] == XCB_ICCCM_WM_STATE_ICONIC)
-        {
-            lua_State *L = globalconf_get_lua_State();
+    if (ev->type == WM_CHANGE_STATE) {
+        client_t* c;
+        if ((c = client_getbywin(ev->window)) && ev->format == 32 &&
+            ev->data.data32[0] == XCB_ICCCM_WM_STATE_ICONIC) {
+            lua_State* L = globalconf_get_lua_State();
             luaA_object_push(L, c);
             client_set_minimized(L, -1, true);
             lua_pop(L, 1);
         }
-    }
-    else if(ev->type == _XEMBED)
+    } else if (ev->type == _XEMBED)
         xembed_process_client_message(ev);
-    else if(ev->type == _NET_SYSTEM_TRAY_OPCODE)
+    else if (ev->type == _NET_SYSTEM_TRAY_OPCODE)
         systray_process_client_message(ev);
     else
         ewmh_process_client_message(ev);
 }
 
-static void
-event_handle_reparentnotify(xcb_reparent_notify_event_t *ev)
-{
-    client_t *c;
+static void event_handle_reparentnotify(xcb_reparent_notify_event_t* ev) {
+    client_t* c;
 
-    if((c = client_getbywin(ev->window)) && c->frame_window != ev->parent)
-    {
+    if ((c = client_getbywin(ev->window)) && c->frame_window != ev->parent) {
         /* Ignore reparents to the root window, they *might* be caused by
          * ourselves if a client quickly unmaps and maps itself again. */
         if (ev->parent != getGlobals().screen->root)
             client_unmanage(c, CLIENT_UNMANAGE_REPARENT);
-    }
-    else if (ev->parent != getGlobals().systray.window) {
+    } else if (ev->parent != getGlobals().systray.window) {
         /* Embedded window moved elsewhere, end of embedding */
-        if(std::erase_if(getGlobals().embedded, [xwin = ev->window](const auto & win) { return win.win == xwin; })) {
+        if (std::erase_if(getGlobals().embedded,
+                          [xwin = ev->window](const auto& win) { return win.win == xwin; })) {
             xcb_change_save_set(getGlobals().connection, XCB_SET_MODE_DELETE, ev->window);
             Lua::systray_invalidate();
         }
     }
 }
 
-static void
-event_handle_selectionclear(xcb_selection_clear_event_t *ev)
-{
-    if(ev->selection == getGlobals().selection_atom)
-    {
+static void event_handle_selectionclear(xcb_selection_clear_event_t* ev) {
+    if (ev->selection == getGlobals().selection_atom) {
         warn("Lost WM_Sn selection, exiting...");
         g_main_loop_quit(getGlobals().loop);
     } else
@@ -1036,45 +921,42 @@ event_handle_selectionclear(xcb_selection_clear_event_t *ev)
  * ignored (especially on UnmapNotify's).
  * \param e The error event.
  */
-static void
-xerror(xcb_generic_error_t *e)
-{
+static void xerror(xcb_generic_error_t* e) {
     /* ignore this */
-    if(e->error_code == XCB_WINDOW
-       || (e->error_code == XCB_MATCH
-           && e->major_code == XCB_SET_INPUT_FOCUS)
-       || (e->error_code == XCB_VALUE
-           && e->major_code == XCB_KILL_CLIENT)
-       || (e->error_code == XCB_MATCH
-           && e->major_code == XCB_CONFIGURE_WINDOW))
+    if (e->error_code == XCB_WINDOW ||
+        (e->error_code == XCB_MATCH && e->major_code == XCB_SET_INPUT_FOCUS) ||
+        (e->error_code == XCB_VALUE && e->major_code == XCB_KILL_CLIENT) ||
+        (e->error_code == XCB_MATCH && e->major_code == XCB_CONFIGURE_WINDOW))
         return;
 
 #ifdef WITH_XCB_ERRORS
-    const char *major = xcb_errors_get_name_for_major_code(
-            getGlobals().errors_ctx, e->major_code);
-    const char *minor = xcb_errors_get_name_for_minor_code(
-            getGlobals().errors_ctx, e->major_code, e->minor_code);
-    const char *extension = NULL;
-    const char *error = xcb_errors_get_name_for_error(
-            getGlobals().errors_ctx, e->error_code, &extension);
+    const char* major = xcb_errors_get_name_for_major_code(getGlobals().errors_ctx, e->major_code);
+    const char* minor =
+      xcb_errors_get_name_for_minor_code(getGlobals().errors_ctx, e->major_code, e->minor_code);
+    const char* extension = NULL;
+    const char* error =
+      xcb_errors_get_name_for_error(getGlobals().errors_ctx, e->error_code, &extension);
 #else
-    const char *major = xcb_event_get_request_label(e->major_code);
-    const char *minor = NULL;
-    const char *extension = NULL;
-    const char *error = xcb_event_get_error_label(e->error_code);
+    const char* major = xcb_event_get_request_label(e->major_code);
+    const char* minor = NULL;
+    const char* extension = NULL;
+    const char* error = xcb_event_get_error_label(e->error_code);
 #endif
     warn("X error: request=%s%s%s (major %d, minor %d), error=%s%s%s (%d)",
-         major, minor == NULL ? "" : "-", NONULL(minor),
-         e->major_code, e->minor_code,
-         NONULL(extension), extension == NULL ? "" : "-", error,
+         major,
+         minor == NULL ? "" : "-",
+         NONULL(minor),
+         e->major_code,
+         e->minor_code,
+         NONULL(extension),
+         extension == NULL ? "" : "-",
+         error,
          e->error_code);
 
     return;
 }
 
-static bool
-should_ignore(xcb_generic_event_t *event)
-{
+static bool should_ignore(xcb_generic_event_t* event) {
     uint8_t response_type = XCB_EVENT_RESPONSE_TYPE(event);
 
     /* Remove completed sequences */
@@ -1087,14 +969,15 @@ should_ignore(xcb_generic_event_t *event)
          */
         if (end - sequence < UINT32_MAX / 2)
             break;
-        getGlobals().ignore_enter_leave_events.erase(getGlobals().ignore_enter_leave_events.begin());
+        getGlobals().ignore_enter_leave_events.erase(
+          getGlobals().ignore_enter_leave_events.begin());
     }
 
     /* Check if this event should be ignored */
-    if ((response_type == XCB_ENTER_NOTIFY || response_type == XCB_LEAVE_NOTIFY)
-            && getGlobals().ignore_enter_leave_events.size() > 0) {
+    if ((response_type == XCB_ENTER_NOTIFY || response_type == XCB_LEAVE_NOTIFY) &&
+        getGlobals().ignore_enter_leave_events.size() > 0) {
         uint32_t begin = getGlobals().ignore_enter_leave_events[0].begin.sequence;
-        uint32_t end   = getGlobals().ignore_enter_leave_events[0].end.sequence;
+        uint32_t end = getGlobals().ignore_enter_leave_events[0].end.sequence;
         if (sequence >= begin && sequence <= end)
             return true;
     }
@@ -1102,28 +985,26 @@ should_ignore(xcb_generic_event_t *event)
     return false;
 }
 
-template<typename ArgT>
+template <typename ArgT>
 ArgT get_argt(void (*fun)(ArgT)) {
     return nullptr;
 }
 
-void event_handle(xcb_generic_event_t *event)
-{
+void event_handle(xcb_generic_event_t* event) {
     uint8_t response_type = XCB_EVENT_RESPONSE_TYPE(event);
 
     if (should_ignore(event))
         return;
 
-    if(response_type == 0)
-    {
+    if (response_type == 0) {
         /* This is an error, not a event */
-        xerror((xcb_generic_error_t *) event);
+        xerror((xcb_generic_error_t*)event);
         return;
     }
 
-    switch(response_type)
-    {
-#define EVENT(type, callback) case type: callback((decltype(get_argt(callback))) event); return
+    switch (response_type) {
+#define EVENT(type, callback) \
+    case type: callback((decltype(get_argt(callback)))event); return
         EVENT(XCB_BUTTON_PRESS, event_handle_button);
         EVENT(XCB_BUTTON_RELEASE, event_handle_button);
         EVENT(XCB_CONFIGURE_REQUEST, event_handle_configurerequest);
@@ -1147,10 +1028,10 @@ void event_handle(xcb_generic_event_t *event)
 #undef EVENT
     }
 
-#define EXTENSION_EVENT(base, offset, callback) \
-    if (getGlobals().event_base_ ## base != 0 \
-            && response_type == getGlobals().event_base_ ## base + (offset)) \
-        callback((decltype(get_argt(callback))) event)
+#define EXTENSION_EVENT(base, offset, callback)                     \
+    if (getGlobals().event_base_##base != 0 &&                      \
+        response_type == getGlobals().event_base_##base + (offset)) \
+    callback((decltype(get_argt(callback)))event)
     EXTENSION_EVENT(randr, XCB_RANDR_SCREEN_CHANGE_NOTIFY, event_handle_randr_screen_change_notify);
     EXTENSION_EVENT(randr, XCB_RANDR_NOTIFY, event_handle_randr_output_change_notify);
     EXTENSION_EVENT(shape, XCB_SHAPE_NOTIFY, event_handle_shape_notify);
@@ -1159,9 +1040,8 @@ void event_handle(xcb_generic_event_t *event)
 #undef EXTENSION_EVENT
 }
 
-void event_init(void)
-{
-    const xcb_query_extension_reply_t *reply;
+void event_init(void) {
+    const xcb_query_extension_reply_t* reply;
 
     reply = xcb_get_extension_data(getGlobals().connection, &xcb_randr_id);
     if (reply && reply->present)

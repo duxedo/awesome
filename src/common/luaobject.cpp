@@ -28,14 +28,13 @@
  */
 
 #include "common/luaobject.h"
+
 #include "common/backtrace.h"
 
 /** Setup the object system at startup.
  * \param L The Lua VM state.
  */
-void
-luaA_object_setup(lua_State *L)
-{
+void luaA_object_setup(lua_State* L) {
     /* Push identification string */
     lua_pushliteral(L, LUAA_OBJECT_REGISTRY_KEY);
     /* Create an empty table */
@@ -55,15 +54,12 @@ luaA_object_setup(lua_State *L)
  * \param oud The object index on the stack.
  * \return A pointer to the object.
  */
-void *
-luaA_object_incref(lua_State *L, int tud, int oud)
-{
+void* luaA_object_incref(lua_State* L, int tud, int oud) {
     /* Get pointer value of the item */
-    void *pointer = (void *) lua_topointer(L, oud);
+    void* pointer = (void*)lua_topointer(L, oud);
 
     /* Not reference able. */
-    if(!pointer)
-    {
+    if (!pointer) {
         lua_remove(L, oud);
         return NULL;
     }
@@ -107,24 +103,21 @@ luaA_object_incref(lua_State *L, int tud, int oud)
  * \param oud The object index on the stack.
  * \return A pointer to the object.
  */
-void
-luaA_object_decref(lua_State *L, int tud, const void *pointer)
-{
-    if(!pointer)
+void luaA_object_decref(lua_State* L, int tud, const void* pointer) {
+    if (!pointer)
         return;
 
     /* First, refcount-- */
     /* Get the metatable */
     lua_getmetatable(L, tud);
     /* Push the pointer (key) */
-    lua_pushlightuserdata(L, (void *) pointer);
+    lua_pushlightuserdata(L, (void*)pointer);
     /* Get the number of references */
     lua_rawget(L, -2);
     /* Get the number of references and decrement it */
     int count = lua_tointeger(L, -1) - 1;
     /* Did we find the item in our table? (tointeger(nil)-1) is -1 */
-    if (count < 0)
-    {
+    if (count < 0) {
         auto bt = backtrace_get();
         warn("BUG: Reference not found: %d %p\n%s", tud, pointer, bt.c_str());
 
@@ -134,9 +127,9 @@ luaA_object_decref(lua_State *L, int tud, const void *pointer)
     }
     lua_pop(L, 1);
     /* Push the pointer (key) */
-    lua_pushlightuserdata(L, (void *) pointer);
+    lua_pushlightuserdata(L, (void*)pointer);
     /* Hasn't the ref reached 0? */
-    if(count)
+    if (count)
         lua_pushinteger(L, count);
     else
         /* Yup, delete it, set nil as value */
@@ -147,10 +140,9 @@ luaA_object_decref(lua_State *L, int tud, const void *pointer)
     lua_pop(L, 1);
 
     /* Wait, no more ref? */
-    if(!count)
-    {
+    if (!count) {
         /* Yes? So remove it from table */
-        lua_pushlightuserdata(L, (void *) pointer);
+        lua_pushlightuserdata(L, (void*)pointer);
         /* Push nil as value */
         lua_pushnil(L);
         /* table[pointer] = nil */
@@ -158,9 +150,7 @@ luaA_object_decref(lua_State *L, int tud, const void *pointer)
     }
 }
 
-int
-luaA_settype(lua_State *L, lua_class_t *lua_class)
-{
+int luaA_settype(lua_State* L, lua_class_t* lua_class) {
     lua_pushlightuserdata(L, lua_class);
     lua_rawget(L, LUA_REGISTRYINDEX);
     lua_setmetatable(L, -2);
@@ -172,10 +162,7 @@ luaA_settype(lua_State *L, lua_class_t *lua_class)
  * @tparam func func A function to call when the signal is emitted.
  * @function connect_signal
  */
-void
-luaA_object_connect_signal(lua_State *L, int oud,
-                           const char *name, lua_CFunction fn)
-{
+void luaA_object_connect_signal(lua_State* L, int oud, const char* name, lua_CFunction fn) {
     lua_pushcfunction(L, fn);
     luaA_object_connect_signal_from_stack(L, oud, name, -1);
 }
@@ -185,10 +172,7 @@ luaA_object_connect_signal(lua_State *L, int oud,
  * @tparam func func A function to remove.
  * @function disconnect_signal
  */
-void
-luaA_object_disconnect_signal(lua_State *L, int oud,
-                              const char *name, lua_CFunction fn)
-{
+void luaA_object_disconnect_signal(lua_State* L, int oud, const char* name, lua_CFunction fn) {
     lua_pushcfunction(L, fn);
     luaA_object_disconnect_signal_from_stack(L, oud, name, -1);
 }
@@ -199,12 +183,9 @@ luaA_object_disconnect_signal(lua_State *L, int oud,
  * \param name The name of the signal.
  * \param ud The index of function to call when signal is emitted.
  */
-void
-luaA_object_connect_signal_from_stack(lua_State *L, int oud,
-                                      const char *name, int ud)
-{
+void luaA_object_connect_signal_from_stack(lua_State* L, int oud, const char* name, int ud) {
     luaA_checkfunction(L, ud);
-    lua_object_t *obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
+    lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     obj->signals.connect(name, luaA_object_ref_item(L, oud, ud));
 }
 
@@ -214,43 +195,36 @@ luaA_object_connect_signal_from_stack(lua_State *L, int oud,
  * \param name The name of the signal.
  * \param ud The index of function to call when signal is emitted.
  */
-void
-luaA_object_disconnect_signal_from_stack(lua_State *L, int oud,
-                                         const char *name, int ud)
-{
+void luaA_object_disconnect_signal_from_stack(lua_State* L, int oud, const char* name, int ud) {
     luaA_checkfunction(L, ud);
-    lua_object_t *obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
-    void *ref = (void *) lua_topointer(L, ud);
+    lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
+    void* ref = (void*)lua_topointer(L, ud);
     if (obj->signals.disconnect(name, ref))
         luaA_object_unref_item(L, oud, ref);
     lua_remove(L, ud);
 }
 
-void
-signal_object_emit(lua_State *L, Signals *arr, const std::string_view& name, int nargs)
-{
+void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name, int nargs) {
     auto signalIt = arr->find(name);
 
-    if(signalIt != arr->end())
-    {
+    if (signalIt != arr->end()) {
         int nbfunc = signalIt->second.functions.size();
         luaL_checkstack(L, nbfunc + nargs + 1, "too much signal");
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
-        for(auto func : signalIt->second.functions) {
+        for (auto func : signalIt->second.functions) {
             luaA_object_push(L, func);
         }
 
-        for(int i = 0; i < nbfunc; i++)
-        {
+        for (int i = 0; i < nbfunc; i++) {
             /* push all args */
-            for(int j = 0; j < nargs; j++) {
-                lua_pushvalue(L, - nargs - nbfunc + i);
+            for (int j = 0; j < nargs; j++) {
+                lua_pushvalue(L, -nargs - nbfunc + i);
             }
             /* push first function */
-            lua_pushvalue(L, - nargs - nbfunc + i);
+            lua_pushvalue(L, -nargs - nbfunc + i);
             /* remove this first function */
-            lua_remove(L, - nargs - nbfunc - 1 + i);
+            lua_remove(L, -nargs - nbfunc - 1 + i);
             luaA_dofunction(L, nargs, 0);
         }
     }
@@ -264,85 +238,69 @@ signal_object_emit(lua_State *L, Signals *arr, const std::string_view& name, int
  * @param[opt] ... Various arguments.
  * @function emit_signal
  */
-void
-luaA_object_emit_signal(lua_State *L, int oud,
-                        const char *name, int nargs)
-{
+void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs) {
     int oud_abs = luaA_absindex(L, oud);
-    lua_class_t *lua_class = luaA_class_get(L, oud);
-    lua_object_t *obj = reinterpret_cast<lua_object_t*>(luaA_toudata(L, oud, lua_class));
-    if(!obj) {
+    lua_class_t* lua_class = luaA_class_get(L, oud);
+    lua_object_t* obj = reinterpret_cast<lua_object_t*>(luaA_toudata(L, oud, lua_class));
+    if (!obj) {
         luaA_warn(L, "Trying to emit signal '%s' on non-object", name);
         return;
-    }
-    else if(lua_class->checker && !lua_class->checker(obj)) {
+    } else if (lua_class->checker && !lua_class->checker(obj)) {
         luaA_warn(L, "Trying to emit signal '%s' on invalid object", name);
         return;
     }
     auto signalIt = obj->signals.find(name);
-    if(signalIt != obj->signals.end())
-    {
+    if (signalIt != obj->signals.end()) {
         int nbfunc = signalIt->second.functions.size();
         luaL_checkstack(L, nbfunc + nargs + 2, "too much signal");
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
-        for(auto func: signalIt->second.functions) {
+        for (auto func : signalIt->second.functions) {
             luaA_object_push_item(L, oud_abs, func);
         }
 
-        for(int i = 0; i < nbfunc; i++)
-        {
+        for (int i = 0; i < nbfunc; i++) {
             /* push object */
             lua_pushvalue(L, oud_abs);
             /* push all args */
-            for(int j = 0; j < nargs; j++)
-                lua_pushvalue(L, - nargs - nbfunc - 1 + i);
+            for (int j = 0; j < nargs; j++)
+                lua_pushvalue(L, -nargs - nbfunc - 1 + i);
             /* push first function */
-            lua_pushvalue(L, - nargs - nbfunc - 1 + i);
+            lua_pushvalue(L, -nargs - nbfunc - 1 + i);
             /* remove this first function */
-            lua_remove(L, - nargs - nbfunc - 2 + i);
+            lua_remove(L, -nargs - nbfunc - 2 + i);
             luaA_dofunction(L, nargs + 1, 0);
         }
     }
 
     /* Then emit signal on the class */
     lua_pushvalue(L, oud);
-    lua_insert(L, - nargs - 1);
-    luaA_class_emit_signal(L, luaA_class_get(L, - nargs - 1), name, nargs + 1);
+    lua_insert(L, -nargs - 1);
+    luaA_class_emit_signal(L, luaA_class_get(L, -nargs - 1), name, nargs + 1);
 }
 
-int
-luaA_object_connect_signal_simple(lua_State *L)
-{
+int luaA_object_connect_signal_simple(lua_State* L) {
     luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
     return 0;
 }
 
-int
-luaA_object_disconnect_signal_simple(lua_State *L)
-{
+int luaA_object_disconnect_signal_simple(lua_State* L) {
     luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
     return 0;
 }
 
-int
-luaA_object_emit_signal_simple(lua_State *L)
-{
+int luaA_object_emit_signal_simple(lua_State* L) {
     luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);
     return 0;
 }
 
-int
-luaA_object_tostring(lua_State *L)
-{
-    lua_class_t *lua_class = luaA_class_get(L, 1);
-    lua_object_t *object = reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, lua_class));
+int luaA_object_tostring(lua_State* L) {
+    lua_class_t* lua_class = luaA_class_get(L, 1);
+    lua_object_t* object = reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, lua_class));
     int offset = 0;
 
-    for(; lua_class; lua_class = lua_class->parent)
-    {
-        if(offset)
-        {
+    for (; lua_class; lua_class = lua_class->parent) {
+        if (offset) {
             lua_pushliteral(L, "/");
             lua_insert(L, -++offset);
         }

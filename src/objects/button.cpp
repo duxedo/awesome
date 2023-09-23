@@ -34,6 +34,7 @@
  */
 
 #include "button.h"
+
 #include <vector>
 
 lua_class_t button_class;
@@ -83,11 +84,7 @@ lua_class_t button_class;
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_button_new(lua_State *L)
-{
-    return luaA_class_new(L, &button_class);
-}
+static int luaA_button_new(lua_State* L) { return luaA_class_new(L, &button_class); }
 
 /** Set a button array with a Lua table.
  * \param L The Lua VM state.
@@ -95,20 +92,18 @@ luaA_button_new(lua_State *L)
  * \param idx The index of the Lua table.
  * \param buttons The array button to fill.
  */
-void
-luaA_button_array_set(lua_State *L, int oidx, int idx, std::vector<button_t*> *buttons)
-{
+void luaA_button_array_set(lua_State* L, int oidx, int idx, std::vector<button_t*>* buttons) {
     luaA_checktable(L, idx);
 
-    for(auto button: *buttons) {
+    for (auto button : *buttons) {
         luaA_object_unref_item(L, oidx, button);
     }
 
     buttons->clear();
 
     lua_pushnil(L);
-    while(lua_next(L, idx)) {
-        if(luaA_toudata(L, -1, &button_class)) {
+    while (lua_next(L, idx)) {
+        if (luaA_toudata(L, -1, &button_class)) {
             buttons->push_back((button_t*)luaA_object_ref_item(L, oidx, -1));
         } else {
             lua_pop(L, 1);
@@ -122,12 +117,9 @@ luaA_button_array_set(lua_State *L, int oidx, int idx, std::vector<button_t*> *b
  * \param buttons The button array to push.
  * \return The number of elements pushed on stack.
  */
-int
-luaA_button_array_get(lua_State *L, int oidx, const std::vector<button_t*>& buttons)
-{
+int luaA_button_array_get(lua_State* L, int oidx, const std::vector<button_t*>& buttons) {
     lua_createtable(L, buttons.size(), 0);
-    for(size_t i = 0; i < buttons.size(); i++)
-    {
+    for (size_t i = 0; i < buttons.size(); i++) {
         luaA_object_push_item(L, oidx, buttons[i]);
         lua_rawseti(L, -2, i + 1);
     }
@@ -137,51 +129,47 @@ luaA_button_array_get(lua_State *L, int oidx, const std::vector<button_t*>& butt
 LUA_OBJECT_EXPORT_PROPERTY(button, button_t, button, lua_pushinteger);
 LUA_OBJECT_EXPORT_PROPERTY(button, button_t, modifiers, luaA_pushmodifiers);
 
-static int
-luaA_button_set_modifiers(lua_State *L, button_t *b)
-{
+static int luaA_button_set_modifiers(lua_State* L, button_t* b) {
     b->modifiers = luaA_tomodifiers(L, -1);
     luaA_object_emit_signal(L, -3, "property::modifiers", 0);
     return 0;
 }
 
-static int
-luaA_button_set_button(lua_State *L, button_t *b)
-{
+static int luaA_button_set_button(lua_State* L, button_t* b) {
     b->button = luaL_checkinteger(L, -1);
     luaA_object_emit_signal(L, -3, "property::button", 0);
     return 0;
 }
 
-void
-button_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg button_methods[] =
-    {
-        LUA_CLASS_METHODS(button)
-        { "__call", luaA_button_new },
-        { NULL, NULL }
+void button_class_setup(lua_State* L) {
+    static const struct luaL_Reg button_methods[] = {
+      LUA_CLASS_METHODS(button){"__call", luaA_button_new},
+      {    NULL,            NULL}
     };
 
-    static const struct luaL_Reg button_meta[] =
-    {
-        LUA_OBJECT_META(button)
-        LUA_CLASS_META
-        { NULL, NULL }
+    static const struct luaL_Reg button_meta[] = {
+      LUA_OBJECT_META(button) LUA_CLASS_META{NULL, NULL}
     };
 
-    luaA_class_setup(L, &button_class, "button", NULL,
-                     (lua_class_allocator_t) button_new, NULL, NULL,
-                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-                     button_methods, button_meta);
+    luaA_class_setup(L,
+                     &button_class,
+                     "button",
+                     NULL,
+                     (lua_class_allocator_t)button_new,
+                     NULL,
+                     NULL,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     button_methods,
+                     button_meta);
     button_class.add_property("button",
-                            (lua_class_propfunc_t) luaA_button_set_button,
-                            (lua_class_propfunc_t) luaA_button_get_button,
-                            (lua_class_propfunc_t) luaA_button_set_button);
+                              (lua_class_propfunc_t)luaA_button_set_button,
+                              (lua_class_propfunc_t)luaA_button_get_button,
+                              (lua_class_propfunc_t)luaA_button_set_button);
     button_class.add_property("modifiers",
-                            (lua_class_propfunc_t) luaA_button_set_modifiers,
-                            (lua_class_propfunc_t) luaA_button_get_modifiers,
-                            (lua_class_propfunc_t) luaA_button_set_modifiers);
+                              (lua_class_propfunc_t)luaA_button_set_modifiers,
+                              (lua_class_propfunc_t)luaA_button_get_modifiers,
+                              (lua_class_propfunc_t)luaA_button_set_modifiers);
 }
 
 /* @DOC_cobject_COMMON@ */

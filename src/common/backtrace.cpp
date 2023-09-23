@@ -19,8 +19,9 @@
  *
  */
 
-#include "config.h"
 #include "common/backtrace.h"
+
+#include "config.h"
 
 #ifdef HAS_EXECINFO
 #include <execinfo.h>
@@ -29,31 +30,28 @@
 #define MAX_STACK_SIZE 32
 
 /** Get a backtrace.
-  * \param buf The buffer to fill with backtrace.
-  */
-std::string backtrace_get()
-{
+ * \param buf The buffer to fill with backtrace.
+ */
+std::string backtrace_get() {
     std::string ret;
-    void *stack[MAX_STACK_SIZE];
-    char **bt;
+    void* stack[MAX_STACK_SIZE];
+    char** bt;
     int stack_size;
 
     stack_size = backtrace(stack, std::size(stack));
     bt = backtrace_symbols(stack, stack_size);
 
-    if(bt)
-    {
-        for(int i = 0; i < stack_size; i++)
-        {
-            if(i > 0) {
-                ret+="\n";
+    if (bt) {
+        for (int i = 0; i < stack_size; i++) {
+            if (i > 0) {
+                ret += "\n";
             }
-            ret+=bt[i];
+            ret += bt[i];
         }
         free(bt);
         return ret;
     }
-    return  "Cannot get backtrace symbols.";
+    return "Cannot get backtrace symbols.";
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

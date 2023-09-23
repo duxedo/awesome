@@ -1,12 +1,12 @@
 #pragma once
 #ifdef __cplusplus
 extern "C" {
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 }
 #else
+#include <lauxlib.h>
 #include <lua.h>
 #include <lualib.h>
-#include <lauxlib.h>
 #endif

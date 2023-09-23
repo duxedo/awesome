@@ -23,10 +23,10 @@
 #define AWESOME_OBJECTS_KEY_H
 
 #include "common/luaobject.h"
+
 #include <xkbcommon/xkbcommon.h>
 
-typedef struct keyb_t
-{
+typedef struct keyb_t {
     LUA_OBJECT_HEADER
     /** Key modifier */
     uint16_t modifiers;
@@ -45,15 +45,15 @@ typedef struct keyb_t
 extern lua_class_t key_class;
 LUA_OBJECT_FUNCS(key_class, keyb_t, key)
 
-void key_class_setup(lua_State *);
+void key_class_setup(lua_State*);
 
-void luaA_key_array_set(lua_State *, int, int, std::vector<keyb_t*> *);
-int luaA_key_array_get(lua_State *, int, const std::vector<keyb_t*>&);
+void luaA_key_array_set(lua_State*, int, int, std::vector<keyb_t*>*);
+int luaA_key_array_get(lua_State*, int, const std::vector<keyb_t*>&);
 
-int luaA_pushmodifiers(lua_State *, uint16_t);
-uint16_t luaA_tomodifiers(lua_State *L, int ud);
+int luaA_pushmodifiers(lua_State*, uint16_t);
+uint16_t luaA_tomodifiers(lua_State* L, int ud);
 
-char * key_get_keysym_name(xkb_keysym_t keysym);
+char* key_get_keysym_name(xkb_keysym_t keysym);
 
 #endif
 

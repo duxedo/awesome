@@ -20,10 +20,12 @@
  */
 
 #include "objects/selection_transfer.h"
-#include "common/luaobject.h"
+
 #include "common/atoms.h"
+#include "common/luaobject.h"
 #include "common/util.h"
 #include "globalconf.h"
+
 #include <cstdint>
 
 #define REGISTRY_TRANSFER_TABLE_INDEX "awesome_selection_transfers"
@@ -36,8 +38,7 @@ enum transfer_state {
     TRANSFER_DONE
 };
 
-typedef struct selection_transfer_t
-{
+typedef struct selection_transfer_t {
     LUA_OBJECT_HEADER
     /** Reference in the special table to this object */
     int ref;
@@ -58,17 +59,17 @@ typedef struct selection_transfer_t
 static lua_class_t selection_transfer_class;
 LUA_OBJECT_FUNCS(selection_transfer_class, selection_transfer_t, selection_transfer)
 
-static size_t max_property_length(void)
-{
+static size_t max_property_length(void) {
     uint32_t max_request_length = xcb_get_maximum_request_length(getGlobals().connection);
-    max_request_length = MIN(max_request_length, (1<<16) - 1);
+    max_request_length = MIN(max_request_length, (1 << 16) - 1);
     return max_request_length * 4 - sizeof(xcb_change_property_request_t);
 }
 
-static void
-selection_transfer_notify(xcb_window_t requestor, xcb_atom_t selection,
-        xcb_atom_t target, xcb_atom_t property, xcb_timestamp_t time)
-{
+static void selection_transfer_notify(xcb_window_t requestor,
+                                      xcb_atom_t selection,
+                                      xcb_atom_t target,
+                                      xcb_atom_t property,
+                                      xcb_timestamp_t time) {
     xcb_selection_notify_event_t ev;
 
     p_clear(&ev, 1);
@@ -79,20 +80,17 @@ selection_transfer_notify(xcb_window_t requestor, xcb_atom_t selection,
     ev.property = property;
     ev.time = time;
 
-    xcb_send_event(getGlobals().connection, false, requestor,
-            XCB_EVENT_MASK_NO_EVENT, (char *) &ev);
+    xcb_send_event(getGlobals().connection, false, requestor, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 
-void
-selection_transfer_reject(xcb_window_t requestor, xcb_atom_t selection,
-        xcb_atom_t target, xcb_timestamp_t time)
-{
+void selection_transfer_reject(xcb_window_t requestor,
+                               xcb_atom_t selection,
+                               xcb_atom_t target,
+                               xcb_timestamp_t time) {
     selection_transfer_notify(requestor, selection, target, XCB_NONE, time);
 }
 
-static void
-transfer_done(lua_State *L, selection_transfer_t *transfer)
-{
+static void transfer_done(lua_State* L, selection_transfer_t* transfer) {
     transfer->state = TRANSFER_DONE;
 
     lua_pushliteral(L, REGISTRY_TRANSFER_TABLE_INDEX);
@@ -102,12 +100,11 @@ transfer_done(lua_State *L, selection_transfer_t *transfer)
     lua_pop(L, 1);
 }
 
-static void
-transfer_continue_incremental(lua_State *L, int ud)
-{
-    const char *data;
+static void transfer_continue_incremental(lua_State* L, int ud) {
+    const char* data;
     size_t data_length;
-    selection_transfer_t *transfer = reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, ud, &selection_transfer_class));
+    selection_transfer_t* transfer =
+      reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, ud, &selection_transfer_class));
 
     ud = luaA_absindex(L, ud);
 
@@ -130,28 +127,34 @@ transfer_continue_incremental(lua_State *L, int ud)
             }
         }
         /* End of transfer */
-        getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span("",0));
+        getConnection().replace_property(
+          transfer->requestor, transfer->property, UTF8_STRING, std::span("", 0));
         getConnection().clear_attributes(transfer->requestor, XCB_CW_EVENT_MASK);
         transfer_done(L, transfer);
     } else {
         /* Send next piece of data */
         assert(transfer->offset < data_length);
         size_t next_length = MIN(data_length - transfer->offset, max_property_length());
-        getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data + transfer->offset, next_length));
+        getConnection().replace_property(transfer->requestor,
+                                         transfer->property,
+                                         UTF8_STRING,
+                                         std::span(data + transfer->offset, next_length));
         transfer->offset += next_length;
     }
     lua_pop(L, 1);
 }
 
-void
-selection_transfer_begin(lua_State *L, int ud, xcb_window_t requestor,
-        xcb_atom_t selection, xcb_atom_t target, xcb_atom_t property,
-        xcb_timestamp_t time)
-{
+void selection_transfer_begin(lua_State* L,
+                              int ud,
+                              xcb_window_t requestor,
+                              xcb_atom_t selection,
+                              xcb_atom_t target,
+                              xcb_atom_t property,
+                              xcb_timestamp_t time) {
     ud = luaA_absindex(L, ud);
 
     /* Allocate a transfer object */
-    auto transfer = (selection_transfer_t *) selection_transfer_class.allocator(L);
+    auto transfer = (selection_transfer_t*)selection_transfer_class.allocator(L);
     transfer->requestor = requestor;
     transfer->selection = selection;
     transfer->target = target;
@@ -167,11 +170,10 @@ selection_transfer_begin(lua_State *L, int ud, xcb_window_t requestor,
     lua_pop(L, 1);
 
     /* Get the atom name */
-    xcb_get_atom_name_reply_t *reply = xcb_get_atom_name_reply(getGlobals().connection,
-            xcb_get_atom_name_unchecked(getGlobals().connection, target), NULL);
+    xcb_get_atom_name_reply_t* reply = xcb_get_atom_name_reply(
+      getGlobals().connection, xcb_get_atom_name_unchecked(getGlobals().connection, target), NULL);
     if (reply) {
-        lua_pushlstring(L, xcb_get_atom_name_name(reply),
-                xcb_get_atom_name_name_length(reply));
+        lua_pushlstring(L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
         p_delete(&reply);
     } else
         lua_pushnil(L);
@@ -190,14 +192,13 @@ selection_transfer_begin(lua_State *L, int ud, xcb_window_t requestor,
     lua_pop(L, 1);
 }
 
-static int
-luaA_selection_transfer_send(lua_State *L)
-{
+static int luaA_selection_transfer_send(lua_State* L) {
     size_t data_length;
     bool incr = false;
     uint32_t incr_size = 0;
 
-    selection_transfer_t *transfer = reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, 1, &selection_transfer_class));
+    selection_transfer_t* transfer =
+      reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, 1, &selection_transfer_class));
     if (transfer->state != TRANSFER_WAIT_FOR_DATA && transfer->state != TRANSFER_INCREMENTAL_DONE)
         luaL_error(L, "Transfer object is not ready for more data to be sent");
 
@@ -237,7 +238,7 @@ luaA_selection_transfer_send(lua_State *L)
     lua_rawget(L, 2);
 
     if (lua_isstring(L, -2)) {
-        const char *format_string = luaL_checkstring(L, -2);
+        const char* format_string = luaL_checkstring(L, -2);
         if (A_STRNEQ(format_string, "atom"))
             luaL_error(L, "Unknown format '%s'", format_string);
         if (incr)
@@ -247,30 +248,31 @@ luaA_selection_transfer_send(lua_State *L)
         size_t len = luaA_rawlen(L, -1);
 
         /* Get an array with atoms */
-        auto *atom_lengths = p_alloca(size_t, len);
-        auto *atom_strings = p_alloca(const char *, len);
+        auto* atom_lengths = p_alloca(size_t, len);
+        auto* atom_strings = p_alloca(const char*, len);
         for (size_t i = 0; i < len; i++) {
-            lua_rawgeti(L, -1, i+1);
+            lua_rawgeti(L, -1, i + 1);
             atom_strings[i] = luaL_checklstring(L, -1, &atom_lengths[i]);
             lua_pop(L, 1);
         }
 
-        auto *cookies = p_alloca(xcb_intern_atom_cookie_t, len);
-        auto *atoms = p_alloca(xcb_atom_t, len);
+        auto* cookies = p_alloca(xcb_intern_atom_cookie_t, len);
+        auto* atoms = p_alloca(xcb_atom_t, len);
         for (size_t i = 0; i < len; i++) {
-            cookies[i] = xcb_intern_atom_unchecked(getGlobals().connection, false,
-                    atom_lengths[i], atom_strings[i]);
+            cookies[i] = xcb_intern_atom_unchecked(
+              getGlobals().connection, false, atom_lengths[i], atom_strings[i]);
         }
         for (size_t i = 0; i < len; i++) {
-            xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(getGlobals().connection,
-                    cookies[i], NULL);
+            xcb_intern_atom_reply_t* reply =
+              xcb_intern_atom_reply(getGlobals().connection, cookies[i], NULL);
             atoms[i] = reply ? reply->atom : XCB_NONE;
             p_delete(&reply);
         }
-        getConnection().replace_property(transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
+        getConnection().replace_property(
+          transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
     } else {
         /* 'data' is a string with the data to transfer */
-        const char *data = luaL_checklstring(L, -1, &data_length);
+        const char* data = luaL_checklstring(L, -1, &data_length);
 
         if (!incr)
             incr_size = data_length;
@@ -279,8 +281,10 @@ luaA_selection_transfer_send(lua_State *L)
             incr = true;
 
         if (incr) {
-            getConnection().change_attributes(transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
-            getConnection().replace_property(transfer->requestor, transfer->property, INCR, incr_size);
+            getConnection().change_attributes(
+              transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
+            getConnection().replace_property(
+              transfer->requestor, transfer->property, INCR, incr_size);
 
             /* Save the data on the transfer object */
             luaA_getuservalue(L, 1);
@@ -292,22 +296,24 @@ luaA_selection_transfer_send(lua_State *L)
             transfer->state = TRANSFER_INCREMENTAL_SENDING;
             transfer->offset = 0;
         } else {
-            getConnection().replace_property(transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
+            getConnection().replace_property(
+              transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
         }
     }
 
-    selection_transfer_notify(transfer->requestor, transfer->selection,
-            transfer->target, transfer->property, transfer->time);
+    selection_transfer_notify(transfer->requestor,
+                              transfer->selection,
+                              transfer->target,
+                              transfer->property,
+                              transfer->time);
     if (!incr)
         transfer_done(L, transfer);
 
     return 0;
 }
 
-void
-selection_transfer_handle_propertynotify(xcb_property_notify_event_t *ev)
-{
-    lua_State *L = globalconf_get_lua_State();
+void selection_transfer_handle_propertynotify(xcb_property_notify_event_t* ev) {
+    lua_State* L = globalconf_get_lua_State();
 
     if (ev->state != XCB_PROPERTY_DELETE)
         return;
@@ -318,10 +324,9 @@ selection_transfer_handle_propertynotify(xcb_property_notify_event_t *ev)
     lua_pushnil(L);
     while (lua_next(L, -2) != 0) {
         if (lua_type(L, -1) == LUA_TUSERDATA) {
-            auto transfer = (selection_transfer_t *)lua_touserdata(L, -1);
-            if (transfer->state == TRANSFER_INCREMENTAL_SENDING
-                    && transfer->requestor == ev->window
-                    && transfer->property == ev->atom) {
+            auto transfer = (selection_transfer_t*)lua_touserdata(L, -1);
+            if (transfer->state == TRANSFER_INCREMENTAL_SENDING &&
+                transfer->requestor == ev->window && transfer->property == ev->atom) {
                 transfer_continue_incremental(L, -1);
                 /* Remove table, key and transfer object */
                 lua_pop(L, 3);
@@ -335,26 +340,18 @@ selection_transfer_handle_propertynotify(xcb_property_notify_event_t *ev)
     lua_pop(L, 1);
 }
 
-static bool
-selection_transfer_checker(selection_transfer_t *transfer)
-{
+static bool selection_transfer_checker(selection_transfer_t* transfer) {
     return transfer->state != TRANSFER_DONE;
 }
 
-void
-selection_transfer_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg selection_transfer_methods[] =
-    {
-        { NULL, NULL }
+void selection_transfer_class_setup(lua_State* L) {
+    static const struct luaL_Reg selection_transfer_methods[] = {
+      {NULL, NULL}
     };
 
-    static const struct luaL_Reg selection_transfer_meta[] =
-    {
-        LUA_OBJECT_META(selection_transfer)
-        LUA_CLASS_META
-        { "send", luaA_selection_transfer_send },
-        { NULL, NULL }
+    static const struct luaL_Reg selection_transfer_meta[] = {
+      LUA_OBJECT_META(selection_transfer) LUA_CLASS_META{"send", luaA_selection_transfer_send},
+      {  NULL,                         NULL}
     };
 
     /* Store a table in the registry that tracks active selection_transfer_t. */
@@ -362,11 +359,17 @@ selection_transfer_class_setup(lua_State *L)
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(L, &selection_transfer_class, "selection_transfer", NULL,
-            (lua_class_allocator_t) selection_transfer_new, NULL,
-            (lua_class_checker_t) selection_transfer_checker,
-            Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-            selection_transfer_methods, selection_transfer_meta);
+    luaA_class_setup(L,
+                     &selection_transfer_class,
+                     "selection_transfer",
+                     NULL,
+                     (lua_class_allocator_t)selection_transfer_new,
+                     NULL,
+                     (lua_class_checker_t)selection_transfer_checker,
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     selection_transfer_methods,
+                     selection_transfer_meta);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

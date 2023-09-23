@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "globalconf.h"
 #include "color.h"
-#include <xcb/shape.h>
+#include "globalconf.h"
 
+#include <xcb/shape.h>
 
 void xwindow_set_state(xcb_window_t, uint32_t);
 xcb_get_property_cookie_t xwindow_get_state_unchecked(xcb_window_t);
@@ -38,15 +38,15 @@ void xwindow_set_opacity(xcb_window_t, double);
 void xwindow_grabkeys(xcb_window_t, const std::vector<keyb_t*>&);
 void xwindow_takefocus(xcb_window_t);
 void xwindow_set_cursor(xcb_window_t, xcb_cursor_t);
-void xwindow_set_border_color(xcb_window_t, color_t *);
-cairo_surface_t *xwindow_get_shape(xcb_window_t, xcb_shape_sk_t);
-void xwindow_set_shape(xcb_window_t, int, int, xcb_shape_sk_t, cairo_surface_t *, int);
-void xwindow_translate_for_gravity(xcb_gravity_t, int16_t, int16_t, int16_t, int16_t, int16_t *, int16_t *);
+void xwindow_set_border_color(xcb_window_t, color_t*);
+cairo_surface_t* xwindow_get_shape(xcb_window_t, xcb_shape_sk_t);
+void xwindow_set_shape(xcb_window_t, int, int, xcb_shape_sk_t, cairo_surface_t*, int);
+void xwindow_translate_for_gravity(
+  xcb_gravity_t, int16_t, int16_t, int16_t, int16_t, int16_t*, int16_t*);
 
 #define xwindow_set_name_static(win, name) \
     xcb_icccm_set_wm_name(getGlobals().connection, win, XCB_ATOM_STRING, 8, sizeof(name) - 1, name)
-#define xwindow_set_class_instance(win) \
-    xwindow_set_class_instance_static(win, "awesome", "awesome")
+#define xwindow_set_class_instance(win) xwindow_set_class_instance_static(win, "awesome", "awesome")
 #define xwindow_set_class_instance_static(win, instance, class) \
     _xwindow_set_class_instance_static(win, instance "\0" class)
 #define _xwindow_set_class_instance_static(win, instance_class) \

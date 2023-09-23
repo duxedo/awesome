@@ -26,37 +26,37 @@
  */
 
 #include "mousegrabber.h"
+
 #include "common/xcursor.h"
-#include "mouse.h"
 #include "globalconf.h"
 #include "globals.h"
+#include "mouse.h"
 
-#include <unistd.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 /** Grab the mouse.
  * \param cursor The cursor to use while grabbing.
  * \return True if mouse was grabbed.
  */
-static bool
-mousegrabber_grab(xcb_cursor_t cursor)
-{
+static bool mousegrabber_grab(xcb_cursor_t cursor) {
     xcb_window_t root = getGlobals().screen->root;
 
-    for(int i = 1000; i; i--)
-    {
-        xcb_grab_pointer_reply_t *grab_ptr_r;
+    for (int i = 1000; i; i--) {
+        xcb_grab_pointer_reply_t* grab_ptr_r;
         xcb_grab_pointer_cookie_t grab_ptr_c =
-            xcb_grab_pointer_unchecked(getGlobals().connection, false, root,
-                                       XCB_EVENT_MASK_BUTTON_PRESS
-                                       | XCB_EVENT_MASK_BUTTON_RELEASE
-                                       | XCB_EVENT_MASK_POINTER_MOTION,
-                                       XCB_GRAB_MODE_ASYNC,
-                                       XCB_GRAB_MODE_ASYNC,
-                                       root, cursor, XCB_CURRENT_TIME);
+          xcb_grab_pointer_unchecked(getGlobals().connection,
+                                     false,
+                                     root,
+                                     XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+                                       XCB_EVENT_MASK_POINTER_MOTION,
+                                     XCB_GRAB_MODE_ASYNC,
+                                     XCB_GRAB_MODE_ASYNC,
+                                     root,
+                                     cursor,
+                                     XCB_CURRENT_TIME);
 
-        if((grab_ptr_r = xcb_grab_pointer_reply(getGlobals().connection, grab_ptr_c, NULL)))
-        {
+        if ((grab_ptr_r = xcb_grab_pointer_reply(getGlobals().connection, grab_ptr_c, NULL))) {
             p_delete(&grab_ptr_r);
             return true;
         }
@@ -71,9 +71,7 @@ mousegrabber_grab(xcb_cursor_t cursor)
  * \param y The received mouse event y component.
  * \param mask The received mouse event bit mask.
  */
-void
-mousegrabber_handleevent(lua_State *L, int x, int y, uint16_t mask)
-{
+void mousegrabber_handleevent(lua_State* L, int x, int y, uint16_t mask) {
     luaA_mouse_pushstatus(L, x, y, mask);
 }
 
@@ -94,19 +92,15 @@ mousegrabber_handleevent(lua_State *L, int x, int y, uint16_t mask)
  * @noreturn
  * @staticfct run
  */
-static int
-luaA_mousegrabber_run(lua_State *L)
-{
-    if(getGlobals().mousegrabber != LUA_REFNIL)
+static int luaA_mousegrabber_run(lua_State* L) {
+    if (getGlobals().mousegrabber != LUA_REFNIL)
         luaL_error(L, "mousegrabber already running");
 
     xcb_cursor_t cursor = XCB_NONE;
 
-    if(!lua_isnil(L, 2))
-    {
+    if (!lua_isnil(L, 2)) {
         uint16_t cfont = xcursor_font_fromstr(luaL_checkstring(L, 2));
-        if(!cfont)
-        {
+        if (!cfont) {
             luaA_warn(L, "invalid cursor");
             return 0;
         }
@@ -116,8 +110,7 @@ luaA_mousegrabber_run(lua_State *L)
 
     luaA_registerfct(L, 1, &(getGlobals().mousegrabber));
 
-    if(!mousegrabber_grab(cursor))
-    {
+    if (!mousegrabber_grab(cursor)) {
         luaA_unregister(L, &(getGlobals().mousegrabber));
         luaL_error(L, "unable to grab mouse pointer");
     }
@@ -130,9 +123,7 @@ luaA_mousegrabber_run(lua_State *L)
  * @staticfct stop
  * @noreturn
  */
-int
-luaA_mousegrabber_stop(lua_State *L)
-{
+int luaA_mousegrabber_stop(lua_State* L) {
     xcb_ungrab_pointer(getGlobals().connection, XCB_CURRENT_TIME);
     luaA_unregister(L, &getGlobals().mousegrabber);
     return 0;
@@ -143,21 +134,18 @@ luaA_mousegrabber_stop(lua_State *L)
  * @treturn boolean True if running, false otherwise.
  * @staticfct isrunning
  */
-static int
-luaA_mousegrabber_isrunning(lua_State *L)
-{
+static int luaA_mousegrabber_isrunning(lua_State* L) {
     lua_pushboolean(L, getGlobals().mousegrabber != LUA_REFNIL);
     return 1;
 }
 
-const struct luaL_Reg awesome_mousegrabber_lib[] =
-{
-    { "run", luaA_mousegrabber_run },
-    { "stop", luaA_mousegrabber_stop },
-    { "isrunning", luaA_mousegrabber_isrunning },
-    { "__index", Lua::default_index },
-    { "__newindex", Lua::default_newindex },
-    { NULL, NULL }
+const struct luaL_Reg awesome_mousegrabber_lib[] = {
+  {       "run",       luaA_mousegrabber_run},
+  {      "stop",      luaA_mousegrabber_stop},
+  { "isrunning", luaA_mousegrabber_isrunning},
+  {   "__index",          Lua::default_index},
+  {"__newindex",       Lua::default_newindex},
+  {        NULL,                        NULL}
 };
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
