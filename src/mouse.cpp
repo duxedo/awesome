@@ -113,10 +113,12 @@ bool mouse_query_pointer(
     *x = query_ptr_r->win_x;
     *y = query_ptr_r->win_y;
 
-    if (mask)
+    if (mask) {
         *mask = query_ptr_r->mask;
-    if (child)
+    }
+    if (child) {
         *child = query_ptr_r->child;
+    }
 
     p_delete(&query_ptr_r);
 
@@ -160,18 +162,20 @@ static int luaA_mouse_index(lua_State* L) {
     if (A_STRNEQ(attr, "screen")) {
         if (miss_index_handler != LUA_REFNIL) {
             return luaA_call_handler(L, miss_index_handler);
-        } else
+        } else {
             return Lua::default_index(L);
+        }
     }
 
     if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, NULL)) {
         /* Nothing ever handles mouse.screen being nil. Lying is better than
          * having lots of lua errors in this case.
          */
-        if (getGlobals().focus.client)
+        if (getGlobals().focus.client) {
             luaA_object_push(L, getGlobals().focus.client->screen);
-        else
+        } else {
             luaA_object_push(L, screen_get_primary());
+        }
         return 1;
     }
 
@@ -191,8 +195,9 @@ static int luaA_mouse_newindex(lua_State* L) {
         /* Call the lua mouse property handler */
         if (miss_newindex_handler != LUA_REFNIL) {
             return luaA_call_handler(L, miss_newindex_handler);
-        } else
+        } else {
             return Lua::default_newindex(L);
+        }
     }
 
     screen = luaA_checkscreen(L, 3);
@@ -218,10 +223,11 @@ int luaA_mouse_pushstatus(lua_State* L, int x, int y, uint16_t mask) {
     int i = 1;
 
     for (uint16_t maski = XCB_BUTTON_MASK_1; maski <= XCB_BUTTON_MASK_5; maski <<= 1) {
-        if (mask & maski)
+        if (mask & maski) {
             lua_pushboolean(L, true);
-        else
+        } else {
             lua_pushboolean(L, false);
+        }
         lua_rawseti(L, -2, i++);
     }
     lua_setfield(L, -2, "buttons");
@@ -238,27 +244,31 @@ static int luaA_mouse_coords(lua_State* L) {
         luaA_checktable(L, 1);
         bool ignore_enter_notify = (lua_gettop(L) == 2 && luaA_checkboolean(L, 2));
 
-        if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, &mask))
+        if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, &mask)) {
             return 0;
+        }
 
         x = round(
           luaA_getopt_number_range(L, 1, "x", mouse_x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         y = round(
           luaA_getopt_number_range(L, 1, "y", mouse_y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
 
-        if (ignore_enter_notify)
+        if (ignore_enter_notify) {
             client_ignore_enterleave_events();
+        }
 
         mouse_warp_pointer(getGlobals().screen->root, x, y);
 
-        if (ignore_enter_notify)
+        if (ignore_enter_notify) {
             client_restore_enterleave_events();
+        }
 
         lua_pop(L, 1);
     }
 
-    if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, &mask))
+    if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, &mask)) {
         return 0;
+    }
 
     return luaA_mouse_pushstatus(L, mouse_x, mouse_y, mask);
 }
@@ -272,17 +282,20 @@ static int luaA_mouse_object_under_pointer(lua_State* L) {
     int16_t mouse_x, mouse_y;
     xcb_window_t child;
 
-    if (!mouse_query_pointer_root(&mouse_x, &mouse_y, &child, NULL))
+    if (!mouse_query_pointer_root(&mouse_x, &mouse_y, &child, NULL)) {
         return 0;
+    }
 
     drawin_t* drawin;
     client_t* client;
 
-    if ((drawin = drawin_getbywin(child)))
+    if ((drawin = drawin_getbywin(child))) {
         return luaA_object_push(L, drawin);
+    }
 
-    if ((client = client_getbyframewin(child)))
+    if ((client = client_getbyframewin(child))) {
         return luaA_object_push(L, client);
+    }
 
     return 0;
 }

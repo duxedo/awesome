@@ -274,8 +274,9 @@ static void acquire_WM_Sn(bool replace) {
                             "Awesome WM_Sn selection owner window");
 
     atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().default_screen);
-    if (!atom_name)
+    if (!atom_name) {
         fatal("error getting WM_Sn atom name");
+    }
 
     atom_q =
       xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name);
@@ -283,8 +284,9 @@ static void acquire_WM_Sn(bool replace) {
     p_delete(&atom_name);
 
     atom_r = xcb_intern_atom_reply(getGlobals().connection, atom_q, NULL);
-    if (!atom_r)
+    if (!atom_r) {
         fatal("error getting WM_Sn atom");
+    }
 
     getGlobals().selection_atom = atom_r->atom;
     p_delete(&atom_r);
@@ -294,10 +296,12 @@ static void acquire_WM_Sn(bool replace) {
       getGlobals().connection,
       xcb_get_selection_owner(getGlobals().connection, getGlobals().selection_atom),
       NULL);
-    if (!get_sel_reply)
+    if (!get_sel_reply) {
         fatal("GetSelectionOwner for WM_Sn failed");
-    if (!replace && get_sel_reply->owner != XCB_NONE)
+    }
+    if (!replace && get_sel_reply->owner != XCB_NONE) {
         fatal("another window manager is already running (selection owned; use --replace)");
+    }
 
     /* Acquire the selection */
     xcb_set_selection_owner(getGlobals().connection,
@@ -411,9 +415,10 @@ static void a_xcb_check(void) {
 static gboolean a_xcb_io_cb(GIOChannel* source, GIOCondition cond, gpointer data) {
     /* a_xcb_check() already handled all events */
 
-    if (xcb_connection_has_error(getGlobals().connection))
+    if (xcb_connection_has_error(getGlobals().connection)) {
         fatal("X server connection broke (error %d)",
               xcb_connection_has_error(getGlobals().connection));
+    }
 
     return TRUE;
 }
@@ -438,8 +443,9 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
     /* Don't sleep if there is a pending event */
     assert(getGlobals().pending_event == NULL);
     getGlobals().pending_event = xcb_poll_for_event(getGlobals().connection);
-    if (getGlobals().pending_event != NULL)
+    if (getGlobals().pending_event != NULL) {
         timeout = 0;
+    }
 
     /* Check how long this main loop iteration took */
     gettimeofday(&now, NULL);
@@ -482,14 +488,16 @@ static gboolean reap_children(GIOChannel* channel, GIOCondition condition, gpoin
     int status;
     char buffer[1024];
     ssize_t result = read(sigchld_pipe[0], &buffer[0], sizeof(buffer));
-    if (result < 0)
+    if (result < 0) {
         fatal("Error reading from signal pipe: %s", strerror(errno));
+    }
 
     while ((child = waitpid(-1, &status, WNOHANG)) > 0) {
         spawn_child_exited(child, status);
     }
-    if (child < 0 && errno != ECHILD)
+    if (child < 0 && errno != ECHILD) {
         warn("waitpid(-1) failed: %s", strerror(errno));
+    }
     return TRUE;
 }
 
@@ -549,8 +557,9 @@ int main(int argc, char** argv) {
     auto opts = Options::options_check_args(argc, argv, &default_init_flags);
 
     /* Get XDG basedir data */
-    if (!xdgInitHandle(&xdg))
+    if (!xdgInitHandle(&xdg)) {
         fatal("Function xdgInitHandle() failed, is $HOME unset?");
+    }
 
     /* add XDG_CONFIG_DIR as include path */
     const char* const* xdgconfigdirs = xdgSearchableConfigDirectories(&xdg);
@@ -598,8 +607,9 @@ int main(int argc, char** argv) {
 
     /* Setup pipe for SIGCHLD processing */
     {
-        if (!g_unix_open_pipe(sigchld_pipe, FD_CLOEXEC, NULL))
+        if (!g_unix_open_pipe(sigchld_pipe, FD_CLOEXEC, NULL)) {
             fatal("Failed to create pipe");
+        }
 
         GIOChannel* channel = g_io_channel_unix_new(sigchld_pipe[0]);
         g_io_add_watch(channel, G_IO_IN, reap_children, NULL);
@@ -633,15 +643,18 @@ int main(int argc, char** argv) {
 
     /* X stuff */
     getGlobals().connection = xcb_connect(NULL, &getGlobals().default_screen);
-    if (xcb_connection_has_error(getGlobals().connection))
+    if (xcb_connection_has_error(getGlobals().connection)) {
         fatal("cannot open display (error %d)", xcb_connection_has_error(getGlobals().connection));
+    }
 
     getGlobals().screen = xcb_aux_get_screen(getGlobals().connection, getGlobals().default_screen);
     getGlobals().default_visual = draw_default_visual(getGlobals().screen);
-    if (default_init_flags & Options::INIT_FLAG_ARGB)
+    if (default_init_flags & Options::INIT_FLAG_ARGB) {
         getGlobals().visual = draw_argb_visual(getGlobals().screen);
-    if (!getGlobals().visual)
+    }
+    if (!getGlobals().visual) {
         getGlobals().visual = getGlobals().default_visual;
+    }
     getGlobals().default_depth =
       draw_visual_depth(getGlobals().screen, getGlobals().visual->visual_id);
     getGlobals().default_cmap = getGlobals().screen->default_colormap;
@@ -656,8 +669,9 @@ int main(int argc, char** argv) {
     }
 
 #ifdef WITH_XCB_ERRORS
-    if (xcb_errors_context_new(globalconf.connection, &globalconf.errors_ctx) < 0)
+    if (xcb_errors_context_new(globalconf.connection, &globalconf.errors_ctx) < 0) {
         fatal("Failed to initialize xcb-errors");
+    }
 #endif
 
     /* Get a recent timestamp */
@@ -672,13 +686,16 @@ int main(int argc, char** argv) {
     xcb_prefetch_extension_data(getGlobals().connection, &xcb_xfixes_id);
 
     if (xcb_cursor_context_new(
-          getGlobals().connection, getGlobals().screen, &getGlobals().cursor_ctx) < 0)
+          getGlobals().connection, getGlobals().screen, &getGlobals().cursor_ctx) < 0) {
         fatal("Failed to initialize xcb-cursor");
+    }
     getGlobals().xrmdb = xcb_xrm_database_from_default(getGlobals().connection);
-    if (getGlobals().xrmdb == NULL)
+    if (getGlobals().xrmdb == NULL) {
         getGlobals().xrmdb = xcb_xrm_database_from_string("");
-    if (getGlobals().xrmdb == NULL)
+    }
+    if (getGlobals().xrmdb == NULL) {
         fatal("Failed to initialize xcb-xrm");
+    }
 
     /* Did we get some usable data from the above X11 setup? */
     draw_test_cairo_xcb();
@@ -705,8 +722,9 @@ int main(int argc, char** argv) {
         /* This causes an error if some other window manager is running */
         cookie = xcb_change_window_attributes_checked(
           getGlobals().connection, getGlobals().screen->root, XCB_CW_EVENT_MASK, &select_input_val);
-        if (xcb_request_check(getGlobals().connection, cookie))
+        if (xcb_request_check(getGlobals().connection, cookie)) {
             fatal("another window manager is already running (can't select SubstructureRedirect)");
+        }
     }
 
     /* Prefetch the maximum request length */
@@ -734,9 +752,10 @@ int main(int argc, char** argv) {
     /* check for xfixes extension */
     query = xcb_get_extension_data(getGlobals().connection, &xcb_xfixes_id);
     getGlobals().have_xfixes = query && query->present;
-    if (getGlobals().have_xfixes)
+    if (getGlobals().have_xfixes) {
         xcb_discard_reply(getGlobals().connection,
                           xcb_xfixes_query_version(getGlobals().connection, 1, 0).sequence);
+    }
 
     event_init();
 
@@ -813,16 +832,18 @@ int main(int argc, char** argv) {
         /* Disable automatic screen creation, awful.screen has a fallback */
         getGlobals().ignore_screens = true;
 
-        if (!opts.configPath || !Lua::parserc(&xdg, opts.configPath->c_str()))
+        if (!opts.configPath || !Lua::parserc(&xdg, opts.configPath->c_str())) {
             fatal("couldn't find any rc file");
+        }
     }
 
     /* init screens information */
     screen_scan();
 
     /* Parse and run configuration file after adding the screens */
-    if (((!getGlobals().no_auto_screen) && !Lua::parserc(&xdg, opts.configPath)))
+    if (((!getGlobals().no_auto_screen) && !Lua::parserc(&xdg, opts.configPath))) {
         fatal("couldn't find any rc file");
+    }
 
     xdgWipeHandle(&xdg);
 
@@ -831,11 +852,12 @@ int main(int argc, char** argv) {
     screen_emit_scanned();
 
     /* Exit if the user doesn't read the instructions properly */
-    if (getGlobals().no_auto_screen && !getGlobals().screens.size())
+    if (getGlobals().no_auto_screen && !getGlobals().screens.size()) {
         fatal(
           "When -m/--screen is set to \"off\", you **must** create a "
           "screen object before or inside the screen \"scanned\" "
           " signal. Using AwesomeWM with no screen is **not supported**.");
+    }
 
     client_emit_scanning();
 

@@ -89,8 +89,9 @@ static int luaA_selection_get(lua_State* L) {
     while (true) {
         event = xcb_wait_for_event(getGlobals().connection);
 
-        if (!event)
+        if (!event) {
             return 0;
+        }
 
         if (XCB_EVENT_RESPONSE_TYPE(event) != XCB_SELECTION_NOTIFY) {
             /* \todo Eventually, this may be rewritten with adding a static
@@ -125,8 +126,9 @@ static int luaA_selection_get(lua_State* L) {
                 p_delete(&event);
 
                 return 1;
-            } else
+            } else {
                 break;
+            }
         }
     }
 

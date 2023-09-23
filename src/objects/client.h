@@ -259,14 +259,16 @@ static inline void client_raise(client_t* c) {
     int counter = 0;
 
     /* Find number of transient layers. */
-    for (counter = 0; tc->transient_for; counter++)
+    for (counter = 0; tc->transient_for; counter++) {
         tc = tc->transient_for;
+    }
 
     /* Push them in reverse order. */
     for (; counter > 0; counter--) {
         tc = c;
-        for (int i = 0; i < counter; i++)
+        for (int i = 0; i < counter; i++) {
             tc = tc->transient_for;
+        }
         stack_client_append(tc);
     }
 

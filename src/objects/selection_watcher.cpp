@@ -102,8 +102,9 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
             /* Selection becomes active */
 
             /* Create a window for it */
-            if (selection->window == XCB_NONE)
+            if (selection->window == XCB_NONE) {
                 selection->window = xcb_generate_id(getGlobals().connection);
+            }
             xcb_create_window(getGlobals().connection,
                               getGlobals().screen->root_depth,
                               selection->window,
@@ -145,9 +146,10 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
             lua_pop(L, 1);
         } else {
             /* Stop watching and destroy the window */
-            if (getGlobals().have_xfixes)
+            if (getGlobals().have_xfixes) {
                 xcb_xfixes_select_selection_input(
                   getGlobals().connection, selection->window, selection->selection, 0);
+            }
             xcb_destroy_window(getGlobals().connection, selection->window);
 
             /* Unreference the selection object */

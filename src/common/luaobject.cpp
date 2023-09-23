@@ -104,8 +104,9 @@ void* luaA_object_incref(lua_State* L, int tud, int oud) {
  * \return A pointer to the object.
  */
 void luaA_object_decref(lua_State* L, int tud, const void* pointer) {
-    if (!pointer)
+    if (!pointer) {
         return;
+    }
 
     /* First, refcount-- */
     /* Get the metatable */
@@ -129,11 +130,12 @@ void luaA_object_decref(lua_State* L, int tud, const void* pointer) {
     /* Push the pointer (key) */
     lua_pushlightuserdata(L, (void*)pointer);
     /* Hasn't the ref reached 0? */
-    if (count)
+    if (count) {
         lua_pushinteger(L, count);
-    else
+    } else {
         /* Yup, delete it, set nil as value */
         lua_pushnil(L);
+    }
     /* Set meta[pointer] = count/nil */
     lua_rawset(L, -3);
     /* Pop metatable */
@@ -199,8 +201,9 @@ void luaA_object_disconnect_signal_from_stack(lua_State* L, int oud, const char*
     luaA_checkfunction(L, ud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     void* ref = (void*)lua_topointer(L, ud);
-    if (obj->signals.disconnect(name, ref))
+    if (obj->signals.disconnect(name, ref)) {
         luaA_object_unref_item(L, oud, ref);
+    }
     lua_remove(L, ud);
 }
 
@@ -263,8 +266,9 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
             /* push object */
             lua_pushvalue(L, oud_abs);
             /* push all args */
-            for (int j = 0; j < nargs; j++)
+            for (int j = 0; j < nargs; j++) {
                 lua_pushvalue(L, -nargs - nbfunc - 1 + i);
+            }
             /* push first function */
             lua_pushvalue(L, -nargs - nbfunc - 1 + i);
             /* remove this first function */
@@ -314,8 +318,9 @@ int luaA_object_tostring(lua_State* L) {
             n = 2 + lua_class->tostring(L, object);
             lua_pushliteral(L, ")");
 
-            for (k = 0; k < n; k++)
+            for (k = 0; k < n; k++) {
                 lua_insert(L, -offset);
+            }
             offset += n;
         }
     }

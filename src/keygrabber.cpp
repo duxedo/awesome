@@ -104,8 +104,9 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
  * @deprecated keygrabber.run
  */
 static int luaA_keygrabber_run(lua_State* L) {
-    if (getGlobals().keygrabber != LUA_REFNIL)
+    if (getGlobals().keygrabber != LUA_REFNIL) {
         luaL_error(L, "keygrabber already running");
+    }
 
     luaA_registerfct(L, 1, &getGlobals().keygrabber);
 

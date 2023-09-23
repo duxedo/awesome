@@ -196,8 +196,9 @@ static bool composite_manager_running(void) {
       xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name),
       NULL);
     p_delete(&atom_name);
-    if (!atom_r)
+    if (!atom_r) {
         return false;
+    }
 
     selection_r = xcb_get_selection_owner_reply(
       getGlobals().connection,
@@ -217,10 +218,12 @@ namespace Lua {
  * @noreturn
  */
 static int quit(lua_State* L) {
-    if (!lua_isnoneornil(L, 1))
+    if (!lua_isnoneornil(L, 1)) {
         getGlobals().exit_code = luaL_checkinteger(L, 1);
-    if (getGlobals().loop == NULL)
+    }
+    if (getGlobals().loop == NULL) {
         getGlobals().loop = g_main_loop_new(NULL, FALSE);
+    }
     g_main_loop_quit(getGlobals().loop);
     return 0;
 }
@@ -390,11 +393,13 @@ static const char* get_modifier_name(int map_index) {
 static uint32_t one_utf8_to_utf32(const char* input, const size_t length) {
     gunichar character = g_utf8_get_char_validated(input, length);
     // Return 0 if there is more than one UTF-8 character:
-    if (g_unichar_to_utf8(character, NULL) != (gint)length)
+    if (g_unichar_to_utf8(character, NULL) != (gint)length) {
         return 0;
+    }
     // Return 0 if the character is invalid.
-    if (character == (gunichar)-1 || character == (gunichar)-2)
+    if (character == (gunichar)-1 || character == (gunichar)-2) {
         return 0;
+    }
     return character;
 }
 
@@ -440,27 +445,30 @@ static int get_key_name(lua_State* L) {
         int keycode_from_hash = atoi(input + 1);
         // We discard keycodes with invalid values:
         const xcb_setup_t* setup = xcb_get_setup(getGlobals().connection);
-        if (keycode_from_hash < setup->min_keycode || keycode_from_hash > setup->max_keycode)
+        if (keycode_from_hash < setup->min_keycode || keycode_from_hash > setup->max_keycode) {
             return 0;
+        }
         xkb_keycode_t keycode = (xkb_keycode_t)keycode_from_hash;
         struct xkb_keymap* keymap = xkb_state_get_keymap(getGlobals().xkb_state);
         xkb_keymap_key_get_syms_by_level(keymap, keycode, 0, 0, &keysyms);
         keysym = keysyms[0];
-    } else if ((ucs = one_utf8_to_utf32(input, length)) > 0) // syntax #2
+    } else if ((ucs = one_utf8_to_utf32(input, length)) > 0) { // syntax #2
         keysym = xkb_utf32_to_keysym_compat(ucs);
-    else // syntax #3
+    } else { // syntax #3
         keysym = xkb_keysym_from_name(input, XKB_KEYSYM_NO_FLAGS);
+    }
 
-    if (keysym == XKB_KEY_NoSymbol)
+    if (keysym == XKB_KEY_NoSymbol) {
         return 0;
-    else {
+    } else {
         char* name = key_get_keysym_name(keysym);
         lua_pushstring(L, name);
         char utfname[8];
-        if (xkb_keysym_to_utf8(keysym, utfname, 8) > 0)
+        if (xkb_keysym_to_utf8(keysym, utfname, 8) > 0) {
             lua_pushstring(L, utfname);
-        else
+        } else {
             return 1; // this will make the second returned value a nil
+        }
     }
     return 2;
 }
@@ -519,8 +527,9 @@ static int get_key_name(lua_State* L) {
 static int get_modifiers(lua_State* L) {
     xcb_get_modifier_mapping_reply_t* mods = xcb_get_modifier_mapping_reply(
       getGlobals().connection, xcb_get_modifier_mapping(getGlobals().connection), NULL);
-    if (!mods)
+    if (!mods) {
         return 0;
+    }
 
     xcb_keycode_t* mappings = xcb_get_modifier_mapping_keycodes(mods);
     struct xkb_keymap* keymap = xkb_state_get_keymap(getGlobals().xkb_state);
@@ -671,8 +680,9 @@ static int get_active_modifiers(lua_State* L) {
  */
 
 static int awesome_index(lua_State* L) {
-    if (luaA_usemetatable(L, 1, 2))
+    if (luaA_usemetatable(L, 1, 2)) {
         return 1;
+    }
 
     auto buf = checkstring(L, 2);
 
@@ -712,8 +722,9 @@ static int awesome_index(lua_State* L) {
     }
 
     if (buf == "startup_errors") {
-        if (getGlobals().startup_errors.size() == 0)
+        if (getGlobals().startup_errors.size() == 0) {
             return 0;
+        }
         lua_pushstring(L, getGlobals().startup_errors.c_str());
         return 1;
     }
@@ -807,16 +818,18 @@ static const char* tolstring(lua_State* L, int idx, size_t* len) {
     /* Try using the metatable. If that fails, push the value itself onto
      * the stack.
      */
-    if (!luaL_callmeta(L, idx, "__tostring"))
+    if (!luaL_callmeta(L, idx, "__tostring")) {
         lua_pushvalue(L, idx);
+    }
 
     switch (lua_type(L, -1)) {
     case LUA_TSTRING: lua_pushvalue(L, -1); break;
     case LUA_TBOOLEAN:
-        if (lua_toboolean(L, -1))
+        if (lua_toboolean(L, -1)) {
             lua_pushliteral(L, "true");
-        else
+        } else {
             lua_pushliteral(L, "false");
+        }
         break;
     case LUA_TNUMBER: lua_pushfstring(L, "%f", lua_tonumber(L, -1)); break;
     case LUA_TNIL: lua_pushstring(L, "nil"); break;
@@ -955,10 +968,11 @@ static void add_to_search_path(lua_State* L, const Paths& searchpath, bool for_l
         int components;
         lua_pushliteral(L, ";");
         lua_pushlstring(L, each.c_str(), each.native().size());
-        if (for_lua)
+        if (for_lua) {
             lua_pushliteral(L, "/?.lua");
-        else
+        } else {
             lua_pushliteral(L, "/?.so");
+        }
         lua_concat(L, 3);
 
         if (for_lua) {

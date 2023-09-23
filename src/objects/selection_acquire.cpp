@@ -92,8 +92,9 @@ static void selection_release(lua_State* L, int ud) {
 void selection_handle_selectionclear(xcb_selection_clear_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (selection_acquire_find_by_window(L, ev->owner) == 0)
+    if (selection_acquire_find_by_window(L, ev->owner) == 0) {
         return;
+    }
 
     selection_release(L, -1);
     lua_pop(L, 1);
@@ -102,9 +103,10 @@ void selection_handle_selectionclear(xcb_selection_clear_event_t* ev) {
 void selection_handle_selectionrequest(xcb_selection_request_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (ev->property == XCB_NONE)
+    if (ev->property == XCB_NONE) {
         /* Obsolete client */
         ev->property = ev->target;
+    }
 
     if (selection_acquire_find_by_window(L, ev->owner) == 0) {
         selection_transfer_reject(ev->requestor, ev->selection, ev->target, ev->time);

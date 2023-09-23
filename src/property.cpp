@@ -105,8 +105,9 @@ void property_update_wm_transient_for(client_t* c, xcb_get_property_cookie_t coo
     c->transient_for_window = trans;
 
     luaA_object_push(L, c);
-    if (!c->has_NET_WM_WINDOW_TYPE)
+    if (!c->has_NET_WM_WINDOW_TYPE) {
         client_set_type(L, -1, trans == XCB_NONE ? WINDOW_TYPE_NORMAL : WINDOW_TYPE_DIALOG);
+    }
     client_set_above(L, -1, false);
     lua_pop(L, 1);
 
@@ -128,8 +129,9 @@ void property_update_wm_client_leader(client_t* c, xcb_get_property_cookie_t coo
 
     reply = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
 
-    if (reply && reply->value_len && (data = xcb_get_property_value(reply)))
+    if (reply && reply->value_len && (data = xcb_get_property_value(reply))) {
         c->leader_window = *(xcb_window_t*)data;
+    }
 
     p_delete(&reply);
 }
@@ -164,8 +166,9 @@ void property_update_wm_hints(client_t* c, xcb_get_property_cookie_t cookie) {
     lua_State* L = globalconf_get_lua_State();
     xcb_icccm_wm_hints_t wmh;
 
-    if (!xcb_icccm_get_wm_hints_reply(getGlobals().connection, cookie, &wmh, NULL))
+    if (!xcb_icccm_get_wm_hints_reply(getGlobals().connection, cookie, &wmh, NULL)) {
         return;
+    }
 
     luaA_object_push(L, c);
 
@@ -173,18 +176,21 @@ void property_update_wm_hints(client_t* c, xcb_get_property_cookie_t cookie) {
     lua_pushboolean(L, xcb_icccm_wm_hints_get_urgency(&wmh));
     luaA_object_emit_signal(L, -2, "request::urgent", 1);
 
-    if (wmh.flags & XCB_ICCCM_WM_HINT_INPUT)
+    if (wmh.flags & XCB_ICCCM_WM_HINT_INPUT) {
         c->nofocus = !wmh.input;
+    }
 
-    if (wmh.flags & XCB_ICCCM_WM_HINT_WINDOW_GROUP)
+    if (wmh.flags & XCB_ICCCM_WM_HINT_WINDOW_GROUP) {
         client_set_group_window(L, -1, wmh.window_group);
+    }
 
     if (!c->have_ewmh_icon) {
         if (wmh.flags & XCB_ICCCM_WM_HINT_ICON_PIXMAP) {
-            if (wmh.flags & XCB_ICCCM_WM_HINT_ICON_MASK)
+            if (wmh.flags & XCB_ICCCM_WM_HINT_ICON_MASK) {
                 client_set_icon_from_pixmaps(c, wmh.icon_pixmap, wmh.icon_mask);
-            else
+            } else {
                 client_set_icon_from_pixmaps(c, wmh.icon_pixmap, XCB_NONE);
+            }
         }
     }
 
@@ -203,8 +209,9 @@ void property_update_wm_class(client_t* c, xcb_get_property_cookie_t cookie) {
     lua_State* L = globalconf_get_lua_State();
     xcb_icccm_get_wm_class_reply_t hint;
 
-    if (!xcb_icccm_get_wm_class_reply(getGlobals().connection, cookie, &hint, NULL))
+    if (!xcb_icccm_get_wm_class_reply(getGlobals().connection, cookie, &hint, NULL)) {
         return;
+    }
 
     luaA_object_push(L, c);
     client_set_class_instance(L, -1, hint.class_name, hint.instance_name);
@@ -216,8 +223,9 @@ void property_update_wm_class(client_t* c, xcb_get_property_cookie_t cookie) {
 static void property_handle_net_wm_strut_partial(uint8_t state, xcb_window_t window) {
     client_t* c = client_getbywin(window);
 
-    if (c)
+    if (c) {
         ewmh_process_client_strut(c);
+    }
 }
 
 xcb_get_property_cookie_t property_get_net_wm_icon(client_t* c) {
@@ -298,8 +306,9 @@ void property_update_wm_protocols(client_t* c, xcb_get_property_cookie_t cookie)
     xcb_icccm_get_wm_protocols_reply_t protocols;
 
     /* If this fails for any reason, we still got the old value */
-    if (!xcb_icccm_get_wm_protocols_reply(getGlobals().connection, cookie, &protocols, NULL))
+    if (!xcb_icccm_get_wm_protocols_reply(getGlobals().connection, cookie, &protocols, NULL)) {
         return;
+    }
 
     xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
     memcpy(&c->protocols, &protocols, sizeof(protocols));
@@ -359,18 +368,22 @@ static void property_handle_propertynotify_xproperty(xcb_property_notify_event_t
 
     auto it = getGlobals().xproperties.find(lookup);
 
-    if (it == getGlobals().xproperties.end())
+    if (it == getGlobals().xproperties.end()) {
         /* Property is not registered */
         return;
+    }
 
     if (ev->window != getGlobals().screen->root) {
         obj = client_getbywin(ev->window);
-        if (!obj)
+        if (!obj) {
             obj = drawin_getbywin(ev->window);
-        if (!obj)
+        }
+        if (!obj) {
             return;
-    } else
+        }
+    } else {
         obj = NULL;
+    }
 
     std::string buf = std::format("xproperty::{}", it->name);
 
@@ -459,19 +472,21 @@ int luaA_register_xproperty(lua_State* L) {
 
     name = luaL_checkstring(L, 1);
     type = luaL_checkoption(L, 2, NULL, args);
-    if (type == 0)
+    if (type == 0) {
         property.type = xproperty::PROP_STRING;
-    else if (type == 1)
+    } else if (type == 1) {
         property.type = xproperty::PROP_NUMBER;
-    else
+    } else {
         property.type = xproperty::PROP_BOOLEAN;
+    }
 
     atom_r = xcb_intern_atom_reply(
       getGlobals().connection,
       xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(name), name),
       NULL);
-    if (!atom_r)
+    if (!atom_r) {
         return 0;
+    }
 
     property.atom = atom_r->atom;
     p_delete(&atom_r);
