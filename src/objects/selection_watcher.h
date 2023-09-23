@@ -23,6 +23,7 @@
 #define AWESOME_OBJECTS_SELECTION_WATCHER_H
 
 #include "common/luahdr.h"
+
 #include <xcb/xcb.h>
 
 void selection_watcher_class_setup(lua_State*);

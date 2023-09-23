@@ -20,16 +20,17 @@
  */
 
 #include "options.h"
+
 #include "common/util.h"
 #include "common/version.h"
 
-#include <unistd.h>
+#include <basedir_fs.h>
+#include <filesystem>
+#include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/stat.h>
-#include <getopt.h>
-#include <basedir_fs.h>
-#include <filesystem>
+#include <unistd.h>
 #include <vector>
 
 #define KEY_VALUE_BUF_MAX 64
@@ -37,13 +38,11 @@
 
 namespace Options {
 
-static void
-set_api_level(char *value)
-{
+static void set_api_level(char* value) {
     if (!value)
         return;
 
-    char *ptr;
+    char* ptr;
     int ret = strtol(value, &ptr, 10);
 
     /* There is no valid number at all */
@@ -65,9 +64,7 @@ set_api_level(char *value)
     getGlobals().api_level = ret;
 }
 
-static void
-push_arg(std::vector<char*>& args, char *value, size_t *len)
-{
+static void push_arg(std::vector<char*>& args, char* value, size_t* len) {
     value[*len] = '\0';
     args.push_back(strdup(value));
     (*len) = 0;
@@ -76,41 +73,40 @@ push_arg(std::vector<char*>& args, char *value, size_t *len)
 /*
  * Support both shebang and modeline modes.
  */
-bool
-options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int *init_flags, Paths& paths)
-{
+bool options_init_config(
+  xdgHandle* xdg, char* execpath, const char* configpath, int* init_flags, Paths& paths) {
     /* The different state the parser can have. */
     enum {
-        MODELINE_STATE_INIT       , /* Start of line        */
-        MODELINE_STATE_NEWLINE    , /* Start of line        */
-        MODELINE_STATE_COMMENT    , /* until --             */
-        MODELINE_STATE_MODELINE   , /* until awesome_mode:  */
-        MODELINE_STATE_SHEBANG    , /* until !              */
-        MODELINE_STATE_KEY_DELIM  , /* until the key begins */
-        MODELINE_STATE_KEY        , /* until '='            */
+        MODELINE_STATE_INIT,        /* Start of line        */
+        MODELINE_STATE_NEWLINE,     /* Start of line        */
+        MODELINE_STATE_COMMENT,     /* until --             */
+        MODELINE_STATE_MODELINE,    /* until awesome_mode:  */
+        MODELINE_STATE_SHEBANG,     /* until !              */
+        MODELINE_STATE_KEY_DELIM,   /* until the key begins */
+        MODELINE_STATE_KEY,         /* until '='            */
         MODELINE_STATE_VALUE_DELIM, /* after ':'            */
-        MODELINE_STATE_VALUE      , /* until ',' or '\n'    */
-        MODELINE_STATE_COMPLETE   , /* Parsing is done      */
-        MODELINE_STATE_INVALID    , /* note a modeline      */
+        MODELINE_STATE_VALUE,       /* until ',' or '\n'    */
+        MODELINE_STATE_COMPLETE,    /* Parsing is done      */
+        MODELINE_STATE_INVALID,     /* note a modeline      */
         MODELINE_STATE_ERROR        /* broken modeline      */
     } state = MODELINE_STATE_INIT;
 
     /* The parsing mode */
     enum {
-        MODELINE_MODE_NONE   , /* No modeline */
-        MODELINE_MODE_LINE   , /* modeline    */
+        MODELINE_MODE_NONE,    /* No modeline */
+        MODELINE_MODE_LINE,    /* modeline    */
         MODELINE_MODE_SHEBANG, /* #! shebang  */
     } mode = MODELINE_MODE_NONE;
 
     static const unsigned char name[] = "awesome_mode:";
-    static char key_buf [KEY_VALUE_BUF_MAX+1] = {'\0'};
-    static char file_buf[READ_BUF_MAX+1     ] = {'\0'};
+    static char key_buf[KEY_VALUE_BUF_MAX + 1] = {'\0'};
+    static char file_buf[READ_BUF_MAX + 1] = {'\0'};
     size_t pos = 0;
 
     std::vector<char*> argv;
     argv.push_back(a_strdup(execpath));
 
-    FILE *fp = NULL;
+    FILE* fp = NULL;
 
     /* It is too early to know which config works. So we assume
      * the first one found is the one to use for the modeline. This
@@ -120,7 +116,7 @@ options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int 
      * do
      */
     if (!configpath) {
-        const char *xdg_confpath = xdgConfigFind("awesome/rc.lua", xdg);
+        const char* xdg_confpath = xdgConfigFind("awesome/rc.lua", xdg);
 
         /* xdg_confpath is "string1\0string2\0string3\0\0" */
         if (xdg_confpath && *xdg_confpath)
@@ -158,60 +154,84 @@ options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int 
         }
 
         switch (state) {
-            case MODELINE_STATE_INIT:
-                switch (c) {
-                    case '#':
-                        state = MODELINE_STATE_SHEBANG;
-                        break;
-                    case ' ': case '-':
-                        state = MODELINE_STATE_COMMENT;
-                        break;
-                    default:
-                        state = MODELINE_STATE_INVALID;
-                }
+        case MODELINE_STATE_INIT:
+            switch (c) {
+            case '#': state = MODELINE_STATE_SHEBANG; break;
+            case ' ':
+            case '-': state = MODELINE_STATE_COMMENT; break;
+            default: state = MODELINE_STATE_INVALID;
+            }
+            break;
+        case MODELINE_STATE_NEWLINE:
+            switch (c) {
+            case ' ':
+            case '-': state = MODELINE_STATE_COMMENT; break;
+            default: state = MODELINE_STATE_INVALID;
+            }
+            break;
+        case MODELINE_STATE_COMMENT:
+            switch (c) {
+            case '-': state = MODELINE_STATE_MODELINE; break;
+            default: state = MODELINE_STATE_INVALID;
+            }
+            break;
+        case MODELINE_STATE_MODELINE:
+            if (c == ' ')
                 break;
-            case MODELINE_STATE_NEWLINE:
-                switch (c) {
-                    case ' ': case '-':
-                        state = MODELINE_STATE_COMMENT;
-                        break;
-                    default:
-                        state = MODELINE_STATE_INVALID;
-                }
+            else if (c != name[pos++]) {
+                state = MODELINE_STATE_INVALID;
+                pos = 0;
+            }
+
+            if (pos == 13) {
+                pos = 0;
+                state = MODELINE_STATE_KEY_DELIM;
+                mode = MODELINE_MODE_LINE;
+            }
+
+            break;
+        case MODELINE_STATE_SHEBANG:
+            switch (c) {
+            case '!':
+                mode = MODELINE_MODE_SHEBANG;
+                state = MODELINE_STATE_KEY_DELIM;
                 break;
-            case MODELINE_STATE_COMMENT:
-                switch (c) {
-                    case '-':
-                        state = MODELINE_STATE_MODELINE;
-                        break;
-                    default:
-                        state = MODELINE_STATE_INVALID;
-                }
-                break;
-            case MODELINE_STATE_MODELINE:
-                if (c == ' ')
+            default: state = MODELINE_STATE_INVALID;
+            }
+            break;
+        case MODELINE_STATE_KEY_DELIM:
+            switch (c) {
+            case ' ':
+            case '\t':
+            case ':':
+            case '=': break;
+            case '\n':
+            case '\r': state = MODELINE_STATE_ERROR; break;
+            default:
+                /* In modeline mode, assume all keys are the long name */
+                switch (mode) {
+                case MODELINE_MODE_LINE:
+                    strcpy(key_buf, "--");
+                    pos = 2;
                     break;
-                else if (c != name[pos++]) {
-                    state = MODELINE_STATE_INVALID;
-                    pos   = 0;
-                }
-
-                if (pos == 13) {
-                    pos   = 0;
-                    state = MODELINE_STATE_KEY_DELIM;
-                    mode  = MODELINE_MODE_LINE;
-                }
-
+                case MODELINE_MODE_SHEBANG:
+                case MODELINE_MODE_NONE: break;
+                };
+                state = MODELINE_STATE_KEY;
+                key_buf[pos++] = c;
+            }
+            break;
+        case MODELINE_STATE_KEY:
+            switch (c) {
+            case '=':
+                push_arg(argv, key_buf, &pos);
+                state = MODELINE_STATE_VALUE_DELIM;
                 break;
-            case MODELINE_STATE_SHEBANG:
-                switch(c) {
-                    case '!':
-                        mode  = MODELINE_MODE_SHEBANG;
-                        state = MODELINE_STATE_KEY_DELIM;
-                        break;
-                    default:
-                        state = MODELINE_STATE_INVALID;
-                }
+            case ' ':
+            case '\t':
+            case ':':
+                push_arg(argv, key_buf, &pos);
+                state = MODELINE_STATE_KEY_DELIM;
                 break;
             case MODELINE_STATE_KEY_DELIM:
                 switch (c) {
@@ -285,6 +305,17 @@ options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int 
             case MODELINE_STATE_COMPLETE:
             case MODELINE_STATE_ERROR:
                 break;
+            case '\n':
+            case '\r': state = MODELINE_STATE_COMPLETE; break;
+            default: key_buf[pos++] = c;
+            }
+            break;
+        case MODELINE_STATE_INVALID:
+            /* This cannot happen, the `if` below should prevent it */
+            state = MODELINE_STATE_ERROR;
+            break;
+        case MODELINE_STATE_COMPLETE:
+        case MODELINE_STATE_ERROR: break;
         }
 
         /* No keys or values are that large */
@@ -296,7 +327,8 @@ options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int 
             break;
 
         /* Try the next line */
-        if (((i == READ_BUF_MAX || file_buf[i] == '\0') && !feof(fp)) || state == MODELINE_STATE_INVALID) {
+        if (((i == READ_BUF_MAX || file_buf[i] == '\0') && !feof(fp)) ||
+            state == MODELINE_STATE_INVALID) {
             if (state == MODELINE_STATE_KEY || state == MODELINE_STATE_VALUE)
                 push_arg(argv, key_buf, &pos);
 
@@ -325,17 +357,14 @@ options_init_config(xdgHandle *xdg, char *execpath, const char *configpath, int 
     auto opts = options_check_args(argv.size(), argv.data(), init_flags);
     paths.insert(paths.end(), opts.searchPaths.begin(), opts.searchPaths.end());
     /* Cleanup */
-    for(auto & each: argv) {
+    for (auto& each : argv) {
         free(each);
     }
 
     return state == MODELINE_STATE_COMPLETE;
 }
 
-
-char *
-options_detect_shebang(int argc, char **argv)
-{
+char* options_detect_shebang(int argc, char** argv) {
     /* There is no cross-platform ways to check if it is *really* called by a
      * shebang. There is a couple Linux specific hacks which work with the
      * most common C libraries, but they won't work on *BSD.
@@ -358,10 +387,10 @@ options_detect_shebang(int argc, char **argv)
 
     /* Check if it is executable */
     struct stat inf;
-    if (stat(argv[argc-1], &inf) || !(inf.st_mode & S_IXUSR))
+    if (stat(argv[argc - 1], &inf) || !(inf.st_mode & S_IXUSR))
         return NULL;
 
-    FILE *fp = fopen(argv[argc-1], "r");
+    FILE* fp = fopen(argv[argc - 1], "r");
 
     if (!fp)
         return NULL;
@@ -379,18 +408,16 @@ options_detect_shebang(int argc, char **argv)
         return NULL;
 
     /* Ok, good enough, this is a shebang script, assume it called `awesome` */
-    return a_strdup(argv[argc-1]);
+    return a_strdup(argv[argc - 1]);
 }
 
 /** Print help and exit(2) with given exit_code.
  * \param exit_code The exit code.
  */
-static void __attribute__ ((noreturn))
-exit_help(int exit_code)
-{
-    FILE *outfile = (exit_code == EXIT_SUCCESS) ? stdout : stderr;
+static void __attribute__((noreturn)) exit_help(int exit_code) {
+    FILE* outfile = (exit_code == EXIT_SUCCESS) ? stdout : stderr;
     fprintf(outfile,
-"Usage: awesome [OPTION]\n\
+            "Usage: awesome [OPTION]\n\
   -h, --help             show help\n\
   -v, --version          show version\n\
   -c, --config FILE      configuration file to use\n\
@@ -407,47 +434,36 @@ exit_help(int exit_code)
 #define ARG 1
 #define NO_ARG 0
 
-ConfigResult
-options_check_args(int argc, char **argv, int *init_flags)
-{
+ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
 
-    static struct option long_options[] =
-    {
-        { "help"      , NO_ARG, NULL, 'h'  },
-        { "version"   , NO_ARG, NULL, 'v'  },
-        { "config"    , ARG   , NULL, 'c'  },
-        { "force"     , NO_ARG, NULL, 'f'  },
-        { "check"     , NO_ARG, NULL, 'k'  },
-        { "search"    , ARG   , NULL, 's'  },
-        { "no-argb"   , NO_ARG, NULL, 'a'  },
-        { "replace"   , NO_ARG, NULL, 'r'  },
-        { "screen"    , ARG   , NULL, 'm'  },
-        { "api-level" , ARG   , NULL, 'l'  },
-        { "reap"      , ARG   , NULL, '\1' },
-        { NULL        , NO_ARG, NULL, 0    }
+    static struct option long_options[] = {
+      {     "help", NO_ARG, NULL,  'h'},
+      {  "version", NO_ARG, NULL,  'v'},
+      {   "config",    ARG, NULL,  'c'},
+      {    "force", NO_ARG, NULL,  'f'},
+      {    "check", NO_ARG, NULL,  'k'},
+      {   "search",    ARG, NULL,  's'},
+      {  "no-argb", NO_ARG, NULL,  'a'},
+      {  "replace", NO_ARG, NULL,  'r'},
+      {   "screen",    ARG, NULL,  'm'},
+      {"api-level",    ARG, NULL,  'l'},
+      {     "reap",    ARG, NULL, '\1'},
+      {       NULL, NO_ARG, NULL,    0}
     };
 
     ConfigResult ret;
     int opt;
 
-    while((opt = getopt_long(argc, argv, "vhfkc:arms:l:",
-                             long_options, NULL)) != -1) {
-        switch(opt)
-        {
-          case 'v':
-            eprint_version();
-            break;
-          case 'h':
-            if (! ((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
+    while ((opt = getopt_long(argc, argv, "vhfkc:arms:l:", long_options, NULL)) != -1) {
+        switch (opt) {
+        case 'v': eprint_version(); break;
+        case 'h':
+            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
                 exit_help(EXIT_SUCCESS);
             break;
-          case 'f':
-            (*init_flags) |= INIT_FLAG_FORCE_CMD_ARGS;
-            break;
-          case 'k':
-            (*init_flags) |= INIT_FLAG_RUN_TEST;
-            break;
-          case 'c':
+        case 'f': (*init_flags) |= INIT_FLAG_FORCE_CMD_ARGS; break;
+        case 'k': (*init_flags) |= INIT_FLAG_RUN_TEST; break;
+        case 'c':
             if (ret.configPath) {
                 fatal("--config may only be specified once");
             }
@@ -456,7 +472,7 @@ options_check_args(int argc, char **argv, int *init_flags)
             /* Make sure multi-file config works */
             ret.searchPaths.push_back(ret.configPath.value().parent_path());
             break;
-          case 'm':
+        case 'm':
             /* Validation */
             if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on"))) {
                 fatal("The possible values of -m/--screen are \"on\" or \"off\"");
@@ -467,28 +483,25 @@ options_check_args(int argc, char **argv, int *init_flags)
             (*init_flags) &= ~INIT_FLAG_AUTO_SCREEN;
 
             break;
-          case 's':
+        case 's':
             getGlobals().have_searchpaths = true;
             ret.searchPaths.push_back(optarg);
             break;
-          case 'a':
+        case 'a':
             getGlobals().had_overriden_depth = true;
             (*init_flags) &= ~INIT_FLAG_ARGB;
             break;
-          case 'r':
-            (*init_flags) |= INIT_FLAG_REPLACE_WM;
-            break;
-          case 'l':
-              set_api_level(optarg);
-              break;
-          case '\1':
+        case 'r': (*init_flags) |= INIT_FLAG_REPLACE_WM; break;
+        case 'l': set_api_level(optarg); break;
+        case '\1':
             /* Silently ignore --reap and its argument */
             break;
-          default:
-            if (! ((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
+        default:
+            if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK))
                 exit_help(EXIT_FAILURE);
             break;
-        }}
+        }
+    }
 
     return ret;
 }

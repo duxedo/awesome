@@ -29,9 +29,9 @@ extern "C" {
 #include <string>
 struct client_t;
 
-#define PROPERTY(funcname) \
-    xcb_get_property_cookie_t property_get_##funcname(client_t *c); \
-    void property_update_##funcname(client_t *c, xcb_get_property_cookie_t cookie)
+#define PROPERTY(funcname)                                          \
+    xcb_get_property_cookie_t property_get_##funcname(client_t* c); \
+    void property_update_##funcname(client_t* c, xcb_get_property_cookie_t cookie)
 
 PROPERTY(wm_name);
 PROPERTY(net_wm_name);
@@ -51,10 +51,10 @@ PROPERTY(motif_wm_hints);
 
 #undef PROPERTY
 
-void property_handle_propertynotify(xcb_property_notify_event_t *ev);
-int luaA_register_xproperty(lua_State *L);
-int luaA_set_xproperty(lua_State *L);
-int luaA_get_xproperty(lua_State *L);
+void property_handle_propertynotify(xcb_property_notify_event_t* ev);
+int luaA_register_xproperty(lua_State* L);
+int luaA_set_xproperty(lua_State* L);
+int luaA_get_xproperty(lua_State* L);
 
 struct xproperty {
     xcb_atom_t atom;
@@ -67,8 +67,5 @@ struct xproperty {
         /* CARDINAL with values 0 and 1 (or "0 and != 0") */
         PROP_BOOLEAN
     } type;
-    auto operator<=>(const xproperty & rhs) const {
-        return atom <=> rhs.atom;
-    }
+    auto operator<=>(const xproperty& rhs) const { return atom <=> rhs.atom; }
 };
-

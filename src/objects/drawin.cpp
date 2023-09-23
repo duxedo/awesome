@@ -31,18 +31,18 @@
  */
 
 #include "drawin.h"
+
 #include "common/atoms.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
 #include "event.h"
 #include "ewmh.h"
 #include "globalconf.h"
+#include "math.h"
 #include "objects/client.h"
 #include "objects/screen.h"
 #include "systray.h"
 #include "xwindow.h"
-
-#include "math.h"
 
 #include <cairo-xcb.h>
 #include <xcb/shape.h>
@@ -151,37 +151,30 @@ LUA_OBJECT_FUNCS(drawin_class, drawin_t, drawin)
 
 /** Kick out systray windows.
  */
-static void
-drawin_systray_kickout(drawin_t *w)
-{
-    if(getGlobals().systray.parent == w)
-    {
+static void drawin_systray_kickout(drawin_t* w) {
+    if (getGlobals().systray.parent == w) {
         /* Who! Check that we're not deleting a drawin with a systray, because it
          * may be its parent. If so, we reparent to root before, otherwise it will
          * hurt very much. */
         xcb_reparent_window(getGlobals().connection,
                             getGlobals().systray.window,
                             getGlobals().screen->root,
-                            -512, -512);
+                            -512,
+                            -512);
 
         getGlobals().systray.parent = NULL;
     }
 }
 
-void
-luaA_drawin_systray_kickout(lua_State *L)
-{
+void luaA_drawin_systray_kickout(lua_State* L) {
     drawin_systray_kickout((drawin_t*)luaA_checkudata(L, 1, &drawin_class));
 }
 
-static void
-drawin_wipe(drawin_t *w)
-{
+static void drawin_wipe(drawin_t* w) {
     /* The drawin must already be unmapped, else it
      * couldn't be garbage collected -> no unmap needed */
     p_delete(&(w->cursor));
-    if(w->window)
-    {
+    if (w->window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(w);
         xcb_destroy_window(getGlobals().connection, w->window);
@@ -191,10 +184,8 @@ drawin_wipe(drawin_t *w)
     w->drawable = NULL;
 }
 
-static void
-drawin_update_drawing(lua_State *L, int widx)
-{
-    drawin_t *w = (drawin_t *)luaA_checkudata(L, widx, &drawin_class);
+static void drawin_update_drawing(lua_State* L, int widx) {
+    drawin_t* w = (drawin_t*)luaA_checkudata(L, widx, &drawin_class);
     luaA_object_push_item(L, widx, w->drawable);
     drawable_set_geometry(L, -1, w->geometry);
     lua_pop(L, 1);
@@ -203,40 +194,31 @@ drawin_update_drawing(lua_State *L, int widx)
 /** Refresh the window content by copying its pixmap data to its window.
  * \param w The drawin to refresh.
  */
-static inline void
-drawin_refresh_pixmap(drawin_t *w)
-{
+static inline void drawin_refresh_pixmap(drawin_t* w) {
     drawin_refresh_pixmap_partial(w, 0, 0, w->geometry.width, w->geometry.height);
 }
 
-static void
-drawin_apply_moveresize(drawin_t *w)
-{
+static void drawin_apply_moveresize(drawin_t* w) {
     if (!w->geometry_dirty)
         return;
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
-    std::array values =
-                         {
-                             (uint32_t)w->geometry.x,
-                             (uint32_t)w->geometry.y,
-                             (uint32_t)w->geometry.width,
-                             (uint32_t)w->geometry.height
-                         };
-    getConnection().configure_window(w->window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y
-                         | XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
-                         values);
+    std::array values = {(uint32_t)w->geometry.x,
+                         (uint32_t)w->geometry.y,
+                         (uint32_t)w->geometry.width,
+                         (uint32_t)w->geometry.height};
+    getConnection().configure_window(w->window,
+                                     XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
+                                       XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
+                                     values);
     client_restore_enterleave_events();
 }
 
-void
-drawin_refresh(void)
-{
-    for(auto *item : getGlobals().drawins)
-    {
+void drawin_refresh(void) {
+    for (auto* item : getGlobals().drawins) {
         drawin_apply_moveresize(item);
-        window_border_refresh((window_t *) item);
+        window_border_refresh((window_t*)item);
     }
 }
 
@@ -244,14 +226,12 @@ drawin_refresh(void)
  * @treturn table A table with drawins.
  * @function get
  */
-static int
-luaA_drawin_get(lua_State *L)
-{
+static int luaA_drawin_get(lua_State* L) {
     int i = 1;
 
     lua_newtable(L);
 
-    for(auto *d : getGlobals().drawins) {
+    for (auto* d : getGlobals().drawins) {
         luaA_object_push(L, d);
         lua_rawseti(L, -2, i++);
     }
@@ -264,16 +244,14 @@ luaA_drawin_get(lua_State *L)
  * \param udx The index of the drawin.
  * \param geometry The new geometry.
  */
-static void
-drawin_moveresize(lua_State *L, int udx, area_t geometry)
-{
-    auto w = (drawin_t *)luaA_checkudata(L, udx, &drawin_class);
+static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
+    auto w = (drawin_t*)luaA_checkudata(L, udx, &drawin_class);
     area_t old_geometry = w->geometry;
 
     w->geometry = geometry;
-    if(w->geometry.width <= 0)
+    if (w->geometry.width <= 0)
         w->geometry.width = old_geometry.width;
-    if(w->geometry.height <= 0)
+    if (w->geometry.height <= 0)
         w->geometry.height = old_geometry.height;
 
     w->geometry_dirty = true;
@@ -290,10 +268,9 @@ drawin_moveresize(lua_State *L, int udx, area_t geometry)
     if (old_geometry.height != w->geometry.height)
         luaA_object_emit_signal(L, udx, "property::height", 0);
 
-    screen_t *old_screen = screen_getbycoord(old_geometry.x, old_geometry.y);
-    screen_t *new_screen = screen_getbycoord(w->geometry.x, w->geometry.y);
-    if (old_screen != new_screen && strut_has_value(&w->strut))
-    {
+    screen_t* old_screen = screen_getbycoord(old_geometry.x, old_geometry.y);
+    screen_t* new_screen = screen_getbycoord(w->geometry.x, w->geometry.y);
+    if (old_screen != new_screen && strut_has_value(&w->strut)) {
         screen_update_workarea(old_screen);
         screen_update_workarea(new_screen);
     }
@@ -306,11 +283,7 @@ drawin_moveresize(lua_State *L, int udx, area_t geometry)
  * \param w The copy width from the x component.
  * \param h The copy height from the y component.
  */
-void
-drawin_refresh_pixmap_partial(drawin_t *drawin,
-                              int16_t x, int16_t y,
-                              uint16_t w, uint16_t h)
-{
+void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint16_t w, uint16_t h) {
     if (!drawin->drawable || !drawin->drawable->pixmap || !drawin->drawable->refreshed)
         return;
 
@@ -319,15 +292,20 @@ drawin_refresh_pixmap_partial(drawin_t *drawin,
 
     /* Make cairo do all pending drawing */
     cairo_surface_flush(drawin->drawable->surface);
-    xcb_copy_area(getGlobals().connection, drawin->drawable->pixmap,
-                  drawin->window, getGlobals().gc, x, y, x, y,
-                  w, h);
+    xcb_copy_area(getGlobals().connection,
+                  drawin->drawable->pixmap,
+                  drawin->window,
+                  getGlobals().gc,
+                  x,
+                  y,
+                  x,
+                  y,
+                  w,
+                  h);
 }
 
-static void
-drawin_map(lua_State *L, int widx)
-{
-    auto drawin = (drawin_t *)luaA_checkudata(L, widx, &drawin_class);
+static void drawin_map(lua_State* L, int widx) {
+    auto drawin = (drawin_t*)luaA_checkudata(L, widx, &drawin_class);
     /* Apply any pending changes */
     drawin_apply_moveresize(drawin);
     /* Activate BMA */
@@ -341,16 +319,14 @@ drawin_map(lua_State *L, int widx)
     /* Add it to the list of visible drawins */
     getGlobals().drawins.push_back(drawin);
     /* Make sure it has a surface */
-    if(drawin->drawable->surface == NULL)
+    if (drawin->drawable->surface == NULL)
         drawin_update_drawing(L, widx);
 }
 
-static void
-drawin_unmap(drawin_t *drawin)
-{
+static void drawin_unmap(drawin_t* drawin) {
     xcb_unmap_window(getGlobals().connection, drawin->window);
     auto it = std::ranges::find(getGlobals().drawins, drawin);
-    if(it != getGlobals().drawins.end()) {
+    if (it != getGlobals().drawins.end()) {
         getGlobals().drawins.erase(it);
     }
 }
@@ -359,10 +335,9 @@ drawin_unmap(drawin_t *drawin)
  * \param win The window id.
  * \return A drawin if found, NULL otherwise.
  */
-drawin_t *
-drawin_getbywin(xcb_window_t win)
-{
-    auto it = std::ranges::find_if(getGlobals().drawins, [win](auto * drawin) { return drawin->window == win; });
+drawin_t* drawin_getbywin(xcb_window_t win) {
+    auto it = std::ranges::find_if(getGlobals().drawins,
+                                   [win](auto* drawin) { return drawin->window == win; });
     return it != getGlobals().drawins.end() ? *it : nullptr;
 }
 
@@ -371,24 +346,18 @@ drawin_getbywin(xcb_window_t win)
  * \param udx The drawin.
  * \param v The visible value.
  */
-static void
-drawin_set_visible(lua_State *L, int udx, bool v)
-{
-    auto drawin = (drawin_t *)luaA_checkudata(L, udx, &drawin_class);
-    if(v != drawin->visible)
-    {
+static void drawin_set_visible(lua_State* L, int udx, bool v) {
+    auto drawin = (drawin_t*)luaA_checkudata(L, udx, &drawin_class);
+    if (v != drawin->visible) {
         drawin->visible = v;
 
-        if(drawin->visible)
-        {
+        if (drawin->visible) {
             drawin_map(L, udx);
             /* duplicate drawin */
             lua_pushvalue(L, udx);
             /* ref it */
             luaA_object_ref_class(L, -1, &drawin_class);
-        }
-        else
-        {
+        } else {
             /* Active BMA */
             client_ignore_enterleave_events();
             /* Unmap window */
@@ -400,19 +369,15 @@ drawin_set_visible(lua_State *L, int udx, bool v)
         }
 
         luaA_object_emit_signal(L, udx, "property::visible", 0);
-        if(strut_has_value(&drawin->strut))
-        {
-            screen_update_workarea(
-                    screen_getbycoord(drawin->geometry.x, drawin->geometry.y));
+        if (strut_has_value(&drawin->strut)) {
+            screen_update_workarea(screen_getbycoord(drawin->geometry.x, drawin->geometry.y));
         }
     }
 }
 
-static drawin_t *
-drawin_allocator(lua_State *L)
-{
-    xcb_screen_t *s = getGlobals().screen;
-    drawin_t *w = drawin_new(L);
+static drawin_t* drawin_allocator(lua_State* L) {
+    xcb_screen_t* s = getGlobals().screen;
+    drawin_t* w = drawin_new(L);
 
     w->visible = false;
 
@@ -423,31 +388,34 @@ drawin_allocator(lua_State *L)
     w->geometry_dirty = false;
     w->type = (window_type_t)_NET_WM_WINDOW_TYPE_NORMAL;
 
-    drawable_allocator(L, (drawable_refresh_callback *) drawin_refresh_pixmap, w);
+    drawable_allocator(L, (drawable_refresh_callback*)drawin_refresh_pixmap, w);
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);
 
     w->window = xcb_generate_id(getGlobals().connection);
-    const uint32_t values[] =
-                      {
-                          w->border_color.pixel,
-                          XCB_GRAVITY_NORTH_WEST,
-                          1,
-                          XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT
-                          | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_ENTER_WINDOW
-                          | XCB_EVENT_MASK_LEAVE_WINDOW | XCB_EVENT_MASK_STRUCTURE_NOTIFY
-                          | XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS
-                          | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE
-                          | XCB_EVENT_MASK_PROPERTY_CHANGE,
-                          getGlobals().default_cmap,
-                          xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor))
-                      };
-    xcb_create_window(getGlobals().connection, getGlobals().default_depth, w->window, s->root,
-                      w->geometry.x, w->geometry.y,
-                      w->geometry.width, w->geometry.height,
-                      w->border_width, XCB_COPY_FROM_PARENT, getGlobals().visual->visual_id,
-                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY
-                      | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP
-                      | XCB_CW_CURSOR,
+    const uint32_t values[] = {
+      w->border_color.pixel,
+      XCB_GRAVITY_NORTH_WEST,
+      1,
+      XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT | XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY |
+        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+        XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_POINTER_MOTION |
+        XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE |
+        XCB_EVENT_MASK_PROPERTY_CHANGE,
+      getGlobals().default_cmap,
+      xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor))};
+    xcb_create_window(getGlobals().connection,
+                      getGlobals().default_depth,
+                      w->window,
+                      s->root,
+                      w->geometry.x,
+                      w->geometry.y,
+                      w->geometry.width,
+                      w->geometry.height,
+                      w->border_width,
+                      XCB_COPY_FROM_PARENT,
+                      getGlobals().visual->visual_id,
+                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_OVERRIDE_REDIRECT |
+                        XCB_CW_EVENT_MASK | XCB_CW_COLORMAP | XCB_CW_CURSOR,
                       values);
     xwindow_set_class_instance(w->window);
     xwindow_set_name_static(w->window, "Awesome drawin");
@@ -463,9 +431,7 @@ drawin_allocator(lua_State *L)
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_new(lua_State *L)
-{
+static int luaA_drawin_new(lua_State* L) {
     luaA_class_new(L, &drawin_class);
 
     return 1;
@@ -478,101 +444,93 @@ luaA_drawin_new(lua_State *L)
  * @return A table with drawin coordinates and geometry.
  * @function geometry
  */
-static int
-luaA_drawin_geometry(lua_State *L)
-{
-    auto drawin = (drawin_t *)luaA_checkudata(L, 1, &drawin_class);
+static int luaA_drawin_geometry(lua_State* L) {
+    auto drawin = (drawin_t*)luaA_checkudata(L, 1, &drawin_class);
 
-    if(lua_gettop(L) == 2)
-    {
+    if (lua_gettop(L) == 2) {
         area_t wingeom;
 
         luaA_checktable(L, 2);
-        wingeom.x = round(luaA_getopt_number_range(L, 2, "x", drawin->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        wingeom.y = round(luaA_getopt_number_range(L, 2, "y", drawin->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        wingeom.width = ceil(luaA_getopt_number_range(L, 2, "width", drawin->geometry.width, MIN_X11_SIZE, MAX_X11_SIZE));
-        wingeom.height = ceil(luaA_getopt_number_range(L, 2, "height", drawin->geometry.height, MIN_X11_SIZE, MAX_X11_SIZE));
+        wingeom.x = round(luaA_getopt_number_range(
+          L, 2, "x", drawin->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        wingeom.y = round(luaA_getopt_number_range(
+          L, 2, "y", drawin->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        wingeom.width = ceil(luaA_getopt_number_range(
+          L, 2, "width", drawin->geometry.width, MIN_X11_SIZE, MAX_X11_SIZE));
+        wingeom.height = ceil(luaA_getopt_number_range(
+          L, 2, "height", drawin->geometry.height, MIN_X11_SIZE, MAX_X11_SIZE));
 
-        if(wingeom.width > 0 && wingeom.height > 0)
+        if (wingeom.width > 0 && wingeom.height > 0)
             drawin_moveresize(L, 1, wingeom);
     }
 
     return luaA_pusharea(L, drawin->geometry);
 }
 
-
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, ontop, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, cursor, lua_pushstring)
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, visible, lua_pushboolean)
 
-static int
-luaA_drawin_set_x(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
     int x = round(luaA_checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    drawin_moveresize(L, -3, (area_t) { .x = (int16_t)x,
-                                        .y = drawin->geometry.y,
-                                        .width = drawin->geometry.width,
-                                        .height = drawin->geometry.height });
+    drawin_moveresize(L,
+                      -3,
+                      (area_t){.x = (int16_t)x,
+                               .y = drawin->geometry.y,
+                               .width = drawin->geometry.width,
+                               .height = drawin->geometry.height});
     return 0;
 }
 
-static int
-luaA_drawin_get_x(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_get_x(lua_State* L, drawin_t* drawin) {
     lua_pushinteger(L, drawin->geometry.x);
     return 1;
 }
 
-static int
-luaA_drawin_set_y(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_y(lua_State* L, drawin_t* drawin) {
     int y = round(luaA_checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    drawin_moveresize(L, -3, (area_t) { .x = drawin->geometry.x,
-                                        .y = (int16_t)y,
-                                        .width = drawin->geometry.width,
-                                        .height = drawin->geometry.height });
+    drawin_moveresize(L,
+                      -3,
+                      (area_t){.x = drawin->geometry.x,
+                               .y = (int16_t)y,
+                               .width = drawin->geometry.width,
+                               .height = drawin->geometry.height});
     return 0;
 }
 
-static int
-luaA_drawin_get_y(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_get_y(lua_State* L, drawin_t* drawin) {
     lua_pushinteger(L, drawin->geometry.y);
     return 1;
 }
 
-static int
-luaA_drawin_set_width(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_width(lua_State* L, drawin_t* drawin) {
     int width = ceil(luaA_checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
-    drawin_moveresize(L, -3, (area_t) { .x = drawin->geometry.x,
-                                        .y = drawin->geometry.y,
-                                        .width = (uint16_t)width,
-                                        .height = drawin->geometry.height });
+    drawin_moveresize(L,
+                      -3,
+                      (area_t){.x = drawin->geometry.x,
+                               .y = drawin->geometry.y,
+                               .width = (uint16_t)width,
+                               .height = drawin->geometry.height});
     return 0;
 }
 
-static int
-luaA_drawin_get_width(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_get_width(lua_State* L, drawin_t* drawin) {
     lua_pushinteger(L, drawin->geometry.width);
     return 1;
 }
 
-static int
-luaA_drawin_set_height(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_height(lua_State* L, drawin_t* drawin) {
     int height = ceil(luaA_checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
-    drawin_moveresize(L, -3, (area_t) { .x = drawin->geometry.x,
-                                       .y = drawin->geometry.y,
-                                       .width = drawin->geometry.width,
-                                       .height = (uint16_t)height });
+    drawin_moveresize(L,
+                      -3,
+                      (area_t){.x = drawin->geometry.x,
+                               .y = drawin->geometry.y,
+                               .width = drawin->geometry.width,
+                               .height = (uint16_t)height});
     return 0;
 }
 
-static int
-luaA_drawin_get_height(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_get_height(lua_State* L, drawin_t* drawin) {
     lua_pushinteger(L, drawin->geometry.height);
     return 1;
 }
@@ -582,12 +540,9 @@ luaA_drawin_get_height(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_ontop(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_ontop(lua_State* L, drawin_t* drawin) {
     bool b = luaA_checkboolean(L, -1);
-    if(b != drawin->ontop)
-    {
+    if (b != drawin->ontop) {
         drawin->ontop = b;
         stack_windows();
         luaA_object_emit_signal(L, -3, "property::ontop", 0);
@@ -600,15 +555,11 @@ luaA_drawin_set_ontop(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_cursor(lua_State *L, drawin_t *drawin)
-{
-    const char *buf = luaL_checkstring(L, -1);
-    if(buf)
-    {
+static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
+    const char* buf = luaL_checkstring(L, -1);
+    if (buf) {
         uint16_t cursor_font = xcursor_font_fromstr(buf);
-        if(cursor_font)
-        {
+        if (cursor_font) {
             xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
             p_delete(&(drawin->cursor));
             drawin->cursor = a_strdup(buf);
@@ -624,9 +575,7 @@ luaA_drawin_set_cursor(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_visible(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_set_visible(lua_State* L, drawin_t* drawin) {
     drawin_set_visible(L, -3, luaA_checkboolean(L, -1));
     return 0;
 }
@@ -636,9 +585,7 @@ luaA_drawin_set_visible(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_get_drawable(lua_State *L, drawin_t *drawin)
-{
+static int luaA_drawin_get_drawable(lua_State* L, drawin_t* drawin) {
     luaA_object_push_item(L, -2, drawin->drawable);
     return 1;
 }
@@ -648,10 +595,8 @@ luaA_drawin_get_drawable(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_get_shape_bounding(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_BOUNDING);
+static int luaA_drawin_get_shape_bounding(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_BOUNDING);
     if (!surf)
         return 0;
     /* lua has to make sure to free the ref or we have a leak */
@@ -664,20 +609,20 @@ luaA_drawin_get_shape_bounding(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_shape_bounding(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = NULL;
-    if(!lua_isnil(L, -1))
-        surf = (cairo_surface_t *)lua_touserdata(L, -1);
+static int luaA_drawin_set_shape_bounding(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = NULL;
+    if (!lua_isnil(L, -1))
+        surf = (cairo_surface_t*)lua_touserdata(L, -1);
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);
 
     xwindow_set_shape(drawin->window,
-            drawin->geometry.width + 2*drawin->border_width,
-            drawin->geometry.height + 2*drawin->border_width,
-            XCB_SHAPE_SK_BOUNDING, surf, -drawin->border_width);
+                      drawin->geometry.width + 2 * drawin->border_width,
+                      drawin->geometry.height + 2 * drawin->border_width,
+                      XCB_SHAPE_SK_BOUNDING,
+                      surf,
+                      -drawin->border_width);
     luaA_object_emit_signal(L, -3, "property::shape_bounding", 0);
     return 0;
 }
@@ -687,10 +632,8 @@ luaA_drawin_set_shape_bounding(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_get_shape_clip(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_CLIP);
+static int luaA_drawin_get_shape_clip(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_CLIP);
     if (!surf)
         return 0;
     /* lua has to make sure to free the ref or we have a leak */
@@ -703,18 +646,16 @@ luaA_drawin_get_shape_clip(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_shape_clip(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = NULL;
-    if(!lua_isnil(L, -1))
-        surf = (cairo_surface_t *)lua_touserdata(L, -1);
+static int luaA_drawin_set_shape_clip(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = NULL;
+    if (!lua_isnil(L, -1))
+        surf = (cairo_surface_t*)lua_touserdata(L, -1);
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);
 
-    xwindow_set_shape(drawin->window, drawin->geometry.width, drawin->geometry.height,
-            XCB_SHAPE_SK_CLIP, surf, 0);
+    xwindow_set_shape(
+      drawin->window, drawin->geometry.width, drawin->geometry.height, XCB_SHAPE_SK_CLIP, surf, 0);
     luaA_object_emit_signal(L, -3, "property::shape_clip", 0);
     return 0;
 }
@@ -724,10 +665,8 @@ luaA_drawin_set_shape_clip(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_get_shape_input(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_INPUT);
+static int luaA_drawin_get_shape_input(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_INPUT);
     if (!surf)
         return 0;
     /* lua has to make sure to free the ref or we have a leak */
@@ -740,96 +679,91 @@ luaA_drawin_get_shape_input(lua_State *L, drawin_t *drawin)
  * \param drawin The drawin object.
  * \return The number of elements pushed on stack.
  */
-static int
-luaA_drawin_set_shape_input(lua_State *L, drawin_t *drawin)
-{
-    cairo_surface_t *surf = NULL;
-    if(!lua_isnil(L, -1))
-        surf = (cairo_surface_t *)lua_touserdata(L, -1);
+static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
+    cairo_surface_t* surf = NULL;
+    if (!lua_isnil(L, -1))
+        surf = (cairo_surface_t*)lua_touserdata(L, -1);
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);
 
     xwindow_set_shape(drawin->window,
-            drawin->geometry.width + 2*drawin->border_width,
-            drawin->geometry.height + 2*drawin->border_width,
-            XCB_SHAPE_SK_INPUT, surf, -drawin->border_width);
+                      drawin->geometry.width + 2 * drawin->border_width,
+                      drawin->geometry.height + 2 * drawin->border_width,
+                      XCB_SHAPE_SK_INPUT,
+                      surf,
+                      -drawin->border_width);
     luaA_object_emit_signal(L, -3, "property::shape_input", 0);
     return 0;
 }
 
-void
-drawin_class_setup(lua_State *L)
-{
-    static const struct luaL_Reg drawin_methods[] =
-    {
-        LUA_CLASS_METHODS(drawin)
-        { "get", luaA_drawin_get },
-        { "__call", luaA_drawin_new },
-        { NULL, NULL }
+void drawin_class_setup(lua_State* L) {
+    static const struct luaL_Reg drawin_methods[] = {
+      LUA_CLASS_METHODS(drawin){   "get", luaA_drawin_get},
+      {"__call", luaA_drawin_new},
+      {    NULL,            NULL}
     };
 
-    static const struct luaL_Reg drawin_meta[] =
-    {
-        LUA_OBJECT_META(drawin)
-        LUA_CLASS_META
-        { "geometry", luaA_drawin_geometry },
-        { NULL, NULL },
+    static const struct luaL_Reg drawin_meta[] = {
+      LUA_OBJECT_META(drawin) LUA_CLASS_META{"geometry", luaA_drawin_geometry},
+      {      NULL,                 NULL},
     };
 
-    luaA_class_setup(L, &drawin_class, "drawin", &window_class,
-                     (lua_class_allocator_t) drawin_allocator,
-                     (lua_class_collector_t) drawin_wipe,
+    luaA_class_setup(L,
+                     &drawin_class,
+                     "drawin",
+                     &window_class,
+                     (lua_class_allocator_t)drawin_allocator,
+                     (lua_class_collector_t)drawin_wipe,
                      NULL,
-                     Lua::class_index_miss_property, Lua::class_newindex_miss_property,
-                     drawin_methods, drawin_meta);
-    drawin_class.add_property("drawable",
-                            NULL,
-                            (lua_class_propfunc_t) luaA_drawin_get_drawable,
-                            NULL);
+                     Lua::class_index_miss_property,
+                     Lua::class_newindex_miss_property,
+                     drawin_methods,
+                     drawin_meta);
+    drawin_class.add_property(
+      "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",
-                            (lua_class_propfunc_t) luaA_drawin_set_visible,
-                            (lua_class_propfunc_t) luaA_drawin_get_visible,
-                            (lua_class_propfunc_t) luaA_drawin_set_visible);
+                              (lua_class_propfunc_t)luaA_drawin_set_visible,
+                              (lua_class_propfunc_t)luaA_drawin_get_visible,
+                              (lua_class_propfunc_t)luaA_drawin_set_visible);
     drawin_class.add_property("ontop",
-                            (lua_class_propfunc_t) luaA_drawin_set_ontop,
-                            (lua_class_propfunc_t) luaA_drawin_get_ontop,
-                            (lua_class_propfunc_t) luaA_drawin_set_ontop);
+                              (lua_class_propfunc_t)luaA_drawin_set_ontop,
+                              (lua_class_propfunc_t)luaA_drawin_get_ontop,
+                              (lua_class_propfunc_t)luaA_drawin_set_ontop);
     drawin_class.add_property("cursor",
-                            (lua_class_propfunc_t) luaA_drawin_set_cursor,
-                            (lua_class_propfunc_t) luaA_drawin_get_cursor,
-                            (lua_class_propfunc_t) luaA_drawin_set_cursor);
+                              (lua_class_propfunc_t)luaA_drawin_set_cursor,
+                              (lua_class_propfunc_t)luaA_drawin_get_cursor,
+                              (lua_class_propfunc_t)luaA_drawin_set_cursor);
     drawin_class.add_property("x",
-                            (lua_class_propfunc_t) luaA_drawin_set_x,
-                            (lua_class_propfunc_t) luaA_drawin_get_x,
-                            (lua_class_propfunc_t) luaA_drawin_set_x);
+                              (lua_class_propfunc_t)luaA_drawin_set_x,
+                              (lua_class_propfunc_t)luaA_drawin_get_x,
+                              (lua_class_propfunc_t)luaA_drawin_set_x);
     drawin_class.add_property("y",
-                            (lua_class_propfunc_t) luaA_drawin_set_y,
-                            (lua_class_propfunc_t) luaA_drawin_get_y,
-                            (lua_class_propfunc_t) luaA_drawin_set_y);
+                              (lua_class_propfunc_t)luaA_drawin_set_y,
+                              (lua_class_propfunc_t)luaA_drawin_get_y,
+                              (lua_class_propfunc_t)luaA_drawin_set_y);
     drawin_class.add_property("width",
-                            (lua_class_propfunc_t) luaA_drawin_set_width,
-                            (lua_class_propfunc_t) luaA_drawin_get_width,
-                            (lua_class_propfunc_t) luaA_drawin_set_width);
+                              (lua_class_propfunc_t)luaA_drawin_set_width,
+                              (lua_class_propfunc_t)luaA_drawin_get_width,
+                              (lua_class_propfunc_t)luaA_drawin_set_width);
     drawin_class.add_property("height",
-                            (lua_class_propfunc_t) luaA_drawin_set_height,
-                            (lua_class_propfunc_t) luaA_drawin_get_height,
-                            (lua_class_propfunc_t) luaA_drawin_set_height);
+                              (lua_class_propfunc_t)luaA_drawin_set_height,
+                              (lua_class_propfunc_t)luaA_drawin_get_height,
+                              (lua_class_propfunc_t)luaA_drawin_set_height);
     drawin_class.add_property("type",
-                            (lua_class_propfunc_t) luaA_window_set_type,
-                            (lua_class_propfunc_t) luaA_window_get_type,
-                            (lua_class_propfunc_t) luaA_window_set_type);
+                              (lua_class_propfunc_t)luaA_window_set_type,
+                              (lua_class_propfunc_t)luaA_window_get_type,
+                              (lua_class_propfunc_t)luaA_window_set_type);
     drawin_class.add_property("shape_bounding",
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_bounding,
-                            (lua_class_propfunc_t) luaA_drawin_get_shape_bounding,
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_bounding);
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_bounding,
+                              (lua_class_propfunc_t)luaA_drawin_get_shape_bounding,
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_bounding);
     drawin_class.add_property("shape_clip",
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_clip,
-                            (lua_class_propfunc_t) luaA_drawin_get_shape_clip,
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_clip);
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_clip,
+                              (lua_class_propfunc_t)luaA_drawin_get_shape_clip,
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_clip);
     drawin_class.add_property("shape_input",
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_input,
-                            (lua_class_propfunc_t) luaA_drawin_get_shape_input,
-                            (lua_class_propfunc_t) luaA_drawin_set_shape_input);
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_input,
+                              (lua_class_propfunc_t)luaA_drawin_get_shape_input,
+                              (lua_class_propfunc_t)luaA_drawin_set_shape_input);
 }
-

@@ -19,14 +19,7 @@
  *
  */
 
-#ifndef AWESOME_COMMON_ATOMS_H
-#define AWESOME_COMMON_ATOMS_H
-
-#include <xcb/xcb.h>
-
+#pragma once
 #include "atoms-extern.h"
 
-void atoms_init(xcb_connection_t *);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
+void atoms_init(xcb_connection_t*);

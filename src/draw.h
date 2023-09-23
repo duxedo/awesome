@@ -22,51 +22,48 @@
 #ifndef AWESOME_COMMON_DRAW_H
 #define AWESOME_COMMON_DRAW_H
 
-#include <xcb/xcb.h>
-#include <cairo.h>
 #include "common/luahdr.h"
-#include <glib.h> /* for GError */
-
 #include "common/util.h"
+
+#include <cairo.h>
+#include <glib.h> /* for GError */
 #include <memory>
+#include <xcb/xcb.h>
 
 /* Forward definition */
 typedef struct _GdkPixbuf GdkPixbuf;
 
 typedef struct area_t area_t;
-struct area_t
-{
+struct area_t {
     /** Co-ords of upper left corner */
-    int16_t  x;
-    int16_t  y;
+    int16_t x;
+    int16_t y;
     uint16_t width;
     uint16_t height;
 };
 
-#define AREA_LEFT(a)    ((a).x)
-#define AREA_TOP(a)     ((a).y)
-#define AREA_RIGHT(a)   ((a).x + (a).width)
-#define AREA_BOTTOM(a)    ((a).y + (a).height)
-#define AREA_EQUAL(a, b) ((a).x == (b).x && (a).y == (b).y && \
-        (a).width == (b).width && (a).height == (b).height)
+#define AREA_LEFT(a) ((a).x)
+#define AREA_TOP(a) ((a).y)
+#define AREA_RIGHT(a) ((a).x + (a).width)
+#define AREA_BOTTOM(a) ((a).y + (a).height)
+#define AREA_EQUAL(a, b) \
+    ((a).x == (b).x && (a).y == (b).y && (a).width == (b).width && (a).height == (b).height)
 
 struct CairoDeleter {
-    void operator()(cairo_surface_t * ptr) const {
-        cairo_surface_destroy(ptr);
-    }
+    void operator()(cairo_surface_t* ptr) const { cairo_surface_destroy(ptr); }
 };
 
 using cairo_surface_handle = std::unique_ptr<cairo_surface_t, CairoDeleter>;
 
-cairo_surface_t *draw_surface_from_data(int width, int height, uint32_t *data);
-cairo_surface_t *draw_dup_image_surface(cairo_surface_t *surface);
-cairo_surface_t *draw_load_image(lua_State *L, const char *path, GError **error);
-cairo_surface_t *draw_surface_from_pixbuf(GdkPixbuf *buf);
+cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data);
+cairo_surface_t* draw_dup_image_surface(cairo_surface_t* surface);
+cairo_surface_t* draw_load_image(lua_State* L, const char* path, GError** error);
+cairo_surface_t* draw_surface_from_pixbuf(GdkPixbuf* buf);
 
-xcb_visualtype_t *draw_find_visual(const xcb_screen_t *s, xcb_visualid_t visual);
-xcb_visualtype_t *draw_default_visual(const xcb_screen_t *s);
-xcb_visualtype_t *draw_argb_visual(const xcb_screen_t *s);
-uint8_t draw_visual_depth(const xcb_screen_t *s, xcb_visualid_t vis);
+xcb_visualtype_t* draw_find_visual(const xcb_screen_t* s, xcb_visualid_t visual);
+xcb_visualtype_t* draw_default_visual(const xcb_screen_t* s);
+xcb_visualtype_t* draw_argb_visual(const xcb_screen_t* s);
+uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis);
 
 void draw_test_cairo_xcb(void);
 

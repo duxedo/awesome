@@ -22,19 +22,18 @@
 #ifndef AWESOME_SCREEN_H
 #define AWESOME_SCREEN_H
 
-#include "globalconf.h"
-#include "draw.h"
 #include "common/luaclass.h"
+#include "draw.h"
+#include "globalconf.h"
 
 /** Different ways to manage screens */
 typedef enum {
-    SCREEN_LIFECYCLE_USER =        0, /*!< Unmanaged (ei. from fake_add) */
-    SCREEN_LIFECYCLE_LUA  = 0x1 << 0, /*!< Is managed internally by Lua  */
-    SCREEN_LIFECYCLE_C    = 0x1 << 1, /*!< Is managed internally by C    */
+    SCREEN_LIFECYCLE_USER = 0,       /*!< Unmanaged (ei. from fake_add) */
+    SCREEN_LIFECYCLE_LUA = 0x1 << 0, /*!< Is managed internally by Lua  */
+    SCREEN_LIFECYCLE_C = 0x1 << 1,   /*!< Is managed internally by C    */
 } screen_lifecycle_t;
 
-struct a_screen
-{
+struct a_screen {
     LUA_OBJECT_HEADER
     bool valid;
     /** Who manages the screen lifecycle */
@@ -44,29 +43,29 @@ struct a_screen
     /** Screen workarea */
     area_t workarea;
     /** The name of the screen */
-    char *name;
+    char* name;
     /** Opaque pointer to the viewport */
-    struct viewport_t *viewport;
+    struct viewport_t* viewport;
     /** Some XID identifying this screen */
     uint32_t xid;
 };
 
-void screen_class_setup(lua_State *L);
+void screen_class_setup(lua_State* L);
 void screen_scan(void);
-screen_t *screen_getbycoord(int, int);
-bool screen_coord_in_screen(screen_t *, int, int);
-bool screen_area_in_screen(screen_t *, area_t);
-int screen_get_index(screen_t *);
-void screen_client_moveto(client_t *, screen_t *, bool);
+screen_t* screen_getbycoord(int, int);
+bool screen_coord_in_screen(screen_t*, int, int);
+bool screen_area_in_screen(screen_t*, area_t);
+int screen_get_index(screen_t*);
+void screen_client_moveto(client_t*, screen_t*, bool);
 void screen_update_primary(void);
-void screen_update_workarea(screen_t *);
-screen_t *screen_get_primary(void);
+void screen_update_workarea(screen_t*);
+screen_t* screen_get_primary(void);
 void screen_schedule_refresh(void);
 void screen_emit_scanned(void);
 void screen_emit_scanning(void);
 void screen_cleanup(void);
 
-screen_t *luaA_checkscreen(lua_State *, int);
+screen_t* luaA_checkscreen(lua_State*, int);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

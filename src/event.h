@@ -41,9 +41,7 @@ void client_refresh(void);
 void client_focus_refresh(void);
 void client_destroy_later(void);
 
-static inline int
-awesome_refresh(void)
-{
+static inline int awesome_refresh(void) {
     Lua::emit_refresh();
     drawin_refresh();
     client_refresh();
@@ -54,8 +52,8 @@ awesome_refresh(void)
 }
 
 void event_init(void);
-void event_handle(xcb_generic_event_t *);
-void event_drawable_under_mouse(lua_State *, int);
+void event_handle(xcb_generic_event_t*);
+void event_drawable_under_mouse(lua_State*, int);
 
 #endif
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
