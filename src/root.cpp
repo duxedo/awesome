@@ -77,8 +77,9 @@ static void root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p) {
     prop_r = xcb_get_property_reply(c.connection, prop_c, NULL);
     if (prop_r && prop_r->value_len) {
         xcb_pixmap_t* rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
-        if (rootpix)
+        if (rootpix) {
             xcb_kill_client(c.getConnection(), *rootpix);
+        }
     }
     p_delete(&prop_r);
 }
@@ -189,10 +190,11 @@ void root_update_wallpaper(void) {
 
     /* Only the default visual makes sense, so just the default depth */
     if (geom_r->depth !=
-        draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id))
+        draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id)) {
         warn("Got a pixmap with depth %d, but the default depth is %d, continuing anyway",
              geom_r->depth,
              draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
+    }
 
     getGlobals().wallpaper = cairo_xcb_surface_create(getGlobals().connection,
                                                       *rootpix,
@@ -313,8 +315,9 @@ static int luaA_root_fake_input(lua_State* L) {
         detail = luaA_checkboolean(L, 2); /* relative to the current position or not */
         x = round(luaA_checknumber_range(L, 3, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         y = round(luaA_checknumber_range(L, 4, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    } else
+    } else {
         return 0;
+    }
 
     xcb_test_fake_input(getGlobals().connection,
                         type,
@@ -430,8 +433,9 @@ static int luaA_root_cursor(lua_State* L) {
 
         xcb_change_window_attributes(
           getGlobals().connection, getGlobals().screen->root, XCB_CW_CURSOR, change_win_vals);
-    } else
+    } else {
         luaA_warn(L, "invalid cursor %s", cursor_name);
+    }
 
     return 0;
 }
@@ -463,8 +467,9 @@ static int luaA_root_wallpaper(lua_State* L) {
     if (lua_gettop(L) == 1) {
         /* Avoid `error()s` down the line. If this happens during
          * initialization, AwesomeWM can be stuck in an infinite loop */
-        if (lua_isnil(L, -1))
+        if (lua_isnil(L, -1)) {
             return 0;
+        }
 
         cairo_pattern_t* pattern = (cairo_pattern_t*)lua_touserdata(L, -1);
         lua_pushboolean(L, root_set_wallpaper(pattern));
@@ -472,8 +477,9 @@ static int luaA_root_wallpaper(lua_State* L) {
         return 1;
     }
 
-    if (getGlobals().wallpaper == NULL)
+    if (getGlobals().wallpaper == NULL) {
         return 0;
+    }
 
     /* lua has to make sure this surface gets destroyed */
     lua_pushlightuserdata(L, cairo_surface_reference(getGlobals().wallpaper));
@@ -567,8 +573,9 @@ static int luaA_root_set_newindex_miss_handler(lua_State* L) {
  * \luastack
  */
 static int luaA_root_index(lua_State* L) {
-    if (miss_index_handler != LUA_REFNIL)
+    if (miss_index_handler != LUA_REFNIL) {
         return luaA_call_handler(L, miss_index_handler);
+    }
 
     return Lua::default_index(L);
 }
@@ -579,8 +586,9 @@ static int luaA_root_index(lua_State* L) {
  */
 static int luaA_root_newindex(lua_State* L) {
     /* Call the lua root property handler */
-    if (miss_newindex_handler != LUA_REFNIL)
+    if (miss_newindex_handler != LUA_REFNIL) {
         return luaA_call_handler(L, miss_newindex_handler);
+    }
 
     return Lua::default_newindex(L);
 }

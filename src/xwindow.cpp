@@ -93,8 +93,9 @@ void xwindow_configure(xcb_window_t win, area_t geometry, int border) {
  * \param buttons The buttons to grab.
  */
 void xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& buttons) {
-    if (win == XCB_NONE)
+    if (win == XCB_NONE) {
         return;
+    }
 
     /* Ungrab everything first */
     xcb_ungrab_button(getGlobals().connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
@@ -118,7 +119,7 @@ void xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& button
  * \param k The key.
  */
 static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
-    if (k->keycode)
+    if (k->keycode) {
         xcb_grab_key(getGlobals().connection,
                      true,
                      win,
@@ -126,10 +127,10 @@ static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
                      k->keycode,
                      XCB_GRAB_MODE_ASYNC,
                      XCB_GRAB_MODE_ASYNC);
-    else if (k->keysym) {
+    } else if (k->keysym) {
         xcb_keycode_t* keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, k->keysym);
         if (keycodes) {
-            for (xcb_keycode_t* kc = keycodes; *kc; kc++)
+            for (xcb_keycode_t* kc = keycodes; *kc; kc++) {
                 xcb_grab_key(getGlobals().connection,
                              true,
                              win,
@@ -137,6 +138,7 @@ static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
                              *kc,
                              XCB_GRAB_MODE_ASYNC,
                              XCB_GRAB_MODE_ASYNC);
+            }
             p_delete(&keycodes);
         }
     }
@@ -236,16 +238,19 @@ void xwindow_set_cursor(xcb_window_t w, xcb_cursor_t c) {
  * \param color The color.
  */
 void xwindow_set_border_color(xcb_window_t w, color_t* color) {
-    if (w)
+    if (w) {
         getConnection().change_attributes(w, XCB_CW_BORDER_PIXEL, &color->pixel);
+    }
 }
 
 /** Get one of a window's shapes as a cairo surface */
 cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
-    if (!getGlobals().have_shape)
+    if (!getGlobals().have_shape) {
         return NULL;
-    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape)
+    }
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape) {
         return NULL;
+    }
 
     int16_t x, y;
     uint16_t width, height;
@@ -314,8 +319,9 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
     cairo_surface_set_device_offset(surface, -x, -y);
     cairo_set_fill_rule(cr, CAIRO_FILL_RULE_WINDING);
 
-    for (int i = 0; i < num_rects; i++)
+    for (int i = 0; i < num_rects; i++) {
         cairo_rectangle(cr, rects[i].x, rects[i].y, rects[i].width, rects[i].height);
+    }
     cairo_fill(cr);
 
     cairo_destroy(cr);
@@ -329,8 +335,9 @@ static xcb_pixmap_t xwindow_shape_pixmap(int width, int height, cairo_surface_t*
     cairo_surface_t* dest;
     cairo_t* cr;
 
-    if (width <= 0 || height <= 0)
+    if (width <= 0 || height <= 0) {
         return XCB_NONE;
+    }
 
     xcb_create_pixmap(getGlobals().connection, 1, pixmap, getGlobals().screen->root, width, height);
     dest = cairo_xcb_surface_create_for_bitmap(
@@ -356,19 +363,23 @@ void xwindow_set_shape(xcb_window_t win,
                        enum xcb_shape_sk_t kind,
                        cairo_surface_t* surf,
                        int offset) {
-    if (!getGlobals().have_shape)
+    if (!getGlobals().have_shape) {
         return;
-    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape)
+    }
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape) {
         return;
+    }
 
     xcb_pixmap_t pixmap = XCB_NONE;
-    if (surf)
+    if (surf) {
         pixmap = xwindow_shape_pixmap(width, height, surf);
+    }
 
     xcb_shape_mask(getGlobals().connection, XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
 
-    if (pixmap != XCB_NONE)
+    if (pixmap != XCB_NONE) {
         xcb_free_pixmap(getGlobals().connection, pixmap);
+    }
 }
 
 /** Calculate the position change that a window needs applied.
@@ -420,10 +431,12 @@ void xwindow_translate_for_gravity(xcb_gravity_t gravity,
         break;
     }
 
-    if (dx)
+    if (dx) {
         *dx += x;
-    if (dy)
+    }
+    if (dy) {
         *dy += y;
+    }
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

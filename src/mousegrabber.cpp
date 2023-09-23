@@ -93,8 +93,9 @@ void mousegrabber_handleevent(lua_State* L, int x, int y, uint16_t mask) {
  * @staticfct run
  */
 static int luaA_mousegrabber_run(lua_State* L) {
-    if (getGlobals().mousegrabber != LUA_REFNIL)
+    if (getGlobals().mousegrabber != LUA_REFNIL) {
         luaL_error(L, "mousegrabber already running");
+    }
 
     xcb_cursor_t cursor = XCB_NONE;
 

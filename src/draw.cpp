@@ -81,8 +81,9 @@ cairo_surface_t* draw_surface_from_pixbuf(GdkPixbuf* buf) {
     unsigned char* cairo_pixels;
 
     cairo_format_t format = CAIRO_FORMAT_ARGB32;
-    if (channels == 3)
+    if (channels == 3) {
         format = CAIRO_FORMAT_RGB24;
+    }
 
     surface = cairo_image_surface_create(format, width, height);
     cairo_surface_flush(surface);
@@ -162,9 +163,10 @@ cairo_surface_t* draw_load_image(lua_State* L, const char* path, GError** error)
     cairo_surface_t* ret;
     GdkPixbuf* buf = gdk_pixbuf_new_from_file(path, error);
 
-    if (!buf)
+    if (!buf) {
         /* error was set above */
         return NULL;
+    }
 
     ret = draw_surface_from_pixbuf(buf);
     g_object_unref(buf);
@@ -174,14 +176,18 @@ cairo_surface_t* draw_load_image(lua_State* L, const char* path, GError** error)
 xcb_visualtype_t* draw_find_visual(const xcb_screen_t* s, xcb_visualid_t visual) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if (depth_iter.data)
-        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
+    if (depth_iter.data) {
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter)) {
             for (xcb_visualtype_iterator_t visual_iter =
                    xcb_depth_visuals_iterator(depth_iter.data);
                  visual_iter.rem;
-                 xcb_visualtype_next(&visual_iter))
-                if (visual == visual_iter.data->visual_id)
+                 xcb_visualtype_next(&visual_iter)) {
+                if (visual == visual_iter.data->visual_id) {
                     return visual_iter.data;
+                }
+            }
+        }
+    }
 
     return NULL;
 }
@@ -193,14 +199,18 @@ xcb_visualtype_t* draw_default_visual(const xcb_screen_t* s) {
 xcb_visualtype_t* draw_argb_visual(const xcb_screen_t* s) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if (depth_iter.data)
-        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
-            if (depth_iter.data->depth == 32)
+    if (depth_iter.data) {
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter)) {
+            if (depth_iter.data->depth == 32) {
                 for (xcb_visualtype_iterator_t visual_iter =
                        xcb_depth_visuals_iterator(depth_iter.data);
                      visual_iter.rem;
-                     xcb_visualtype_next(&visual_iter))
+                     xcb_visualtype_next(&visual_iter)) {
                     return visual_iter.data;
+                }
+            }
+        }
+    }
 
     return NULL;
 }
@@ -208,14 +218,18 @@ xcb_visualtype_t* draw_argb_visual(const xcb_screen_t* s) {
 uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis) {
     xcb_depth_iterator_t depth_iter = xcb_screen_allowed_depths_iterator(s);
 
-    if (depth_iter.data)
-        for (; depth_iter.rem; xcb_depth_next(&depth_iter))
+    if (depth_iter.data) {
+        for (; depth_iter.rem; xcb_depth_next(&depth_iter)) {
             for (xcb_visualtype_iterator_t visual_iter =
                    xcb_depth_visuals_iterator(depth_iter.data);
                  visual_iter.rem;
-                 xcb_visualtype_next(&visual_iter))
-                if (vis == visual_iter.data->visual_id)
+                 xcb_visualtype_next(&visual_iter)) {
+                if (vis == visual_iter.data->visual_id) {
                     return depth_iter.data->depth;
+                }
+            }
+        }
+    }
 
     fatal("Could not find a visual's depth");
 }
@@ -226,9 +240,10 @@ void draw_test_cairo_xcb(void) {
       getGlobals().connection, getGlobals().default_depth, pixmap, getGlobals().screen->root, 1, 1);
     cairo_surface_t* surface =
       cairo_xcb_surface_create(getGlobals().connection, pixmap, getGlobals().visual, 1, 1);
-    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS)
+    if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         fatal("Could not set up display: got cairo surface with status %s",
               cairo_status_to_string(cairo_surface_status(surface)));
+    }
     cairo_surface_finish(surface);
     cairo_surface_destroy(surface);
     xcb_free_pixmap(getGlobals().connection, pixmap);

@@ -845,24 +845,30 @@ static const struct codepair keysymtab[] = {
 
 static xkb_keysym_t xkb_utf32_to_keysym_compat(uint32_t ucs) {
     /* first check for Latin-1 characters (1:1 mapping) */
-    if ((ucs >= 0x0020 && ucs <= 0x007e) || (ucs >= 0x00a0 && ucs <= 0x00ff))
+    if ((ucs >= 0x0020 && ucs <= 0x007e) || (ucs >= 0x00a0 && ucs <= 0x00ff)) {
         return ucs;
+    }
 
     /* special keysyms */
     if ((ucs >= (XKB_KEY_BackSpace & 0x7f) && ucs <= (XKB_KEY_Clear & 0x7f)) ||
-        ucs == (XKB_KEY_Return & 0x7f) || ucs == (XKB_KEY_Escape & 0x7f))
+        ucs == (XKB_KEY_Return & 0x7f) || ucs == (XKB_KEY_Escape & 0x7f)) {
         return ucs | 0xff00;
-    if (ucs == (XKB_KEY_Delete & 0x7f))
+    }
+    if (ucs == (XKB_KEY_Delete & 0x7f)) {
         return XKB_KEY_Delete;
+    }
 
     /* Unicode non-symbols and code points outside Unicode planes */
-    if ((ucs >= 0xfdd0 && ucs <= 0xfdef) || ucs > 0x10ffff || (ucs & 0xfffe) == 0xfffe)
+    if ((ucs >= 0xfdd0 && ucs <= 0xfdef) || ucs > 0x10ffff || (ucs & 0xfffe) == 0xfffe) {
         return XKB_KEY_NoSymbol;
+    }
 
     /* search main table */
-    for (size_t i = 0; i < sizeof(keysymtab) / sizeof(keysymtab[0]); i++)
-        if (keysymtab[i].ucs == ucs)
+    for (size_t i = 0; i < sizeof(keysymtab) / sizeof(keysymtab[0]); i++) {
+        if (keysymtab[i].ucs == ucs) {
             return keysymtab[i].keysym;
+        }
+    }
 
     /* Use direct encoding if everything else fails */
     return ucs | 0x01000000;

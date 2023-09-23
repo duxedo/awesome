@@ -199,8 +199,9 @@ static inline void drawin_refresh_pixmap(drawin_t* w) {
 }
 
 static void drawin_apply_moveresize(drawin_t* w) {
-    if (!w->geometry_dirty)
+    if (!w->geometry_dirty) {
         return;
+    }
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
@@ -249,24 +250,31 @@ static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
     area_t old_geometry = w->geometry;
 
     w->geometry = geometry;
-    if (w->geometry.width <= 0)
+    if (w->geometry.width <= 0) {
         w->geometry.width = old_geometry.width;
-    if (w->geometry.height <= 0)
+    }
+    if (w->geometry.height <= 0) {
         w->geometry.height = old_geometry.height;
+    }
 
     w->geometry_dirty = true;
     drawin_update_drawing(L, udx);
 
-    if (!AREA_EQUAL(old_geometry, w->geometry))
+    if (!AREA_EQUAL(old_geometry, w->geometry)) {
         luaA_object_emit_signal(L, udx, "property::geometry", 0);
-    if (old_geometry.x != w->geometry.x)
+    }
+    if (old_geometry.x != w->geometry.x) {
         luaA_object_emit_signal(L, udx, "property::x", 0);
-    if (old_geometry.y != w->geometry.y)
+    }
+    if (old_geometry.y != w->geometry.y) {
         luaA_object_emit_signal(L, udx, "property::y", 0);
-    if (old_geometry.width != w->geometry.width)
+    }
+    if (old_geometry.width != w->geometry.width) {
         luaA_object_emit_signal(L, udx, "property::width", 0);
-    if (old_geometry.height != w->geometry.height)
+    }
+    if (old_geometry.height != w->geometry.height) {
         luaA_object_emit_signal(L, udx, "property::height", 0);
+    }
 
     screen_t* old_screen = screen_getbycoord(old_geometry.x, old_geometry.y);
     screen_t* new_screen = screen_getbycoord(w->geometry.x, w->geometry.y);
@@ -284,8 +292,9 @@ static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
  * \param h The copy height from the y component.
  */
 void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint16_t w, uint16_t h) {
-    if (!drawin->drawable || !drawin->drawable->pixmap || !drawin->drawable->refreshed)
+    if (!drawin->drawable || !drawin->drawable->pixmap || !drawin->drawable->refreshed) {
         return;
+    }
 
     /* Make sure it really has the size it should have */
     drawin_apply_moveresize(drawin);
@@ -319,8 +328,9 @@ static void drawin_map(lua_State* L, int widx) {
     /* Add it to the list of visible drawins */
     getGlobals().drawins.push_back(drawin);
     /* Make sure it has a surface */
-    if (drawin->drawable->surface == NULL)
+    if (drawin->drawable->surface == NULL) {
         drawin_update_drawing(L, widx);
+    }
 }
 
 static void drawin_unmap(drawin_t* drawin) {
@@ -460,8 +470,9 @@ static int luaA_drawin_geometry(lua_State* L) {
         wingeom.height = ceil(luaA_getopt_number_range(
           L, 2, "height", drawin->geometry.height, MIN_X11_SIZE, MAX_X11_SIZE));
 
-        if (wingeom.width > 0 && wingeom.height > 0)
+        if (wingeom.width > 0 && wingeom.height > 0) {
             drawin_moveresize(L, 1, wingeom);
+        }
     }
 
     return luaA_pusharea(L, drawin->geometry);
@@ -597,8 +608,9 @@ static int luaA_drawin_get_drawable(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_get_shape_bounding(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_BOUNDING);
-    if (!surf)
+    if (!surf) {
         return 0;
+    }
     /* lua has to make sure to free the ref or we have a leak */
     lua_pushlightuserdata(L, surf);
     return 1;
@@ -611,8 +623,9 @@ static int luaA_drawin_get_shape_bounding(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_set_shape_bounding(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = NULL;
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
+    }
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);
@@ -634,8 +647,9 @@ static int luaA_drawin_set_shape_bounding(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_get_shape_clip(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_CLIP);
-    if (!surf)
+    if (!surf) {
         return 0;
+    }
     /* lua has to make sure to free the ref or we have a leak */
     lua_pushlightuserdata(L, surf);
     return 1;
@@ -648,8 +662,9 @@ static int luaA_drawin_get_shape_clip(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_set_shape_clip(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = NULL;
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
+    }
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);
@@ -667,8 +682,9 @@ static int luaA_drawin_set_shape_clip(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_get_shape_input(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = xwindow_get_shape(drawin->window, XCB_SHAPE_SK_INPUT);
-    if (!surf)
+    if (!surf) {
         return 0;
+    }
     /* lua has to make sure to free the ref or we have a leak */
     lua_pushlightuserdata(L, surf);
     return 1;
@@ -681,8 +697,9 @@ static int luaA_drawin_get_shape_input(lua_State* L, drawin_t* drawin) {
  */
 static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
     cairo_surface_t* surf = NULL;
-    if (!lua_isnil(L, -1))
+    if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
+    }
 
     /* The drawin might have been resized to a larger size. Apply that. */
     drawin_apply_moveresize(drawin);

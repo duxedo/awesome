@@ -65,8 +65,9 @@ void systray_init(void) {
     xwindow_set_name_static(getGlobals().systray.window, "Awesome systray window");
 
     atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", getGlobals().default_screen);
-    if (!atom_name)
+    if (!atom_name) {
         fatal("error getting systray atom name");
+    }
 
     atom_systray_q =
       xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name);
@@ -74,8 +75,9 @@ void systray_init(void) {
     p_delete(&atom_name);
 
     atom_systray_r = xcb_intern_atom_reply(getGlobals().connection, atom_systray_q, NULL);
-    if (!atom_systray_r)
+    if (!atom_systray_r) {
         fatal("error getting systray atom");
+    }
 
     getGlobals().systray.atom = atom_systray_r->atom;
     p_delete(&atom_systray_r);
@@ -88,8 +90,9 @@ static void systray_register(void) {
 
     xcb_screen_t* xscreen = getGlobals().screen;
 
-    if (getGlobals().systray.registered)
+    if (getGlobals().systray.registered) {
         return;
+    }
 
     getGlobals().systray.registered = true;
 
@@ -116,8 +119,9 @@ static void systray_register(void) {
 /** Remove systray information in X.
  */
 void systray_cleanup(void) {
-    if (!getGlobals().systray.registered)
+    if (!getGlobals().systray.registered) {
         return;
+    }
 
     getGlobals().systray.registered = false;
 
@@ -142,8 +146,9 @@ int systray_request_handle(xcb_window_t embed_win) {
     auto it = std::find_if(getGlobals().embedded.begin(),
                            getGlobals().embedded.end(),
                            [embed_win](const auto& window) { return window.win == embed_win; });
-    if (it != getGlobals().embedded.end())
+    if (it != getGlobals().embedded.end()) {
         return -1;
+    }
 
     p_clear(&em_cookie, 1);
 
@@ -191,11 +196,13 @@ int systray_process_client_message(xcb_client_message_event_t* ev) {
     case SYSTEM_TRAY_REQUEST_DOCK:
         geom_c = xcb_get_geometry_unchecked(getGlobals().connection, ev->window);
 
-        if (!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL)))
+        if (!(geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL))) {
             return -1;
+        }
 
-        if (getGlobals().screen->root == geom_r->root)
+        if (getGlobals().screen->root == geom_r->root) {
             ret = systray_request_handle(ev->data.data32[2]);
+        }
 
         p_delete(&geom_r);
         break;
@@ -257,14 +264,16 @@ void systray_invalidate(void) {
     signal_object_emit(L, &global_signals, "systray::update", 0);
 
     /* Unmap now if the systray became empty */
-    if (systray_num_visible_entries() == 0)
+    if (systray_num_visible_entries() == 0) {
         xcb_unmap_window(getGlobals().connection, getGlobals().systray.window);
+    }
 }
 }
 static void systray_update(
   int base_size, bool horizontal, bool reverse, int spacing, bool force_redraw, int rows) {
-    if (base_size <= 0)
+    if (base_size <= 0) {
         return;
+    }
 
     /* Give the systray window the correct size */
     int num_entries = systray_num_visible_entries();
@@ -286,10 +295,11 @@ static void systray_update(
     for (size_t i = 0; i < getGlobals().embedded.size(); i++) {
         decltype(getGlobals().embedded)::iterator em;
 
-        if (reverse)
+        if (reverse) {
             em = getGlobals().embedded.begin() + (getGlobals().embedded.size() - i - 1);
-        else
+        } else {
             em = getGlobals().embedded.begin() + i;
+        }
 
         if (!(em->info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED))) {
             xcb_unmap_window(getGlobals().connection, em->win);
@@ -301,8 +311,9 @@ static void systray_update(
                                            XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                                          config_vals);
         xcb_map_window(getGlobals().connection, em->win);
-        if (force_redraw)
+        if (force_redraw) {
             xcb_clear_area(getGlobals().connection, 1, em->win, 0, 0, 0, 0);
+        }
         if (int(i % rows) == rows - 1) {
             if (horizontal) {
                 config_vals[0] += base_size + spacing;
@@ -338,8 +349,9 @@ static void systray_update(
 int luaA_systray(lua_State* L) {
     systray_register();
 
-    if (lua_gettop(L) == 1)
+    if (lua_gettop(L) == 1) {
         luaA_drawin_systray_kickout(L);
+    }
 
     if (lua_gettop(L) > 1) {
         size_t bg_len;
@@ -365,10 +377,10 @@ int luaA_systray(lua_State* L) {
             force_redraw = true;
         }
 
-        if (getGlobals().systray.parent != w)
+        if (getGlobals().systray.parent != w) {
             xcb_reparent_window(
               getGlobals().connection, getGlobals().systray.window, w->window, x, y);
-        else {
+        } else {
             getConnection().configure_window(getGlobals().systray.window,
                                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
                                              std::array<uint32_t, 2>{(uint32_t)x, (uint32_t)y});

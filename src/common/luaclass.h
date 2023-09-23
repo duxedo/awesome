@@ -163,8 +163,9 @@ static inline void luaA_class_set_tostring(lua_class_t* cls, lua_class_propfunc_
 }
 
 static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls) {
-    if (lua_isnil(L, udx))
+    if (lua_isnil(L, udx)) {
         return NULL;
+    }
     return luaA_checkudata(L, udx, cls);
 }
 

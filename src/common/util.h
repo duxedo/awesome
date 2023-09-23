@@ -125,24 +125,27 @@ void p_delete(PtrT** ptr) {
 static inline void* __attribute__((malloc)) xmalloc(ssize_t size) {
     void* ptr;
 
-    if (size <= 0)
+    if (size <= 0) {
         return NULL;
+    }
 
     ptr = calloc(1, size);
 
-    if (!ptr)
+    if (!ptr) {
         abort();
+    }
 
     return ptr;
 }
 
 static inline void xrealloc(void** ptr, ssize_t newsize) {
-    if (newsize <= 0)
+    if (newsize <= 0) {
         p_delete(ptr);
-    else {
+    } else {
         *ptr = realloc(*ptr, newsize);
-        if (!*ptr)
+        if (!*ptr) {
             abort();
+        }
     }
 }
 
@@ -303,8 +306,9 @@ static inline unsigned long __attribute__((nonnull(1))) a_strhash(const unsigned
     unsigned long hash = 5381;
     int c;
 
-    while ((c = *str++))
+    while ((c = *str++)) {
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    }
 
     return hash;
 }

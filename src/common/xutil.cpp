@@ -27,25 +27,34 @@
 #include <xcb/xcb_icccm.h>
 
 uint16_t xutil_key_mask_fromstr(const char* keyname) {
-    if (A_STREQ(keyname, "Shift"))
+    if (A_STREQ(keyname, "Shift")) {
         return XCB_MOD_MASK_SHIFT;
-    if (A_STREQ(keyname, "Lock"))
+    }
+    if (A_STREQ(keyname, "Lock")) {
         return XCB_MOD_MASK_LOCK;
-    if (A_STREQ(keyname, "Ctrl") || A_STREQ(keyname, "Control"))
+    }
+    if (A_STREQ(keyname, "Ctrl") || A_STREQ(keyname, "Control")) {
         return XCB_MOD_MASK_CONTROL;
-    if (A_STREQ(keyname, "Mod1"))
+    }
+    if (A_STREQ(keyname, "Mod1")) {
         return XCB_MOD_MASK_1;
-    if (A_STREQ(keyname, "Mod2"))
+    }
+    if (A_STREQ(keyname, "Mod2")) {
         return XCB_MOD_MASK_2;
-    if (A_STREQ(keyname, "Mod3"))
+    }
+    if (A_STREQ(keyname, "Mod3")) {
         return XCB_MOD_MASK_3;
-    if (A_STREQ(keyname, "Mod4"))
+    }
+    if (A_STREQ(keyname, "Mod4")) {
         return XCB_MOD_MASK_4;
-    if (A_STREQ(keyname, "Mod5"))
+    }
+    if (A_STREQ(keyname, "Mod5")) {
         return XCB_MOD_MASK_5;
-    if (A_STREQ(keyname, "Any"))
+    }
+    if (A_STREQ(keyname, "Any")) {
         /* this is misnamed but correct */
         return XCB_BUTTON_MASK_ANY;
+    }
     return XCB_NO_SYMBOL;
 }
 
