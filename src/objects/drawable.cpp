@@ -138,7 +138,7 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
         drawable_unset_surface(d);
     }
     if (area_changed && geom.width > 0 && geom.height > 0) {
-        d->pixmap = xcb_generate_id(getGlobals().connection);
+        d->pixmap = getConnection().generate_id();
         xcb_create_pixmap(getGlobals().connection,
                           getGlobals().default_depth,
                           d->pixmap,
