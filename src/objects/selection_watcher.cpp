@@ -103,7 +103,7 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
 
             /* Create a window for it */
             if (selection->window == XCB_NONE) {
-                selection->window = xcb_generate_id(getGlobals().connection);
+                selection->window = getConnection().generate_id();
             }
             xcb_create_window(getGlobals().connection,
                               getGlobals().screen->root_depth,

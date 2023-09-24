@@ -331,7 +331,7 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
 
 /** Turn a cairo surface into a pixmap with depth 1 */
 static xcb_pixmap_t xwindow_shape_pixmap(int width, int height, cairo_surface_t* surf) {
-    xcb_pixmap_t pixmap = xcb_generate_id(getGlobals().connection);
+    xcb_pixmap_t pixmap = getConnection().generate_id();
     cairo_surface_t* dest;
     cairo_t* cr;
 

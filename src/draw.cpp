@@ -235,7 +235,7 @@ uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis) {
 }
 
 void draw_test_cairo_xcb(void) {
-    xcb_pixmap_t pixmap = xcb_generate_id(getGlobals().connection);
+    xcb_pixmap_t pixmap = getConnection().generate_id();
     xcb_create_pixmap(
       getGlobals().connection, getGlobals().default_depth, pixmap, getGlobals().screen->root, 1, 1);
     cairo_surface_t* surface =
