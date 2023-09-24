@@ -177,7 +177,7 @@ void ewmh_init(void) {
     getConnection().replace_property(xscreen->root, _NET_SUPPORTED, XCB_ATOM_ATOM, atom);
 
     /* create our own window */
-    xcb_window_t father = xcb_generate_id(getGlobals().connection);
+    xcb_window_t father = getConnection().generate_id();
 
     xcb_create_window(getGlobals().connection,
                       xscreen->root_depth,

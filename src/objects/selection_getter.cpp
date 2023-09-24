@@ -61,7 +61,7 @@ static int luaA_selection_getter_new(lua_State* L) {
 
     /* Create a selection object */
     selection = reinterpret_cast<selection_getter_t*>(selection_getter_class.allocator(L));
-    selection->window = xcb_generate_id(getGlobals().connection);
+    selection->window = getConnection().generate_id();
     xcb_create_window(getGlobals().connection,
                       getGlobals().screen->root_depth,
                       selection->window,

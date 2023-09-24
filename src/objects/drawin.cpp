@@ -401,7 +401,7 @@ static drawin_t* drawin_allocator(lua_State* L) {
     drawable_allocator(L, (drawable_refresh_callback*)drawin_refresh_pixmap, w);
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);
 
-    w->window = xcb_generate_id(getGlobals().connection);
+    w->window = getConnection().generate_id();
     const uint32_t values[] = {
       w->border_color.pixel,
       XCB_GRAVITY_NORTH_WEST,

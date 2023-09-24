@@ -255,7 +255,7 @@ static void acquire_WM_Sn(bool replace) {
     xcb_get_selection_owner_reply_t* get_sel_reply;
 
     /* Get the WM_Sn atom */
-    getGlobals().selection_owner_window = xcb_generate_id(getGlobals().connection);
+    getGlobals().selection_owner_window = getConnection().generate_id();
     xcb_create_window(getGlobals().connection,
                       getGlobals().screen->root_depth,
                       getGlobals().selection_owner_window,
@@ -660,7 +660,7 @@ int main(int argc, char** argv) {
     getGlobals().default_cmap = getGlobals().screen->default_colormap;
     if (getGlobals().default_depth != getGlobals().screen->root_depth) {
         // We need our own color map if we aren't using the default depth
-        getGlobals().default_cmap = xcb_generate_id(getGlobals().connection);
+        getGlobals().default_cmap = getConnection().generate_id();
         xcb_create_colormap(getGlobals().connection,
                             XCB_COLORMAP_ALLOC_NONE,
                             getGlobals().default_cmap,
@@ -777,8 +777,8 @@ int main(int argc, char** argv) {
     /* The default GC is just a newly created associated with a window with
      * depth globalconf.default_depth.
      * The window_no_focus is used for "nothing has the input focus". */
-    getGlobals().focus.window_no_focus = xcb_generate_id(getGlobals().connection);
-    getGlobals().gc = xcb_generate_id(getGlobals().connection);
+    getGlobals().focus.window_no_focus = getConnection().generate_id();
+    getGlobals().gc = getConnection().generate_id();
     uint32_t create_window_values[] = {getGlobals().screen->black_pixel,
                                        getGlobals().screen->black_pixel,
                                        1,

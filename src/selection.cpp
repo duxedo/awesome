@@ -57,7 +57,7 @@ static int luaA_selection_get(lua_State* L) {
         uint32_t mask = XCB_CW_BACK_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
         uint32_t values[] = {screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE};
 
-        selection_window = xcb_generate_id(getGlobals().connection);
+        selection_window = getConnection().generate_id();
 
         xcb_create_window(getGlobals().connection,
                           screen->root_depth,

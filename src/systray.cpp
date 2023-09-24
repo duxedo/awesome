@@ -45,7 +45,7 @@ void systray_init(void) {
     char* atom_name;
     xcb_screen_t* xscreen = getGlobals().screen;
 
-    getGlobals().systray.window = xcb_generate_id(getGlobals().connection);
+    getGlobals().systray.window = getConnection().generate_id();
     getGlobals().systray.background_pixel = xscreen->black_pixel;
     const uint32_t values[] = {xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT};
     xcb_create_window(getGlobals().connection,

@@ -1850,7 +1850,7 @@ void client_focus(client_t* c) {
 
 static xcb_window_t client_get_nofocus_window(client_t* c) {
     if (c->nofocus_window == XCB_NONE) {
-        c->nofocus_window = xcb_generate_id(getGlobals().connection);
+        c->nofocus_window = getConnection().generate_id();
         xcb_create_window(getGlobals().connection,
                           getGlobals().default_depth,
                           c->nofocus_window,
@@ -2112,7 +2112,7 @@ void client_manage(xcb_window_t w,
     /* Store window and visual */
     c->window = w;
     c->visualtype = draw_find_visual(getGlobals().screen, wattr->visual);
-    c->frame_window = xcb_generate_id(getGlobals().connection);
+    c->frame_window = getConnection().generate_id();
     const uint32_t values[] = {getGlobals().screen->black_pixel,
                                XCB_GRAVITY_NORTH_WEST,
                                XCB_GRAVITY_NORTH_WEST,
