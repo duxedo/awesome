@@ -348,7 +348,7 @@ void spawn_child_exited(pid_t pid, int status) {
         lua_pushliteral(L, "exit");
         lua_pushinteger(L, WEXITSTATUS(status));
     } else {
-        check(WIFSIGNALED(status));
+        awsm_check(WIFSIGNALED(status));
         lua_pushliteral(L, "signal");
         lua_pushinteger(L, WTERMSIG(status));
     }
