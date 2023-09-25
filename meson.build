@@ -17,6 +17,7 @@ xorg_deps = [
     dependency('xproto', version : '>=7.0.15'),
     dependency('xcb-xrm'),
     dependency('libuv'),
+    dependency('fmt'),
 ]
 deps = [
     xorg_deps,
