@@ -1775,7 +1775,7 @@ void client_ban(client_t* c) {
  * generate events in this range.
  */
 void client_ignore_enterleave_events(void) {
-    check(getGlobals().pending_enter_leave_begin.sequence == 0);
+    awsm_check(getGlobals().pending_enter_leave_begin.sequence == 0);
     getGlobals().pending_enter_leave_begin = xcb_grab_server(getGlobals().connection);
     /* If the connection is broken, we get a request with sequence number 0
      * which would then trigger an assertion in
@@ -1785,13 +1785,13 @@ void client_ignore_enterleave_events(void) {
         fatal("X server connection broke (error %d)",
               xcb_connection_has_error(getGlobals().connection));
     }
-    check(getGlobals().pending_enter_leave_begin.sequence != 0);
+    awsm_check(getGlobals().pending_enter_leave_begin.sequence != 0);
 }
 
 void client_restore_enterleave_events(void) {
     sequence_pair_t pair;
 
-    check(getGlobals().pending_enter_leave_begin.sequence != 0);
+    awsm_check(getGlobals().pending_enter_leave_begin.sequence != 0);
     pair.begin = getGlobals().pending_enter_leave_begin;
     pair.end = xcb_no_operation(getGlobals().connection);
     xutil_ungrab_server(getGlobals().connection);

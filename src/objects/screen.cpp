@@ -933,7 +933,7 @@ static void screen_scan_common(bool quiet) {
         screen_scan_x11(L, &getGlobals().screens);
     }
 
-    check(getGlobals().screens.size() > 0 || getGlobals().ignore_screens);
+    awsm_check(getGlobals().screens.size() > 0 || getGlobals().ignore_screens);
 
     screen_deduplicate(L, &getGlobals().screens);
 
