@@ -19,9 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COMMON_UTIL_H
-#define AWESOME_COMMON_UTIL_H
+#pragma once
 
 #include <type_traits>
 #ifndef _GNU_SOURCE
@@ -320,7 +318,7 @@ __attribute__((format(printf, 3, 4)));
 #define warn(string, ...) _warn(__LINE__, __FUNCTION__, string, ##__VA_ARGS__)
 void _warn(int, const char*, const char*, ...) __attribute__((format(printf, 3, 4)));
 
-#define awsm_check(condition)                                                             \
+#define awsm_check(condition)                                                        \
     do {                                                                             \
         if (!(condition))                                                            \
             _warn(__LINE__, __FUNCTION__, "Checking assertion failed: " #condition); \
@@ -329,6 +327,3 @@ void _warn(int, const char*, const char*, ...) __attribute__((format(printf, 3, 
 const char* a_current_time_str(void);
 
 void a_exec(const char*);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

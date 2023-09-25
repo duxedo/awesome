@@ -18,13 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_SELECTION_H
-#define AWESOME_SELECTION_H
+#pragma once
 
 #include "common/luahdr.h"
 
 void selection_setup(lua_State*);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

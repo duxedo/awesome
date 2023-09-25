@@ -33,7 +33,7 @@ bool is_client_tagged(client_t*, tag_t*);
 void tag_unref_simplified(tag_t*);
 
 /** Tag type */
-struct tag {
+struct tag_t {
     LUA_OBJECT_HEADER
     /** Tag name */
     char* name;

@@ -18,12 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_BANNING_H
-#define AWESOME_BANNING_H
+#pragma once
 
 void banning_need_update(void);
 void banning_refresh(void);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
