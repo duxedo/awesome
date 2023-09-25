@@ -21,14 +21,13 @@
  */
 #pragma once
 
-#include <stdbool.h>
-#include <xcb/xcb.h>
+#include "xcbcpp/xcb.h"
 
 namespace XEmbed {
 enum class InfoFlags : uint32_t { UNMAPPED = 0, MAPPED = (1 << 0), FLAGS_ALL = 1 };
 struct info {
-    unsigned long version;
-    uint32_t flags;
+    unsigned long version = 0;
+    uint32_t flags = static_cast<uint32_t>(InfoFlags::UNMAPPED);
 };
 
 struct window {
@@ -77,11 +76,16 @@ enum class Modifier {
 
 void xembed_message_send(
   xcb_connection_t*, xcb_window_t, xcb_timestamp_t, Message, uint32_t, uint32_t, uint32_t);
-void xembed_property_update(xcb_connection_t*, window&, xcb_timestamp_t, xcb_get_property_reply_t*);
-xcb_get_property_cookie_t info_get_unchecked(xcb_connection_t*, xcb_window_t);
-bool xembed_info_get_reply(xcb_connection_t* connection,
-                           xcb_get_property_cookie_t cookie,
-                           info* info);
+
+void xembed_property_update(XCB::Connection* connection,
+                            window& emwin,
+                            xcb_timestamp_t timestamp,
+                            const XCB::reply<xcb_get_property_reply_t>& reply);
+
+
+
+xcb_get_property_cookie_t info_get_unchecked(XCB::Connection* connection, xcb_window_t win);
+std::optional<info> xembed_info_get_reply(XCB::Connection * conn, xcb_get_property_cookie_t cookie);
 
 /** Indicate to an embedded window that it has focus.
  * \param c The X connection.

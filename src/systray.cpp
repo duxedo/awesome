@@ -152,7 +152,7 @@ int systray_request_handle(xcb_window_t embed_win) {
 
     p_clear(&em_cookie, 1);
 
-    em_cookie = XEmbed::info_get_unchecked(getGlobals().connection, embed_win);
+    em_cookie = XEmbed::info_get_unchecked(&getConnection(), embed_win);
 
     xcb_change_window_attributes(
       getGlobals().connection, embed_win, XCB_CW_EVENT_MASK, select_input_val);
@@ -165,11 +165,9 @@ int systray_request_handle(xcb_window_t embed_win) {
 
     em.win = embed_win;
 
-    if (!xembed_info_get_reply(getGlobals().connection, em_cookie, &em.info)) {
-        /* Set some sane defaults */
-        em.info.version = XEMBED_VERSION;
-        em.info.flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED);
-    }
+    auto info = XEmbed::xembed_info_get_reply(&getConnection(), em_cookie).
+        value_or(XEmbed::info{.version = XEMBED_VERSION, .flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED)});
+    em.info = info;
 
     XEmbed::xembed_embedded_notify(getGlobals().connection,
                                    em.win,

@@ -22,9 +22,13 @@
 
 #include "common/xembed.h"
 
+#include "atoms-extern.h"
 #include "common/atoms.h"
 #include "common/util.h"
+#include "globalconf.h"
 #include "luaa.h"
+#include "xcbcpp/xcb.h"
+#include <xcb/xproto.h>
 /* I should really include the correct header instead... */
 namespace XEmbed {
 /** Send an XEMBED message to a window.
@@ -63,26 +67,26 @@ void xembed_message_send(xcb_connection_t* connection,
  * \param win The window.
  * \return A cookie.
  */
-xcb_get_property_cookie_t info_get_unchecked(xcb_connection_t* connection, xcb_window_t win) {
-    return xcb_get_property_unchecked(
-      connection, false, win, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
+xcb_get_property_cookie_t info_get_unchecked(XCB::Connection* connection, xcb_window_t win) {
+    return connection->get_property_unchecked(false, win, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
 }
 
-static bool xembed_info_from_reply(info* info, xcb_get_property_reply_t* prop_r) {
-    uint32_t* data;
+static std::optional<info> xembed_info_from_reply(const XCB::reply<xcb_get_property_reply_t>& prop_r) {
+    struct Data {
+        uint32_t data[2];
+    };
 
-    if (!prop_r || !prop_r->value_len) {
-        return false;
+    auto data = getConnection().get_property_value<Data>(prop_r);
+    if(!data) {
+        return {};
     }
 
-    if (!(data = (uint32_t*)xcb_get_property_value(prop_r))) {
-        return false;
-    }
+    info info;
 
-    info->version = data[0];
-    info->flags = data[1] & IFLAG(FLAGS_ALL);
+    info.version = data->data[0];
+    info.flags = data->data[1] & IFLAG(FLAGS_ALL);
 
-    return true;
+    return info;
 }
 
 /** Get the XEMBED info for a window.
@@ -90,13 +94,9 @@ static bool xembed_info_from_reply(info* info, xcb_get_property_reply_t* prop_r)
  * \param cookie The cookie of the request.
  * \param info The xembed_info_t structure to fill.
  */
-bool xembed_info_get_reply(xcb_connection_t* connection,
-                           xcb_get_property_cookie_t cookie,
-                           info* info) {
-    xcb_get_property_reply_t* prop_r = xcb_get_property_reply(connection, cookie, NULL);
-    bool ret = xembed_info_from_reply(info, prop_r);
-    p_delete(&prop_r);
-    return ret;
+std::optional<info> xembed_info_get_reply(XCB::Connection * conn,
+                           xcb_get_property_cookie_t cookie) {
+    return xembed_info_from_reply(conn->get_property_reply(cookie));
 }
 
 /** Update embedded window properties.
@@ -105,30 +105,28 @@ bool xembed_info_get_reply(xcb_connection_t* connection,
  * \param timestamp The timestamp.
  * \param reply The property reply to handle.
  */
-void xembed_property_update(xcb_connection_t* connection,
+void xembed_property_update(XCB::Connection* connection,
                             window& emwin,
                             xcb_timestamp_t timestamp,
-                            xcb_get_property_reply_t* reply) {
+                            const XCB::reply<xcb_get_property_reply_t>& reply) {
     int flags_changed;
-    info info = {0, static_cast<uint32_t>(InfoFlags::UNMAPPED)};
-
-    xembed_info_from_reply(&info, reply);
+    info _info = xembed_info_from_reply(reply).value_or<info>(info{});
 
     /* test if it changed */
     if (!(flags_changed =
-            static_cast<int32_t>(info.flags) ^ static_cast<uint32_t>(emwin.info.flags))) {
+            static_cast<int32_t>(_info.flags) ^ static_cast<uint32_t>(emwin.info.flags))) {
         return;
     }
 
-    emwin.info.flags = info.flags;
+    emwin.info.flags = _info.flags;
     if (flags_changed & IFLAG(MAPPED)) {
-        if (info.flags & IFLAG(MAPPED)) {
-            xcb_map_window(connection, emwin.win);
-            xembed_window_activate(connection, emwin.win, timestamp);
+        if (_info.flags & IFLAG(MAPPED)) {
+            xcb_map_window(connection->connection, emwin.win);
+            xembed_window_activate(connection->connection, emwin.win, timestamp);
         } else {
-            xcb_unmap_window(connection, emwin.win);
-            xembed_window_deactivate(connection, emwin.win, timestamp);
-            xembed_focus_out(connection, emwin.win, timestamp);
+            xcb_unmap_window(connection->connection, emwin.win);
+            xembed_window_deactivate(connection->connection, emwin.win, timestamp);
+            xembed_focus_out(connection->connection, emwin.win, timestamp);
         }
         Lua::systray_invalidate();
     }
