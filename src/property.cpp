@@ -319,18 +319,14 @@ void property_update_wm_protocols(client_t* c, xcb_get_property_cookie_t cookie)
  * \param window The window to obtain update the property with.
  */
 static void property_handle_xembed_info(uint8_t state, xcb_window_t window) {
-    // XEmbed::window *emwin = xembed_getbywin(&getGlobals().embedded, window);
     auto emwinIt = std::find_if(getGlobals().embedded.begin(),
                                 getGlobals().embedded.end(),
                                 [window](const auto& w) { return w.win == window; });
     if (emwinIt != getGlobals().embedded.end()) {
         xcb_get_property_cookie_t cookie = xcb_get_property(
           getGlobals().connection, 0, window, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0, 3);
-        xcb_get_property_reply_t* propr =
-          xcb_get_property_reply(getGlobals().connection, cookie, 0);
-        xembed_property_update(
-          getGlobals().connection, *emwinIt, getGlobals().get_timestamp(), propr);
-        p_delete(&propr);
+        auto reply = getConnection().get_property_reply(cookie);
+        xembed_property_update(&getConnection(), *emwinIt, getGlobals().get_timestamp(), reply);
     }
 }
 
