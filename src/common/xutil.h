@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COMMON_XUTIL_H
-#define AWESOME_COMMON_XUTIL_H
+#pragma once
 
 #include "common/atoms.h"
 #include "common/util.h"
@@ -63,6 +61,3 @@ static inline void xutil_ungrab_server(xcb_connection_t* connection) {
 
 uint16_t xutil_key_mask_fromstr(const char*);
 void xutil_key_mask_tostr(uint16_t, const char**, size_t*);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

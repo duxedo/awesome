@@ -1,5 +1,6 @@
 #pragma once
 #include "common/luahdr.h"
+#include "config.h"
 #ifdef WITH_DBUS
 extern const struct luaL_Reg awesome_dbus_lib[];
 #endif

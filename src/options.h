@@ -18,11 +18,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
+#pragma once
+
 #include "globalconf.h"
 
 #include <filesystem>
 #include <optional>
 #include <vector>
+
 namespace Options {
 /**
  * Initialization values extracted from the command line or modeline.
