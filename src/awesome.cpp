@@ -233,16 +233,14 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
                                    conn.get_geometry_reply(geo_c),
                                    xwindow_get_state_reply(state_c),
                                  };
-                             }) |
-                             std::ranges::views::filter([](const auto& v) {
-                                 auto& [win, attr_r, geom_r, state] = v;
-                                 return geom_r && attr_r && !attr_r->override_redirect &&
-                                        attr_r->map_state != XCB_MAP_STATE_UNMAPPED &&
-                                        state != XCB_ICCCM_WM_STATE_WITHDRAWN;
                              });
 
     for (const auto& [win, attr_r, geom_r, state] : clients_to_manage) {
-        client_manage(win, geom_r.get(), attr_r.get());
+         if( geom_r && attr_r && !attr_r->override_redirect &&
+                attr_r->map_state != XCB_MAP_STATE_UNMAPPED &&
+                state != XCB_ICCCM_WM_STATE_WITHDRAWN) {
+                client_manage(win, geom_r.get(), attr_r.get());
+         }
     }
 
     restore_client_order(prop_cookie);
