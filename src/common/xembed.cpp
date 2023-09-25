@@ -28,6 +28,7 @@
 #include "globalconf.h"
 #include "luaa.h"
 #include "xcbcpp/xcb.h"
+
 #include <xcb/xproto.h>
 /* I should really include the correct header instead... */
 namespace XEmbed {
@@ -68,16 +69,18 @@ void xembed_message_send(xcb_connection_t* connection,
  * \return A cookie.
  */
 xcb_get_property_cookie_t info_get_unchecked(XCB::Connection* connection, xcb_window_t win) {
-    return connection->get_property_unchecked(false, win, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
+    return connection->get_property_unchecked(
+      false, win, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
 }
 
-static std::optional<info> xembed_info_from_reply(const XCB::reply<xcb_get_property_reply_t>& prop_r) {
+static std::optional<info>
+xembed_info_from_reply(const XCB::reply<xcb_get_property_reply_t>& prop_r) {
     struct Data {
         uint32_t data[2];
     };
 
     auto data = getConnection().get_property_value<Data>(prop_r);
-    if(!data) {
+    if (!data) {
         return {};
     }
 
@@ -94,8 +97,7 @@ static std::optional<info> xembed_info_from_reply(const XCB::reply<xcb_get_prope
  * \param cookie The cookie of the request.
  * \param info The xembed_info_t structure to fill.
  */
-std::optional<info> xembed_info_get_reply(XCB::Connection * conn,
-                           xcb_get_property_cookie_t cookie) {
+std::optional<info> xembed_info_get_reply(XCB::Connection* conn, xcb_get_property_cookie_t cookie) {
     return xembed_info_from_reply(conn->get_property_reply(cookie));
 }
 

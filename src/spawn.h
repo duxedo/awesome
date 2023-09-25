@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_SPAWN_H
-#define AWESOME_SPAWN_H
+#pragma once
 
 #include "common/luahdr.h"
 #include "objects/client.h"
@@ -29,6 +27,3 @@ void spawn_init(void);
 void spawn_start_notify(client_t*, const char*);
 int luaA_spawn(lua_State*);
 void spawn_child_exited(pid_t, int);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

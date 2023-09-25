@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COMMON_LUACLASS
-#define AWESOME_COMMON_LUACLASS
+#pragma once
 
 #include "common/luahdr.h"
 #include "common/signal.h"
@@ -207,7 +205,3 @@ static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls
       {"set_newindex_miss_handler", luaA_##class##_set_newindex_miss_handler},
 
 #define LUA_CLASS_META {"__index", luaA_class_index}, {"__newindex", luaA_class_newindex},
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

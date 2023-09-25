@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_SELECTION_TRANSFER_H
-#define AWESOME_OBJECTS_SELECTION_TRANSFER_H
+#pragma once
 
 #include "common/luahdr.h"
 
@@ -31,7 +29,3 @@ void selection_transfer_reject(xcb_window_t, xcb_atom_t, xcb_atom_t, xcb_timesta
 void selection_transfer_begin(
   lua_State*, int, xcb_window_t, xcb_atom_t, xcb_atom_t, xcb_atom_t, xcb_timestamp_t);
 void selection_transfer_handle_propertynotify(xcb_property_notify_event_t*);
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

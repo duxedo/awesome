@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_STACK_H
-#define AWESOME_STACK_H
+#pragma once
 
 typedef struct client_t client_t;
 
@@ -29,6 +27,3 @@ void stack_client_push(client_t*);
 void stack_client_append(client_t*);
 void stack_windows(void);
 void stack_refresh(void);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

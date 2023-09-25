@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COMMON_DRAW_H
-#define AWESOME_COMMON_DRAW_H
+#pragma once
 
 #include "common/luahdr.h"
 #include "common/util.h"
@@ -66,6 +64,3 @@ xcb_visualtype_t* draw_argb_visual(const xcb_screen_t* s);
 uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis);
 
 void draw_test_cairo_xcb(void);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -48,13 +48,11 @@
     }
 
 struct drawable_t;
-typedef struct a_screen_area screen_area_t;
 struct drawin_t;
-typedef struct a_screen screen_t;
 struct button_t;
 struct client_t;
-typedef struct tag tag_t;
-typedef struct xproperty xproperty_t;
+struct screen_t;
+struct tag_t;
 struct sequence_pair_t {
     xcb_void_cookie_t begin;
     xcb_void_cookie_t end;
@@ -251,5 +249,3 @@ static inline lua_State* globalconf_get_lua_State(void) {
 
 /* Defined in root.c */
 void root_update_wallpaper(void);
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

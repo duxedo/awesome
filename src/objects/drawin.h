@@ -19,9 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_DRAWIN_H
-#define AWESOME_OBJECTS_DRAWIN_H
+#pragma once
 
 #include "objects/drawable.h"
 #include "objects/window.h"
@@ -50,6 +48,3 @@ void luaA_drawin_systray_kickout(lua_State*);
 void drawin_class_setup(lua_State*);
 
 extern lua_class_t drawin_class;
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

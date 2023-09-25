@@ -291,7 +291,7 @@ int luaA_window_set_type(lua_State* L, window_t* w) {
     return 0;
 }
 
-static const xproperty_t* luaA_find_xproperty(lua_State* L, int idx) {
+static const xproperty* luaA_find_xproperty(lua_State* L, int idx) {
     const char* name = luaL_checkstring(L, idx);
 
     auto it = std::ranges::find_if(getGlobals().xproperties,
@@ -304,7 +304,7 @@ static const xproperty_t* luaA_find_xproperty(lua_State* L, int idx) {
 }
 
 int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int value_idx) {
-    const xproperty_t* prop = luaA_find_xproperty(L, prop_idx);
+    const xproperty* prop = luaA_find_xproperty(L, prop_idx);
 
     if (lua_isnil(L, value_idx)) {
         xcb_delete_property(getGlobals().connection, window, prop->atom);
@@ -326,7 +326,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
 }
 
 int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
-    const xproperty_t* prop = luaA_find_xproperty(L, prop_idx);
+    const xproperty* prop = luaA_find_xproperty(L, prop_idx);
     xcb_atom_t type;
     const char* data;
     xcb_get_property_reply_t* reply;

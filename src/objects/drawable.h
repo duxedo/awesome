@@ -19,9 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_DRAWABLE_H
-#define AWESOME_OBJECTS_DRAWABLE_H
+#pragma once
 
 #include "common/luaclass.h"
 #include "draw.h"
@@ -49,6 +47,3 @@ typedef struct drawable_t drawable_t;
 drawable_t* drawable_allocator(lua_State*, drawable_refresh_callback*, void*);
 void drawable_set_geometry(lua_State*, int, area_t);
 void drawable_class_setup(lua_State*);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

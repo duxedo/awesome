@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_SCREEN_H
-#define AWESOME_SCREEN_H
+#pragma once
 
 #include "common/luaclass.h"
 #include "draw.h"
@@ -33,7 +31,7 @@ typedef enum {
     SCREEN_LIFECYCLE_C = 0x1 << 1,   /*!< Is managed internally by C    */
 } screen_lifecycle_t;
 
-struct a_screen {
+struct screen_t {
     LUA_OBJECT_HEADER
     bool valid;
     /** Who manages the screen lifecycle */
@@ -66,6 +64,3 @@ void screen_emit_scanning(void);
 void screen_cleanup(void);
 
 screen_t* luaA_checkscreen(lua_State*, int);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

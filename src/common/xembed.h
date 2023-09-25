@@ -82,10 +82,8 @@ void xembed_property_update(XCB::Connection* connection,
                             xcb_timestamp_t timestamp,
                             const XCB::reply<xcb_get_property_reply_t>& reply);
 
-
-
 xcb_get_property_cookie_t info_get_unchecked(XCB::Connection* connection, xcb_window_t win);
-std::optional<info> xembed_info_get_reply(XCB::Connection * conn, xcb_get_property_cookie_t cookie);
+std::optional<info> xembed_info_get_reply(XCB::Connection* conn, xcb_get_property_cookie_t cookie);
 
 /** Indicate to an embedded window that it has focus.
  * \param c The X connection.

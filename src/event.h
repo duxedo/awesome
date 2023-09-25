@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_EVENT_H
-#define AWESOME_EVENT_H
+#pragma once
 
 #include "banning.h"
 #include "globalconf.h"
@@ -54,6 +52,3 @@ static inline int awesome_refresh(void) {
 void event_init(void);
 void event_handle(xcb_generic_event_t*);
 void event_drawable_under_mouse(lua_State*, int);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

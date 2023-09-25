@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_CLIENT_H
-#define AWESOME_OBJECTS_CLIENT_H
+#pragma once
 
 #include "objects/key.h"
 #include "objects/window.h"
@@ -303,6 +301,3 @@ static inline bool client_isfixed(client_t* c) {
 static inline bool client_isvisible(client_t* c) {
     return (!c->hidden && !c->minimized && client_on_selected_tags(c));
 }
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
