@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_WINDOW_H
-#define AWESOME_OBJECTS_WINDOW_H
+#pragma once
 
 #include "color.h"
 #include "common/luaclass.h"
@@ -90,6 +88,3 @@ int luaA_window_set_type(lua_State*, window_t*);
 uint32_t window_translate_type(window_type_t);
 int window_set_xproperty(lua_State*, xcb_window_t, int, int);
 int window_get_xproperty(lua_State*, xcb_window_t, int);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

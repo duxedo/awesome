@@ -359,7 +359,7 @@ static void property_handle_xrootpmap_id(uint8_t state, xcb_window_t window) {
  */
 static void property_handle_propertynotify_xproperty(xcb_property_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
-    xproperty_t lookup = {.atom = ev->atom};
+    xproperty lookup = {.atom = ev->atom};
     void* obj;
 
     auto it = getGlobals().xproperties.find(lookup);

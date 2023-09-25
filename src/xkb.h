@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_XKB_H
-#define AWESOME_XKB_H
+#pragma once
 
 #include "common/luahdr.h"
 
@@ -33,7 +31,3 @@ void xkb_free(void);
 extern "C" int luaA_xkb_set_layout_group(lua_State* L);
 extern "C" int luaA_xkb_get_layout_group(lua_State* L);
 extern "C" int luaA_xkb_get_group_names(lua_State* L);
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -51,5 +51,3 @@ void xwindow_translate_for_gravity(
     _xwindow_set_class_instance_static(win, instance "\0" class)
 #define _xwindow_set_class_instance_static(win, instance_class) \
     xcb_icccm_set_wm_class(getGlobals().connection, win, sizeof(instance_class), instance_class)
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

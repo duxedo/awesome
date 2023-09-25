@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_OBJECTS_KEY_H
-#define AWESOME_OBJECTS_KEY_H
+#pragma once
 
 #include "common/luaobject.h"
 
@@ -54,7 +52,3 @@ int luaA_pushmodifiers(lua_State*, uint16_t);
 uint16_t luaA_tomodifiers(lua_State* L, int ud);
 
 char* key_get_keysym_name(xkb_keysym_t keysym);
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

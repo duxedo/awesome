@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COMMON_LUAOBJECT
-#define AWESOME_COMMON_LUAOBJECT
+#pragma once
 
 #include "common/luaclass.h"
 #include "luaa.h"
@@ -193,7 +191,3 @@ int luaA_object_tostring(lua_State*);
     {"__tostring", luaA_object_tostring}, {"connect_signal", luaA_object_connect_signal_simple}, \
       {"disconnect_signal", luaA_object_disconnect_signal_simple},                               \
       {"emit_signal", luaA_object_emit_signal_simple},
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -19,13 +19,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_COLOR_H
-#define AWESOME_COLOR_H
+#pragma once
 
 #include "common/luahdr.h"
 
-#include <stdbool.h>
 #include <xcb/xcb.h>
 
 typedef struct {
@@ -48,7 +45,3 @@ color_init_request_t color_init_unchecked(color_t*, const char*, ssize_t, xcb_vi
 bool color_init_reply(color_init_request_t);
 
 int luaA_pushcolor(lua_State*, const color_t);
-
-#endif
-
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

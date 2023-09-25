@@ -165,8 +165,10 @@ int systray_request_handle(xcb_window_t embed_win) {
 
     em.win = embed_win;
 
-    auto info = XEmbed::xembed_info_get_reply(&getConnection(), em_cookie).
-        value_or(XEmbed::info{.version = XEMBED_VERSION, .flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED)});
+    auto info =
+      XEmbed::xembed_info_get_reply(&getConnection(), em_cookie)
+        .value_or(XEmbed::info{.version = XEMBED_VERSION,
+                               .flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED)});
     em.info = info;
 
     XEmbed::xembed_embedded_notify(getGlobals().connection,

@@ -1,4 +1,6 @@
+
 #pragma once
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
@@ -195,9 +197,7 @@ class Connection {
         }
         return {};
     }
-    uint32_t generate_id() {
-        return xcb_generate_id(connection);
-    }
+    uint32_t generate_id() { return xcb_generate_id(connection); }
 
     // private:
     xcb_connection_t* connection = nullptr;

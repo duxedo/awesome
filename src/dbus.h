@@ -18,12 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_DBUS_H
-#define AWESOME_DBUS_H
+#pragma once
 
 void a_dbus_init(void);
 void a_dbus_cleanup(void);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

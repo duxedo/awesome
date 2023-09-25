@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_EWMH_H
-#define AWESOME_EWMH_H
+#pragma once
 
 #include "draw.h"
 #include "strut.h"
@@ -45,6 +43,3 @@ void ewmh_update_strut(xcb_window_t, strut_t*);
 void ewmh_update_window_type(xcb_window_t window, uint32_t type);
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t);
 std::vector<cairo_surface_handle> ewmh_window_icon_get_reply(xcb_get_property_cookie_t);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

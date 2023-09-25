@@ -18,9 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  *
  */
-
-#ifndef AWESOME_STRUT_H
-#define AWESOME_STRUT_H
+#pragma once
 
 #include "common/luahdr.h"
 
@@ -48,6 +46,3 @@ static inline bool strut_has_value(strut_t* strut) {
 
 int luaA_pushstrut(lua_State*, strut_t);
 void luaA_tostrut(lua_State*, int, strut_t*);
-
-#endif
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
