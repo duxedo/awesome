@@ -599,12 +599,10 @@ static screen_output_t screen_get_randr_output(lua_State* L,
     if (name_r) {
         const char* name = xcb_get_atom_name_name(name_r);
         size_t len = xcb_get_atom_name_name_length(name_r);
-
-        output.name = (char*)memcpy(p_new(char*, len + 1), name, len);
-        output.name[len] = '\0';
+        output.name.assign(name, len);
         p_delete(&name_r);
     } else {
-        output.name = a_strdup("unknown");
+        output.name = "unknown";
     }
 
     randr_outputs = xcb_randr_monitor_info_outputs(it->data);
@@ -1455,7 +1453,7 @@ static int luaA_screen_module_index(lua_State* L) {
             if (screen->name && A_STREQ(name, screen->name)) {
                 return luaA_object_push(L, screen);
             } else if (screen->viewport) {
-                for (auto& output : screen->viewport->outputs) {
+                for (const auto& output : screen->viewport->outputs) {
                     if (output.name == name) {
                         return luaA_object_push(L, screen);
                     }
