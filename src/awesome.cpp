@@ -530,13 +530,15 @@ int main(int argc, char** argv) {
     xdgHandle xdg;
     xcb_query_tree_cookie_t tree_c;
 
-    /* The default values for the init flags */
-    int default_init_flags =
-      Options::INIT_FLAG_NONE | Options::INIT_FLAG_ARGB | Options::INIT_FLAG_AUTO_SCREEN;
-
     /* Make stdout/stderr line buffered. */
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
+
+    /* Text won't be printed correctly otherwise */
+    setlocale(LC_ALL, "");
+    /* The default values for the init flags */
+    int default_init_flags =
+      Options::INIT_FLAG_NONE | Options::INIT_FLAG_ARGB | Options::INIT_FLAG_AUTO_SCREEN;
 
     /* clear the globalconf structure */
     gGlobals = new Globals;
@@ -544,9 +546,6 @@ int main(int argc, char** argv) {
 
     /* save argv */
     awesome_argv = argv;
-
-    /* Text won't be printed correctly otherwise */
-    setlocale(LC_ALL, "");
 
     // char *confpath = options_detect_shebang(argc, argv);
 
@@ -572,7 +571,7 @@ int main(int argc, char** argv) {
           &xdg, opts.configPath, [](const std::filesystem::path&) { return true; });
         if (!config) {
             fprintf(stderr, "Config not found");
-            return 1;
+            return EXIT_FAILURE;
         }
         fprintf(stdout, "Checking config '%s'... ", config->c_str());
 
