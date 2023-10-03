@@ -51,4 +51,4 @@ int luaA_key_array_get(lua_State*, int, const std::vector<keyb_t*>&);
 int luaA_pushmodifiers(lua_State*, uint16_t);
 uint16_t luaA_tomodifiers(lua_State* L, int ud);
 
-char* key_get_keysym_name(xkb_keysym_t keysym);
+std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym);

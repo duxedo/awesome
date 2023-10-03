@@ -259,23 +259,20 @@ static int luaA_key_set_modifiers(lua_State* L, keyb_t* k) {
 LUA_OBJECT_EXPORT_PROPERTY(key, keyb_t, modifiers, luaA_pushmodifiers)
 
 /* It's caller's responsibility to release the returned string. */
-char* key_get_keysym_name(xkb_keysym_t keysym) {
-    const ssize_t bufsize = 64;
-    char* buf = p_new(char, bufsize);
-    ssize_t len;
-
-    if ((len = xkb_keysym_get_name(keysym, buf, bufsize)) == -1) {
-        p_delete(&buf);
-        return NULL;
-    }
-    if (len + 1 > bufsize) {
-        p_realloc(&buf, len + 1);
-        if (xkb_keysym_get_name(keysym, buf, len + 1) != len) {
-            p_delete(&buf);
-            return NULL;
+std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym) {
+    std::optional<std::string> ret = std::string{};
+    ret->resize(ret->capacity() > 0 ? ret->capacity() : 64 );
+    if (auto len = xkb_keysym_get_name(keysym, ret->data(), ret->size()); len == -1) {
+        return {};
+    } else if (len > ret->size()) {
+        ret->resize(len);
+        if (xkb_keysym_get_name(keysym, ret->data(), ret->capacity()) != len) {
+            return {};
         }
+    } else {
+        ret->resize(len);
     }
-    return buf;
+    return ret;
 }
 
 static int luaA_key_get_key(lua_State* L, keyb_t* k) {
@@ -284,23 +281,21 @@ static int luaA_key_get_key(lua_State* L, keyb_t* k) {
         int slen = snprintf(buf, sizeof(buf), "#%u", k->keycode);
         lua_pushlstring(L, buf, slen);
     } else {
-        char* name = key_get_keysym_name(k->keysym);
+        auto name = key_get_keysym_name(k->keysym);
         if (!name) {
             return 0;
         }
-        lua_pushstring(L, name);
-        p_delete(&name);
+        lua_pushstring(L, name->c_str());
     }
     return 1;
 }
 
 static int luaA_key_get_keysym(lua_State* L, keyb_t* k) {
-    char* name = key_get_keysym_name(k->keysym);
+    auto name = key_get_keysym_name(k->keysym);
     if (!name) {
         return 0;
     }
-    lua_pushstring(L, name);
-    p_delete(&name);
+    lua_pushstring(L, name->c_str());
     return 1;
 }
 

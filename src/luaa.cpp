@@ -461,8 +461,11 @@ static int get_key_name(lua_State* L) {
     if (keysym == XKB_KEY_NoSymbol) {
         return 0;
     } else {
-        char* name = key_get_keysym_name(keysym);
-        lua_pushstring(L, name);
+        auto name = key_get_keysym_name(keysym);
+        if(!name) {
+            return 0;
+        }
+        lua_pushstring(L, name->c_str());
         char utfname[8];
         if (xkb_keysym_to_utf8(keysym, utfname, 8) > 0) {
             lua_pushstring(L, utfname);
@@ -559,9 +562,8 @@ static int get_modifiers(lua_State* L) {
                  * but... we just use the first one.
                  */
                 lua_pushstring(L, "keysym");
-                char* string = key_get_keysym_name(keysyms[0]);
-                lua_pushstring(L, string);
-                p_delete(&string);
+                auto string = key_get_keysym_name(keysyms[0]);
+                lua_pushstring(L, string->c_str());
                 lua_settable(L, -3);
 
                 lua_settable(L, -3);
