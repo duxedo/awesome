@@ -20,6 +20,5 @@
  */
 
 #pragma once
-#include <string>
 
-std::string backtrace_get();
+const char* backtrace_get();

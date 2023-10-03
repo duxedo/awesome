@@ -22,36 +22,52 @@
 #include "common/backtrace.h"
 
 #include "config.h"
+#include <cstring>
+#include <cstdlib>
 
 #ifdef HAS_EXECINFO
 #include <execinfo.h>
 #endif
+enum {
+ MAX_STACK_SIZE = 32,
+ MAX_BT_SIZE = 2048
+};
 
-#define MAX_STACK_SIZE 32
+#include <array>
+
+static char bt_text[MAX_BT_SIZE] = "\0";
 
 /** Get a backtrace.
  * \param buf The buffer to fill with backtrace.
  */
-std::string backtrace_get() {
-    std::string ret;
+const char* backtrace_get() {
     void* stack[MAX_STACK_SIZE];
     char** bt;
     int stack_size;
+    memset(bt_text, 0, sizeof(bt_text));
 
     stack_size = backtrace(stack, std::size(stack));
     bt = backtrace_symbols(stack, stack_size);
-
+    char * curr = bt_text;
     if (bt) {
-        for (int i = 0; i < stack_size; i++) {
-            if (i > 0) {
-                ret += "\n";
+        for (int i = 0; i < stack_size && curr < bt_text + MAX_BT_SIZE; i++) {
+            size_t dataleft = (MAX_BT_SIZE - (curr - bt_text));
+            if (i > 0 && dataleft >= 3) {
+                strncat(curr, "\n", (MAX_BT_SIZE - (curr - bt_text)));
+                curr += 2;
+                dataleft -= 2;
             }
-            ret += bt[i];
+            auto len = std::min(dataleft - 1, strlen(bt[i]));
+            if(len <= 4) {
+                free(bt);
+                return bt_text;
+            }
+            strncat(curr, bt[i], len);
+            curr += len;
         }
         free(bt);
-        return ret;
+        return bt_text;
     }
     return "Cannot get backtrace symbols.";
 }
 
-// vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

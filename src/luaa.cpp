@@ -805,7 +805,7 @@ static int awesome_emit_signal(lua_State* L) {
 static int panic(lua_State* L) {
     warn("unprotected error in call to Lua API (%s)", lua_tostring(L, -1));
     auto bt = backtrace_get();
-    warn("dumping backtrace\n%s", bt.c_str());
+    warn("dumping backtrace\n%s", bt);
     warn("restarting awesome");
     awesome_restart();
     return 0;
