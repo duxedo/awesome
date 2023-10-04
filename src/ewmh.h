@@ -27,7 +27,7 @@
 #include <vector>
 #include <xcb/xcb.h>
 
-typedef struct client_t client_t;
+struct client;
 
 void ewmh_init(void);
 void ewmh_init_lua(void);
@@ -36,9 +36,9 @@ int ewmh_update_net_current_desktop(lua_State*);
 void ewmh_update_net_desktop_names(void);
 int ewmh_process_client_message(xcb_client_message_event_t*);
 void ewmh_update_net_client_list_stacking(void);
-void ewmh_client_check_hints(client_t*);
-void ewmh_client_update_desktop(client_t*);
-void ewmh_process_client_strut(client_t*);
+void ewmh_client_check_hints(client*);
+void ewmh_client_update_desktop(client*);
+void ewmh_process_client_strut(client*);
 void ewmh_update_strut(xcb_window_t, strut_t*);
 void ewmh_update_window_type(xcb_window_t window, uint32_t type);
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t);

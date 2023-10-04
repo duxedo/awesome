@@ -188,7 +188,7 @@ static void restore_client_order(xcb_get_property_cookie_t prop_cookie) {
         //   Find windows[i] and swap it to where it belongs
         for (auto*& c : getGlobals().clients) {
             if (c->window == windows[i]) {
-                client_t* tmp = c;
+                client* tmp = c;
                 c = getGlobals().clients[client_idx];
                 getGlobals().clients[client_idx] = tmp;
                 client_idx++;

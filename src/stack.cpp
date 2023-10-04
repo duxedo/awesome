@@ -29,7 +29,7 @@
 #include <algorithm>
 #include <array>
 
-void stack_client_remove(client_t* c) {
+void stack_client_remove(client* c) {
     auto it =
       std::ranges::find_if(getGlobals().getStack(), [c](auto client) { return c == client; });
     if (it == getGlobals().getStack().end()) {
@@ -43,7 +43,7 @@ void stack_client_remove(client_t* c) {
 /** Push the client at the beginning of the client stack.
  * \param c The client to push.
  */
-void stack_client_push(client_t* c) {
+void stack_client_push(client* c) {
     stack_client_remove(c);
     getGlobals().refStack().insert(getGlobals().getStack().begin(), c);
     ewmh_update_net_client_list_stacking();
@@ -53,7 +53,7 @@ void stack_client_push(client_t* c) {
 /** Push the client at the end of the client stack.
  * \param c The client to push.
  */
-void stack_client_append(client_t* c) {
+void stack_client_append(client* c) {
     stack_client_remove(c);
     getGlobals().refStack().push_back(c);
     ewmh_update_net_client_list_stacking();
@@ -85,7 +85,7 @@ static void stack_window_above(xcb_window_t w, xcb_window_t previous) {
  * \param previous The previous client on the stack.
  * \return The next-previous!
  */
-static xcb_window_t stack_client_above(client_t* c, xcb_window_t previous) {
+static xcb_window_t stack_client_above(client* c, xcb_window_t previous) {
     stack_window_above(c->frame_window, previous);
 
     previous = c->frame_window;
@@ -118,7 +118,7 @@ typedef enum {
  * \param c The client.
  * \return The real layer.
  */
-static window_layer_t client_layer_translator(client_t* c) {
+static window_layer_t client_layer_translator(client* c) {
     /* first deal with user set attributes */
     if (c->ontop) {
         return WINDOW_LAYER_ONTOP;

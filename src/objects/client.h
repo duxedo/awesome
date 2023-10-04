@@ -24,30 +24,30 @@
 #include "objects/window.h"
 #include "stack.h"
 
-#define CLIENT_SELECT_INPUT_EVENT_MASK \
-    (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_FOCUS_CHANGE)
+enum {
+    CLIENT_SELECT_INPUT_EVENT_MASK = (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_FOCUS_CHANGE),
+    FRAME_SELECT_INPUT_EVENT_MASK =  (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+             XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+                  XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE)
 
-#define FRAME_SELECT_INPUT_EVENT_MASK                                                              \
-    (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW | \
-     XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |                              \
-     XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE)
+};
 
-typedef enum {
+enum client_titlebar_t {
     CLIENT_TITLEBAR_TOP = 0,
     CLIENT_TITLEBAR_RIGHT = 1,
     CLIENT_TITLEBAR_BOTTOM = 2,
     CLIENT_TITLEBAR_LEFT = 3,
     /* This is not a valid value, but the number of valid values */
     CLIENT_TITLEBAR_COUNT = 4
-} client_titlebar_t;
+};
 
-typedef enum {
+enum client_unmanage_t {
     CLIENT_UNMANAGE_DESTROYED = 0,
     CLIENT_UNMANAGE_USER = 1,
     CLIENT_UNMANAGE_REPARENT = 2,
     CLIENT_UNMANAGE_UNMAP = 3,
     CLIENT_UNMANAGE_FAILED = 4
-} client_unmanage_t;
+};
 
 /* Special bit we invented to "fake" unset hints */
 #define MWM_HINTS_AWESOME_SET (1L << 15)
@@ -92,7 +92,7 @@ typedef struct {
 } motif_wm_hints_t;
 
 /** client_t type */
-struct client_t {
+struct client {
     WINDOW_OBJECT_HEADER
     /** Window we use for input focus and no-input clients */
     xcb_window_t nofocus_window;
@@ -176,7 +176,7 @@ struct client_t {
     /** Client pid */
     uint32_t pid;
     /** Window it is transient for */
-    client_t* transient_for;
+    client* transient_for;
     /** Value of WM_TRANSIENT_FOR */
     xcb_window_t transient_for_window;
     /** Titelbar information */
@@ -193,20 +193,20 @@ struct client_t {
 /** Client class */
 extern lua_class_t client_class;
 
-LUA_OBJECT_FUNCS(client_class, client_t, client)
+LUA_OBJECT_FUNCS(client_class, client, client)
 
-bool client_on_selected_tags(client_t*);
-client_t* client_getbywin(xcb_window_t);
-client_t* client_getbynofocuswin(xcb_window_t);
-client_t* client_getbyframewin(xcb_window_t);
+bool client_on_selected_tags(client*);
+client* client_getbywin(xcb_window_t);
+client* client_getbynofocuswin(xcb_window_t);
+client* client_getbyframewin(xcb_window_t);
 
-void client_ban(client_t*);
-void client_ban_unfocus(client_t*);
-void client_unban(client_t*);
+void client_ban(client*);
+void client_ban_unfocus(client*);
+void client_unban(client*);
 void client_manage(xcb_window_t, xcb_get_geometry_reply_t*, xcb_get_window_attributes_reply_t*);
-bool client_resize(client_t*, area_t, bool);
-void client_unmanage(client_t*, client_unmanage_t);
-void client_kill(client_t*);
+bool client_resize(client*, area_t, bool);
+void client_unmanage(client*, client_unmanage_t);
+void client_kill(client*);
 void client_set_sticky(lua_State*, int, bool);
 void client_set_above(lua_State*, int, bool);
 void client_set_below(lua_State*, int, bool);
@@ -225,35 +225,35 @@ void client_set_icon_name(lua_State*, int, char*);
 void client_set_alt_icon_name(lua_State*, int, char*);
 void client_set_class_instance(lua_State*, int, const char*, const char*);
 void client_set_type(lua_State* L, int, window_type_t);
-void client_set_transient_for(lua_State* L, int, client_t*);
+void client_set_transient_for(lua_State* L, int, client*);
 void client_set_name(lua_State* L, int, char*);
 void client_set_startup_id(lua_State* L, int, char*);
 void client_set_alt_name(lua_State* L, int, char*);
 void client_set_group_window(lua_State*, int, xcb_window_t);
-void client_set_icons(client_t*, std::vector<cairo_surface_handle>);
-void client_set_icon_from_pixmaps(client_t*, xcb_pixmap_t, xcb_pixmap_t);
+void client_set_icons(client*, std::vector<cairo_surface_handle>);
+void client_set_icon_from_pixmaps(client*, xcb_pixmap_t, xcb_pixmap_t);
 void client_set_skip_taskbar(lua_State*, int, bool);
 void client_set_motif_wm_hints(lua_State*, int, motif_wm_hints_t);
-void client_focus(client_t*);
-bool client_focus_update(client_t*);
-bool client_hasproto(client_t*, xcb_atom_t);
+void client_focus(client*);
+bool client_focus_update(client*);
+bool client_hasproto(client*, xcb_atom_t);
 void client_ignore_enterleave_events(void);
 void client_restore_enterleave_events(void);
-void client_refresh_partial(client_t*, int16_t, int16_t, uint16_t, uint16_t);
+void client_refresh_partial(client*, int16_t, int16_t, uint16_t, uint16_t);
 void client_class_setup(lua_State*);
-void client_send_configure(client_t*);
-void client_find_transient_for(client_t*);
+void client_send_configure(client*);
+void client_find_transient_for(client*);
 void client_emit_scanned(void);
 void client_emit_scanning(void);
-drawable_t* client_get_drawable(client_t*, int, int);
-drawable_t* client_get_drawable_offset(client_t*, int*, int*);
-area_t client_get_undecorated_geometry(client_t*);
+drawable_t* client_get_drawable(client*, int, int);
+drawable_t* client_get_drawable_offset(client*, int*, int*);
+area_t client_get_undecorated_geometry(client*);
 
 /** Put client on top of the stack.
  * \param c The client to raise.
  */
-static inline void client_raise(client_t* c) {
-    client_t* tc = c;
+static inline void client_raise(client* c) {
+    client* tc = c;
     int counter = 0;
 
     /* Find number of transient layers. */
@@ -284,7 +284,7 @@ static inline void client_raise(client_t* c) {
  * \param c A client.
  * \return A boolean value, true if the client has a fixed size.
  */
-static inline bool client_isfixed(client_t* c) {
+static inline bool client_isfixed(client* c) {
     return (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_MAX_SIZE &&
             c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE &&
             c->size_hints.max_width == c->size_hints.min_width &&
@@ -298,6 +298,6 @@ static inline bool client_isfixed(client_t* c) {
  * \param screen Virtual screen number.
  * \return true if the client is visible, false otherwise.
  */
-static inline bool client_isvisible(client_t* c) {
+static inline bool client_isvisible(client* c) {
     return (!c->hidden && !c->minimized && client_on_selected_tags(c));
 }

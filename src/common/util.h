@@ -72,7 +72,6 @@ struct to {
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))
 
-#define p_alloc_nr(x) (((x) + 16) * 3 / 2)
 #define p_new(type, count) ((type*)xmalloc(sizeof(type) * (count)))
 #define p_clear(p, count) ((void)memset((p), 0, sizeof(*(p)) * (count)))
 #define p_dup(p, count) xmemdup((p), sizeof(*(p)) * (count))
@@ -131,17 +130,6 @@ static inline void* __attribute__((malloc)) xmalloc(ssize_t size) {
     }
 
     return ptr;
-}
-
-static inline void xrealloc(void** ptr, ssize_t newsize) {
-    if (newsize <= 0) {
-        p_delete(ptr);
-    } else {
-        *ptr = realloc(*ptr, newsize);
-        if (!*ptr) {
-            abort();
-        }
-    }
 }
 
 /** Duplicate a memory zone.

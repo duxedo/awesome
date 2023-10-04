@@ -335,7 +335,7 @@ static void tag_view(lua_State* L, int udx, bool view) {
     }
 }
 
-static void tag_client_emit_signal(tag_t* t, client_t* c, const char* signame) {
+static void tag_client_emit_signal(tag_t* t, client* c, const char* signame) {
     lua_State* L = globalconf_get_lua_State();
     luaA_object_push(L, c);
     luaA_object_push(L, t);
@@ -354,7 +354,7 @@ static void tag_client_emit_signal(tag_t* t, client_t* c, const char* signame) {
  * \param L The Lua VM state.
  * \param c the client to tag
  */
-void tag_client(lua_State* L, client_t* c) {
+void tag_client(lua_State* L, client* c) {
     tag_t* t = (tag_t*)luaA_object_ref_class(L, -1, &tag_class);
 
     /* don't tag twice */
@@ -375,7 +375,7 @@ void tag_client(lua_State* L, client_t* c) {
  * \param c the client to tag
  * \param t the tag to tag the client with
  */
-void untag_client(client_t* c, tag_t* t) {
+void untag_client(client* c, tag_t* t) {
     for (size_t i = 0; i < t->clients.size(); i++) {
         if (t->clients[i] == c) {
             lua_State* L = globalconf_get_lua_State();
@@ -395,7 +395,7 @@ void untag_client(client_t* c, tag_t* t) {
  * \param t the tag
  * \return true if the client is tagged with the tag, false otherwise.
  */
-bool is_client_tagged(client_t* c, tag_t* t) {
+bool is_client_tagged(client* c, tag_t* t) {
     for (size_t i = 0; i < t->clients.size(); i++) {
         if (t->clients[i] == c) {
             return true;
@@ -453,13 +453,13 @@ static int luaA_tag_clients(lua_State* L) {
     if (lua_gettop(L) == 2) {
         luaA_checktable(L, 2);
         for (size_t j = 0; j < clients.size(); j++) {
-            client_t* c = clients[j];
+            client* c = clients[j];
 
             /* Only untag if we aren't going to add this tag again */
             bool found = false;
             lua_pushnil(L);
             while (lua_next(L, 2)) {
-                client_t* tc = (client_t*)luaA_checkudata(L, -1, &client_class);
+                auto tc = (client*)luaA_checkudata(L, -1, &client_class);
                 /* Pop the value from lua_next */
                 lua_pop(L, 1);
                 if (tc != c) {
@@ -478,7 +478,7 @@ static int luaA_tag_clients(lua_State* L) {
         }
         lua_pushnil(L);
         while (lua_next(L, 2)) {
-            client_t* c = (client_t*)luaA_checkudata(L, -1, &client_class);
+            auto c = (client*)luaA_checkudata(L, -1, &client_class);
             /* push tag on top of the stack */
             lua_pushvalue(L, 1);
             tag_client(L, c);

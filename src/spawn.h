@@ -24,6 +24,6 @@
 #include "objects/client.h"
 
 void spawn_init(void);
-void spawn_start_notify(client_t*, const char*);
+void spawn_start_notify(client*, const char*);
 int luaA_spawn(lua_State*);
 void spawn_child_exited(pid_t, int);

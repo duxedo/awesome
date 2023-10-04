@@ -43,7 +43,7 @@
  * \param L The Lua VM state.
  */
 static int ewmh_client_update_hints(lua_State* L) {
-    client_t* c = (client_t*)luaA_checkudata(L, 1, &client_class);
+    client* c = (client*)luaA_checkudata(L, 1, &client_class);
     xcb_atom_t state[10]; /* number of defined state atoms */
     size_t i = 0;
 
@@ -112,8 +112,7 @@ static int ewmh_update_net_client_list(lua_State* L) {
 }
 
 static int ewmh_client_update_frame_extents(lua_State* L) {
-    client_t* c = (client_t*)luaA_checkudata(L, 1, &client_class);
-    ;
+    client* c = (client*)luaA_checkudata(L, 1, &client_class);
     uint32_t extents[4];
 
     extents[0] = c->border_width + c->titlebar[CLIENT_TITLEBAR_LEFT].size;
@@ -311,7 +310,7 @@ void ewmh_update_net_desktop_names(void) {
       getGlobals().screen->root, _NET_DESKTOP_NAMES, UTF8_STRING, buf);
 }
 
-static void ewmh_process_state_atom(client_t* c, xcb_atom_t state, int set) {
+static void ewmh_process_state_atom(client* c, xcb_atom_t state, int set) {
     lua_State* L = globalconf_get_lua_State();
     luaA_object_push(L, c);
 
@@ -406,7 +405,7 @@ static void ewmh_process_state_atom(client_t* c, xcb_atom_t state, int set) {
     lua_pop(L, 1);
 }
 
-static void ewmh_process_desktop(client_t* c, uint32_t desktop) {
+static void ewmh_process_desktop(client* c, uint32_t desktop) {
     lua_State* L = globalconf_get_lua_State();
     int idx = desktop;
     if (desktop == ALL_DESKTOPS) {
@@ -427,7 +426,7 @@ static void ewmh_process_desktop(client_t* c, uint32_t desktop) {
 }
 
 int ewmh_process_client_message(xcb_client_message_event_t* ev) {
-    client_t* c;
+    client* c;
 
     if (ev->type == _NET_CURRENT_DESKTOP) {
         int idx = ev->data.data32[0];
@@ -478,7 +477,7 @@ int ewmh_process_client_message(xcb_client_message_event_t* ev) {
  * of desktop system so just take the first tag.
  * \param c The client.
  */
-void ewmh_client_update_desktop(client_t* c) {
+void ewmh_client_update_desktop(client* c) {
     uint32_t i;
 
     if (c->sticky) {
@@ -527,7 +526,7 @@ void ewmh_update_window_type(xcb_window_t window, uint32_t type) {
     getConnection().replace_property(window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, type);
 }
 
-void ewmh_client_check_hints(client_t* c) {
+void ewmh_client_check_hints(client* c) {
     xcb_atom_t* state;
     void* data = NULL;
     xcb_get_property_cookie_t c0, c1, c2;
@@ -617,7 +616,7 @@ void ewmh_client_check_hints(client_t* c) {
 /** Process the WM strut of a client.
  * \param c The client.
  */
-void ewmh_process_client_strut(client_t* c) {
+void ewmh_process_client_strut(client* c) {
     void* data;
     xcb_get_property_reply_t* strut_r;
 

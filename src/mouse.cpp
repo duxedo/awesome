@@ -287,7 +287,7 @@ static int luaA_mouse_object_under_pointer(lua_State* L) {
     }
 
     drawin_t* drawin;
-    client_t* client;
+    client* client;
 
     if ((drawin = drawin_getbywin(child))) {
         return luaA_object_push(L, drawin);
