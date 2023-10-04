@@ -50,7 +50,7 @@
 struct drawable_t;
 struct drawin_t;
 struct button_t;
-struct client_t;
+struct client;
 struct screen_t;
 struct tag_t;
 struct sequence_pair_t {
@@ -125,14 +125,14 @@ class Globals {
     uint8_t event_base_randr = 0;
     uint8_t event_base_xfixes = 0;
     /** Clients list */
-    std::vector<client_t*> clients;
+    std::vector<client*> clients;
     /** Embedded windows */
   private:
-    std::vector<client_t*> stack = {};
+    std::vector<client*> stack = {};
 
   public:
-    const std::vector<client_t*>& getStack() { return stack; }
-    std::vector<client_t*>& refStack() { return stack; }
+    const std::vector<client*>& getStack() { return stack; }
+    std::vector<client*>& refStack() { return stack; }
 
     std::vector<XEmbed::window> embedded;
     /** Stack client history */
@@ -153,7 +153,7 @@ class Globals {
     /** Input focus information */
     struct {
         /** Focused client */
-        client_t* client = nullptr;
+        client* client = nullptr;
         /** Is there a focus change pending? */
         bool need_update = false;
         /** When nothing has the input focus, this window actually is focused */

@@ -213,7 +213,7 @@ static void spawn_monitor_event(SnMonitorEvent* event, void* data) {
  * \param c The client that just started.
  * \param startup_id The startup id of the started application.
  */
-void spawn_start_notify(client_t* c, const char* startup_id) {
+void spawn_start_notify(client* c, const char* startup_id) {
     for (auto& _seq : sn_waits) {
         SnStartupSequence* seq = _seq.get();
         bool found = false;

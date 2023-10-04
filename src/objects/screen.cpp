@@ -1283,7 +1283,7 @@ void screen_update_workarea(screen_t* screen) {
  * \param doresize Set to true if we also move the client to the new x and
  *        y of the new screen.
  */
-void screen_client_moveto(client_t* c, screen_t* new_screen, bool doresize) {
+void screen_client_moveto(client* c, screen_t* new_screen, bool doresize) {
     lua_State* L = globalconf_get_lua_State();
     screen_t* old_screen = c->screen;
     area_t from, to;

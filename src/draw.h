@@ -31,7 +31,6 @@
 /* Forward definition */
 typedef struct _GdkPixbuf GdkPixbuf;
 
-typedef struct area_t area_t;
 struct area_t {
     /** Co-ords of upper left corner */
     int16_t x;
