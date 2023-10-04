@@ -739,8 +739,8 @@ static int awesome_index(lua_State* L) {
     if (buf == "hostname") {
         /* No good way to handle failures... */
         char hostname[256] = "";
-        gethostname(&hostname[0], countof(hostname));
-        hostname[countof(hostname) - 1] = '\0';
+        gethostname(&hostname[0], std::size(hostname));
+        hostname[std::size(hostname) - 1] = '\0';
 
         lua_pushstring(L, hostname);
         return 1;

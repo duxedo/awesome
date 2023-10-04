@@ -164,7 +164,7 @@ int luaA_object_emit_signal_simple(lua_State*);
     }
 
 #define OBJECT_EXPORT_PROPERTY(pfx, type, field) \
-    fieldtypeof(type, field) pfx##_get_##field(const type* object) { return object->field; }
+    decltype(std::declval<type>().field) pfx##_get_##field(const type* object) { return object->field; }
 
 #define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
     static int luaA_##pfx##_get_##field(lua_State* L, type* object) { \

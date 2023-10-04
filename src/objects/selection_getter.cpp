@@ -159,7 +159,7 @@ static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t pr
     }
 
     getConnection().change_attributes(
-      selection->window, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+      selection->window, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
 
     xcb_get_property_reply_t* property_r =
       xcb_get_property_reply(getGlobals().connection,
