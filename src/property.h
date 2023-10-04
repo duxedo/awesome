@@ -27,11 +27,11 @@ extern "C" {
 }
 #include <compare>
 #include <string>
-struct client_t;
+struct client;
 
 #define PROPERTY(funcname)                                          \
-    xcb_get_property_cookie_t property_get_##funcname(client_t* c); \
-    void property_update_##funcname(client_t* c, xcb_get_property_cookie_t cookie)
+    xcb_get_property_cookie_t property_get_##funcname(client* c); \
+    void property_update_##funcname(client* c, xcb_get_property_cookie_t cookie)
 
 PROPERTY(wm_name);
 PROPERTY(net_wm_name);

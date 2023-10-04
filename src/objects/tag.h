@@ -27,9 +27,9 @@
 #include <memory>
 
 int tags_get_current_or_first_selected_index(void);
-void tag_client(lua_State*, client_t*);
-void untag_client(client_t*, tag_t*);
-bool is_client_tagged(client_t*, tag_t*);
+void tag_client(lua_State*, client*);
+void untag_client(client*, tag_t*);
+bool is_client_tagged(client*, tag_t*);
 void tag_unref_simplified(tag_t*);
 
 /** Tag type */
@@ -42,7 +42,7 @@ struct tag_t {
     /** true if selected */
     bool selected;
     /** clients in this tag */
-    std::vector<client_t*> clients;
+    std::vector<client*> clients;
 };
 
 extern lua_class_t tag_class;
