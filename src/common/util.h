@@ -50,11 +50,6 @@
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-template <uint32_t... values>
-const uint32_t* makeArray() {
-    static uint32_t vals[] = {values...};
-    return vals;
-}
 namespace range {
 template <template <typename...> class Container>
 struct to {
@@ -73,10 +68,6 @@ struct to {
             a -= b;             \
     } while (0)
 
-#define ssizeof(foo) (ssize_t)sizeof(foo)
-#define countof(foo) (ssizeof(foo) / ssizeof(foo[0]))
-#define fieldsizeof(type_t, m) sizeof(((type_t*)0)->m)
-#define fieldtypeof(type_t, m) decltype(((type_t*)0)->m)
 
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))

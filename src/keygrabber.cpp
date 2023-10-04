@@ -78,12 +78,12 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
 
     /* snprintf-like return value could be used here, but that should not be
      * necessary, as we have buffer big enough */
-    xkb_state_key_get_utf8(getGlobals().xkb_state, e->detail, buf, countof(buf));
+    xkb_state_key_get_utf8(getGlobals().xkb_state, e->detail, buf, std::size(buf));
 
     if (is_control(buf)) {
         /* Use text names for control characters, ignoring all modifiers. */
         xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().keysyms, e->detail, 0);
-        xkb_keysym_get_name(keysym, buf, countof(buf));
+        xkb_keysym_get_name(keysym, buf, std::size(buf));
     }
 
     luaA_pushmodifiers(L, e->state);

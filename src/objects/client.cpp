@@ -1572,7 +1572,7 @@ void client_set_urgent(lua_State* L, int cidx, bool urgent) {
 }
 
 #define DO_CLIENT_SET_PROPERTY(prop)                                                    \
-    void client_set_##prop(lua_State* L, int cidx, fieldtypeof(client_t, prop) value) { \
+    void client_set_##prop(lua_State* L, int cidx, decltype(std::declval<client_t>().prop) value) { \
         client_t* c = (client_t*)luaA_checkudata(L, cidx, &client_class);               \
         if (c->prop != value) {                                                         \
             c->prop = value;                                                            \

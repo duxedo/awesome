@@ -344,7 +344,7 @@ static void acquire_timestamp(void) {
 
     xcb_grab_server(getGlobals().connection);
     getConnection().change_attributes(
-      win, XCB_CW_EVENT_MASK, makeArray<XCB_EVENT_MASK_PROPERTY_CHANGE>());
+      win, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
     getConnection().append_property(win, atom, type, std::span{"", 0});
     getConnection().clear_attributes(win, XCB_CW_EVENT_MASK);
     xutil_ungrab_server(getGlobals().connection);
