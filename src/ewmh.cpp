@@ -555,7 +555,7 @@ void ewmh_client_check_hints(client_t* c) {
     reply = xcb_get_property_reply(getGlobals().connection, c1, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++) {
+        for (int i = 0; i < xcb_get_property_value_length(reply) / sizeof(xcb_atom_t); i++) {
             if (state[i] == _NET_WM_STATE_MAXIMIZED_HORZ) {
                 is_h_max = true;
             } else if (state[i] == _NET_WM_STATE_MAXIMIZED_VERT) {
@@ -590,7 +590,7 @@ void ewmh_client_check_hints(client_t* c) {
     if (reply && (data = xcb_get_property_value(reply))) {
         c->has_NET_WM_WINDOW_TYPE = true;
         state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / ssizeof(xcb_atom_t); i++) {
+        for (int i = 0; i < xcb_get_property_value_length(reply) / sizeof(xcb_atom_t); i++) {
             if (state[i] == _NET_WM_WINDOW_TYPE_DESKTOP) {
                 c->type = MAX(c->type, WINDOW_TYPE_DESKTOP);
             } else if (state[i] == _NET_WM_WINDOW_TYPE_DIALOG) {
