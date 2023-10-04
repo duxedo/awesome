@@ -20,10 +20,10 @@
  */
 #pragma once
 
-typedef struct client_t client_t;
+struct client;
 
-void stack_client_remove(client_t*);
-void stack_client_push(client_t*);
-void stack_client_append(client_t*);
+void stack_client_remove(client*);
+void stack_client_push(client*);
+void stack_client_append(client*);
 void stack_windows(void);
 void stack_refresh(void);

@@ -166,7 +166,7 @@ static void event_emit_button(lua_State* L, xcb_button_press_event_t* ev) {
  */
 static void event_handle_button(xcb_button_press_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
-    client_t* c;
+    client* c;
     drawin_t* drawin;
 
     getGlobals().update_timestamp(ev);
@@ -298,7 +298,7 @@ static void event_handle_configurerequest_configure_window(xcb_configure_request
  * \param ev The event.
  */
 static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
-    client_t* c;
+    client* c;
 
     if ((c = client_getbywin(ev->window))) {
         lua_State* L = globalconf_get_lua_State();
@@ -453,7 +453,7 @@ static void event_handle_configurenotify(xcb_configure_notify_event_t* ev) {
  * \param ev The event.
  */
 static void event_handle_destroynotify(xcb_destroy_notify_event_t* ev) {
-    client_t* c;
+    client* c;
 
     if ((c = client_getbywin(ev->window))) {
         client_unmanage(c, CLIENT_UNMANAGE_DESTROYED);
@@ -502,7 +502,7 @@ void event_drawable_under_mouse(lua_State* L, int ud) {
 static void event_handle_motionnotify(xcb_motion_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
     drawin_t* w;
-    client_t* c;
+    client* c;
 
     getGlobals().update_timestamp(ev);
 
@@ -546,7 +546,7 @@ static void event_handle_motionnotify(xcb_motion_notify_event_t* ev) {
  */
 static void event_handle_leavenotify(xcb_leave_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
-    client_t* c;
+    client* c;
 
     getGlobals().update_timestamp(ev);
 
@@ -593,7 +593,7 @@ static void event_handle_leavenotify(xcb_leave_notify_event_t* ev) {
  */
 static void event_handle_enternotify(xcb_enter_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
-    client_t* c;
+    client* c;
     drawin_t* drawin;
 
     getGlobals().update_timestamp(ev);
@@ -675,7 +675,7 @@ static void event_handle_focusin(xcb_focus_in_event_t* ev) {
      */
     case XCB_NOTIFY_DETAIL_NONLINEAR_VIRTUAL:
     case XCB_NOTIFY_DETAIL_NONLINEAR: {
-        client_t* c;
+        client* c;
 
         if ((c = client_getbywin(ev->event))) {
             /* If there is still a pending focus change, do it now. */
@@ -695,7 +695,7 @@ static void event_handle_expose(xcb_expose_event_t* ev) {
     if (drawin_t* drawin = drawin_getbywin(ev->window)) {
         drawin_refresh_pixmap_partial(drawin, ev->x, ev->y, ev->width, ev->height);
     }
-    if (client_t* client = client_getbyframewin(ev->window)) {
+    if (client* client = client_getbyframewin(ev->window)) {
         client_refresh_partial(client, ev->x, ev->y, ev->width, ev->height);
     }
 }
@@ -719,7 +719,7 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
     } else {
         /* get keysym ignoring all modifiers */
         xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().keysyms, ev->detail, 0);
-        client_t* c;
+        client* c;
         if ((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event))) {
             luaA_object_push(L, c);
             event_key_callback(ev, c->keys, L, -1, 1, &keysym);
@@ -733,7 +733,7 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
  * \param ev The event.
  */
 static void event_handle_maprequest(xcb_map_request_event_t* ev) {
-    client_t* c;
+    client* c;
     xcb_get_window_attributes_cookie_t wa_c;
     xcb_get_window_attributes_reply_t* wa_r;
     xcb_get_geometry_cookie_t geom_c;
@@ -792,7 +792,7 @@ bailout:
  * \param ev The event.
  */
 static void event_handle_unmapnotify(xcb_unmap_notify_event_t* ev) {
-    client_t* c;
+    client* c;
 
     if ((c = client_getbywin(ev->window))) {
         client_unmanage(c, CLIENT_UNMANAGE_UNMAP);
@@ -870,7 +870,7 @@ static void event_handle_randr_output_change_notify(xcb_randr_notify_event_t* ev
  * \param ev The event.
  */
 static void event_handle_shape_notify(xcb_shape_notify_event_t* ev) {
-    client_t* c = client_getbywin(ev->affected_window);
+    client* c = client_getbywin(ev->affected_window);
     if (c) {
         lua_State* L = globalconf_get_lua_State();
         luaA_object_push(L, c);
@@ -894,7 +894,7 @@ static void event_handle_clientmessage(xcb_client_message_event_t* ev) {
     }
 
     if (ev->type == WM_CHANGE_STATE) {
-        client_t* c;
+        client* c;
         if ((c = client_getbywin(ev->window)) && ev->format == 32 &&
             ev->data.data32[0] == XCB_ICCCM_WM_STATE_ICONIC) {
             lua_State* L = globalconf_get_lua_State();
@@ -912,7 +912,7 @@ static void event_handle_clientmessage(xcb_client_message_event_t* ev) {
 }
 
 static void event_handle_reparentnotify(xcb_reparent_notify_event_t* ev) {
-    client_t* c;
+    client* c;
 
     if ((c = client_getbywin(ev->window)) && c->frame_window != ev->parent) {
         /* Ignore reparents to the root window, they *might* be caused by
