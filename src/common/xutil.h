@@ -22,6 +22,7 @@
 
 #include "common/atoms.h"
 #include "common/util.h"
+#include <string>
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
@@ -31,7 +32,7 @@
 #define MAX_X11_SIZE UINT16_MAX
 #define MIN_X11_SIZE 1
 
-static inline char* xutil_get_text_property_from_reply(xcb_get_property_reply_t* reply) {
+static inline std::string xutil_get_text_property_from_reply(xcb_get_property_reply_t* reply) {
     if (reply &&
         (reply->type == XCB_ATOM_STRING || reply->type == UTF8_STRING ||
          reply->type == COMPOUND_TEXT) &&
@@ -39,12 +40,11 @@ static inline char* xutil_get_text_property_from_reply(xcb_get_property_reply_t*
         /* We need to copy it that way since the string may not be
          * NULL-terminated */
         int len = xcb_get_property_value_length(reply);
-        char* value = p_new(char, len + 1);
-        memcpy(value, xcb_get_property_value(reply), len);
-        value[len] = '\0';
-        return value;
+        std::string ret(len, ' ');
+        memcpy(ret.data(), xcb_get_property_value(reply), len);
+        return ret;
     }
-    return NULL;
+    return "";
 }
 
 static inline void xutil_ungrab_server(xcb_connection_t* connection) {
