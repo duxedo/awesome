@@ -1544,15 +1544,6 @@ client_set_maximized_common(lua_State* L, int cidx, bool s, const char* type, co
 static void client_wipe(client* c) {
     c->keys.clear();
     xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
-    c->icons.clear();
-    p_delete(&c->machine);
-    p_delete(&c->cls);
-    p_delete(&c->instance);
-    p_delete(&c->icon_name);
-    p_delete(&c->alt_icon_name);
-    p_delete(&c->name);
-    p_delete(&c->alt_name);
-    p_delete(&c->startup_id);
     c->~client();
 }
 
@@ -1597,14 +1588,25 @@ DO_CLIENT_SET_PROPERTY(skip_taskbar)
         c->prop = value;                                                  \
         luaA_object_emit_signal(L, cidx, "property::" #signal, 0);        \
     }
+#define DO_CLIENT_SET_STRING_PROPERTY3(prop, getter, setter, signal)                      \
+    void client_set_##prop(lua_State* L, int cidx, const std::string& value) {         \
+        auto c = (client*)luaA_checkudata(L, cidx, &client_class); \
+        if (c->getter() == value) {                                    \
+            return;                                                       \
+        }                                                                 \
+        c->setter(value);                                                  \
+        luaA_object_emit_signal(L, cidx, "property::" #signal, 0);        \
+    }
+#define DO_CLIENT_SET_STRING_PROPERTY4(name, signal)                      \
+    DO_CLIENT_SET_STRING_PROPERTY3(name, get ## name, set ## name, signal)
 #define DO_CLIENT_SET_STRING_PROPERTY(prop) DO_CLIENT_SET_STRING_PROPERTY2(prop, prop)
-DO_CLIENT_SET_STRING_PROPERTY(name)
-DO_CLIENT_SET_STRING_PROPERTY2(alt_name, name)
-DO_CLIENT_SET_STRING_PROPERTY(icon_name)
-DO_CLIENT_SET_STRING_PROPERTY2(alt_icon_name, icon_name)
-DO_CLIENT_SET_STRING_PROPERTY(startup_id)
-DO_CLIENT_SET_STRING_PROPERTY(role)
-DO_CLIENT_SET_STRING_PROPERTY(machine)
+DO_CLIENT_SET_STRING_PROPERTY4(Name, name)
+DO_CLIENT_SET_STRING_PROPERTY4(AltName, name)
+DO_CLIENT_SET_STRING_PROPERTY4(IconName, icon_name)
+DO_CLIENT_SET_STRING_PROPERTY4(AltIconName, icon_name)
+DO_CLIENT_SET_STRING_PROPERTY4(StartupId, startup_id)
+DO_CLIENT_SET_STRING_PROPERTY4(Role, role)
+DO_CLIENT_SET_STRING_PROPERTY4(Machine, machine)
 #undef DO_CLIENT_SET_STRING_PROPERTY
 
 void client_emit_scanned(void) {
@@ -1654,13 +1656,11 @@ void client_find_transient_for(client* c) {
     lua_pop(L, 1);
 }
 
-void client_set_class_instance(lua_State* L, int cidx, const char* cls, const char* instance) {
+void client_set_ClassInstance(lua_State* L, int cidx, const std::string& cls, const std::string& instance) {
     auto c = (client*)luaA_checkudata(L, cidx, &client_class);
-    p_delete(&c->cls);
-    p_delete(&c->instance);
-    c->cls = a_strdup(cls);
+    c->setCls(cls);
     luaA_object_emit_signal(L, cidx, "property::class", 0);
-    c->instance = a_strdup(instance);
+    c->setInstance(instance);
     luaA_object_emit_signal(L, cidx, "property::instance", 0);
 }
 
@@ -2216,10 +2216,10 @@ void client_manage(xcb_window_t w,
     xcb_get_property_reply_t* reply =
       xcb_get_property_reply(getGlobals().connection, startup_id_q, NULL);
     /* Say spawn that a client has been started, with startup id as argument */
-    char* startup_id = xutil_get_text_property_from_reply(reply);
+    auto startup_id = xutil_get_text_property_from_reply(reply);
     p_delete(&reply);
 
-    if (startup_id == NULL && c->leader_window != XCB_NONE) {
+    if (startup_id.empty() && c->leader_window != XCB_NONE) {
         /* GTK hides this property elsewhere. No idea why. */
         startup_id_q = xcb_get_property(getGlobals().connection,
                                         false,
@@ -2232,9 +2232,9 @@ void client_manage(xcb_window_t w,
         startup_id = xutil_get_text_property_from_reply(reply);
         p_delete(&reply);
     }
-    c->startup_id = startup_id;
+    c->setStartupId(startup_id);
 
-    spawn_start_notify(c, startup_id);
+    spawn_start_notify(c, startup_id.c_str());
 
     luaA_class_emit_signal(L, &client_class, "list", 0);
 
@@ -2259,9 +2259,9 @@ void client_manage(xcb_window_t w,
         warn(
           "Failed to manage window with name '%s', class '%s', instance '%s', because reparenting "
           "failed.",
-          NONULL(c->name),
-          NONULL(c->cls),
-          NONULL(c->instance));
+          c->getName().c_str(),
+          c->getCls().c_str(),
+          c->getInstance().c_str());
         event_handle((xcb_generic_event_t*)error);
         p_delete(&error);
         client_unmanage(c, CLIENT_UNMANAGE_FAILED);
@@ -3717,7 +3717,7 @@ static int luaA_client_set_skip_taskbar(lua_State* L, client* c) {
 }
 
 static int luaA_client_get_name(lua_State* L, client* c) {
-    lua_pushstring(L, NONULL(c->name ? c->name : c->alt_name));
+    lua_pushstring(L, !c->getName().empty() ? c->getName().c_str() : c->getAltName().c_str());
     return 1;
 }
 
@@ -3727,27 +3727,27 @@ static int luaA_client_get_name(lua_State* L, client* c) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_client_set_name(lua_State* L, client* c) {
-    const char* name = luaL_checkstring(L, -1);
-    client_set_name(L, 1, a_strdup(name));
+    const auto name = Lua::checkstring(L, -1);
+    client_set_Name(L, 1, std::string{name.begin(), name.end()});
     return 0;
 }
 
 static int luaA_client_get_icon_name(lua_State* L, client* c) {
-    lua_pushstring(L, c->icon_name ? c->icon_name : c->alt_icon_name);
+    lua_pushstring(L, !c->getIconName().empty() ? c->getIconName().c_str() : c->getAltIconName().c_str());
     return 1;
 }
 
 static int luaA_client_set_startup_id(lua_State* L, client* c) {
     const char* startup_id = luaL_checkstring(L, -1);
-    client_set_startup_id(L, 1, a_strdup(startup_id));
+    client_set_StartupId(L, 1, startup_id);
     return 0;
 }
 
 LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, screen, luaA_object_push, NULL)
-LUA_OBJECT_EXPORT_PROPERTY2(client, client, cls, class, lua_pushstring)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, instance, lua_pushstring)
-LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, machine, lua_pushstring, NULL)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, role, lua_pushstring)
+LUA_OBJECT_EXPORT_PROPERTY2(client, client, getCls(), class, Lua::pushstring)
+LUA_OBJECT_EXPORT_PROPERTY2(client, client, getInstance(), instance, Lua::pushstring)
+LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(client, client, getMachine(), machine, Lua::pushstring, "")
+LUA_OBJECT_EXPORT_PROPERTY2(client, client, getRole(), role, Lua::pushstring)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, transient_for, luaA_object_push)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, skip_taskbar, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, leader_window, lua_pushinteger)
@@ -3766,7 +3766,7 @@ LUA_OBJECT_EXPORT_PROPERTY(client, client, size_hints_honor, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized_horizontal, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized_vertical, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, startup_id, lua_pushstring)
+LUA_OBJECT_EXPORT_PROPERTY2(client, client, getStartupId(), startup_id, Lua::pushstring)
 
 static int luaA_client_get_motif_wm_hints(lua_State* L, client* c) {
     if (!(c->motif_wm_hints.hints & MWM_HINTS_AWESOME_SET)) {
@@ -4201,15 +4201,14 @@ static int luaA_client_get_some_icon(lua_State* L) {
 }
 
 static int client_tostring(lua_State* L, client* c) {
-    char* name = c->name ? c->name : c->alt_name;
-    ssize_t len = a_strlen(name);
+    const auto& name = c->getName().empty() ? c->getAltName() : c->getName();
     ssize_t limit = 20;
 
-    lua_pushlstring(L, name, MIN(len, limit));
-    if (len > limit) {
+    lua_pushlstring(L, name.c_str(), MIN(name.size(), limit));
+    if (name.size() > limit) {
         lua_pushstring(L, "...");
     }
-    return len > limit ? 2 : 1;
+    return name.size() > limit ? 2 : 1;
 }
 
 /* Client module.

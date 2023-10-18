@@ -60,12 +60,12 @@
             property_update_##funcname(c, property_get_##funcname(c));               \
     }
 
-HANDLE_TEXT_PROPERTY(wm_name, XCB_ATOM_WM_NAME, client_set_alt_name)
-HANDLE_TEXT_PROPERTY(net_wm_name, _NET_WM_NAME, client_set_name)
-HANDLE_TEXT_PROPERTY(wm_icon_name, XCB_ATOM_WM_ICON_NAME, client_set_alt_icon_name)
-HANDLE_TEXT_PROPERTY(net_wm_icon_name, _NET_WM_ICON_NAME, client_set_icon_name)
-HANDLE_TEXT_PROPERTY(wm_client_machine, XCB_ATOM_WM_CLIENT_MACHINE, client_set_machine)
-HANDLE_TEXT_PROPERTY(wm_window_role, WM_WINDOW_ROLE, client_set_role)
+HANDLE_TEXT_PROPERTY(wm_name, XCB_ATOM_WM_NAME, client_set_AltName)
+HANDLE_TEXT_PROPERTY(net_wm_name, _NET_WM_NAME, client_set_Name)
+HANDLE_TEXT_PROPERTY(wm_icon_name, XCB_ATOM_WM_ICON_NAME, client_set_AltIconName)
+HANDLE_TEXT_PROPERTY(net_wm_icon_name, _NET_WM_ICON_NAME, client_set_IconName)
+HANDLE_TEXT_PROPERTY(wm_client_machine, XCB_ATOM_WM_CLIENT_MACHINE, client_set_Machine)
+HANDLE_TEXT_PROPERTY(wm_window_role, WM_WINDOW_ROLE, client_set_Role)
 
 #undef HANDLE_TEXT_PROPERTY
 
@@ -214,7 +214,7 @@ void property_update_wm_class(client* c, xcb_get_property_cookie_t cookie) {
     }
 
     luaA_object_push(L, c);
-    client_set_class_instance(L, -1, hint.class_name, hint.instance_name);
+    client_set_ClassInstance(L, -1, hint.class_name, hint.instance_name);
     lua_pop(L, 1);
 
     xcb_icccm_get_wm_class_reply_wipe(&hint);

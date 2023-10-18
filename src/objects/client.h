@@ -99,9 +99,28 @@ struct client {
     /** Client logical screen */
     screen_t* screen;
     /** Client name */
-    char *name, *alt_name, *icon_name, *alt_icon_name;
+    private:
+    std::string name, alt_name, icon_name, alt_icon_name;
+    public:
+    const std::string& getName() const { return name; }
+    const std::string& getAltName() const { return alt_name; }
+    const std::string& getIconName() const { return icon_name; }
+    const std::string& getAltIconName() const { return alt_icon_name; }
+
+    void setName(const std::string & name) { this->name = name; }
+    void setAltName(const std::string & name) { this->alt_name = name; }
+    void setIconName(const std::string & name) { this->icon_name = name; }
+    void setAltIconName(const std::string & name) { this->alt_icon_name = name; }
     /** WM_CLASS stuff */
-    char *cls, *instance;
+    private:
+    std::string cls;
+    std::string instance;
+    public:
+    const std::string& getCls() const { return cls; }
+    const std::string& getInstance() const { return instance; }
+
+    void setCls(const std::string& cls) { this->cls = cls; }
+    void setInstance(const std::string& instance) { this->instance = instance; }
     /** Window geometry */
     area_t geometry;
     /** Old window geometry currently configured in X11 */
@@ -110,7 +129,12 @@ struct client {
     /** Got a configure request and have to call client_send_configure() if its ignored? */
     bool got_configure_request;
     /** Startup ID */
-    char* startup_id;
+    private:
+    std::string startup_id;
+    public:
+    const std::string& getStartupId() const { return startup_id; }
+    void setStartupId(const std::string& id) { startup_id = id; }
+
     /** True if the client is sticky */
     bool sticky;
     /** Has urgency hint */
@@ -170,9 +194,18 @@ struct client {
     /** Do we honor the client's size hints? */
     bool size_hints_honor;
     /** Machine the client is running on. */
-    char* machine;
+    private:
+    std::string machine;
+    public:
+    const std::string& getMachine() const { return machine; }
+    void setMachine(const std::string& machine) { this->machine = machine; }
     /** Role of the client */
-    char* role;
+    private:
+    std::string role;
+    public:
+    const std::string& getRole() const { return role; }
+    void setRole(const std::string& val) { role = val; }
+
     /** Client pid */
     uint32_t pid;
     /** Window it is transient for */
@@ -219,16 +252,16 @@ void client_set_maximized_vertical(lua_State*, int, bool);
 void client_set_minimized(lua_State*, int, bool);
 void client_set_urgent(lua_State*, int, bool);
 void client_set_pid(lua_State*, int, uint32_t);
-void client_set_role(lua_State*, int, char*);
-void client_set_machine(lua_State*, int, char*);
-void client_set_icon_name(lua_State*, int, char*);
-void client_set_alt_icon_name(lua_State*, int, char*);
-void client_set_class_instance(lua_State*, int, const char*, const char*);
+void client_set_Role(lua_State*, int, const std::string&);
+void client_set_Machine(lua_State*, int, const std::string&);
+void client_set_IconName(lua_State*, int, const std::string&);
+void client_set_AltIconName(lua_State*, int, const std::string&);
+void client_set_ClassInstance(lua_State*, int, const std::string&, const std::string&);
 void client_set_type(lua_State* L, int, window_type_t);
 void client_set_transient_for(lua_State* L, int, client*);
-void client_set_name(lua_State* L, int, char*);
-void client_set_startup_id(lua_State* L, int, char*);
-void client_set_alt_name(lua_State* L, int, char*);
+void client_set_Name(lua_State* L, int, const std::string&);
+void client_set_StartupId(lua_State* L, int, const std::string&);
+void client_set_AltName(lua_State* L, int, const std::string&);
 void client_set_group_window(lua_State*, int, xcb_window_t);
 void client_set_icons(client*, std::vector<cairo_surface_handle>);
 void client_set_icon_from_pixmaps(client*, xcb_pixmap_t, xcb_pixmap_t);
