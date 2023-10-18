@@ -40,6 +40,8 @@
 #include <alloca.h>
 #endif
 
+#include <cctype>
+
 /** \brief replace \c NULL strings with empty strings */
 #define NONULL(x) (x ? x : "")
 
@@ -294,3 +296,9 @@ void _warn(int, const char*, const char*, ...) __attribute__((format(printf, 3, 
 const char* a_current_time_str(void);
 
 void a_exec(const char*);
+
+inline bool ichar_equals(char a, char b)
+{
+    return std::tolower(static_cast<unsigned char>(a)) ==
+           std::tolower(static_cast<unsigned char>(b));
+}
