@@ -35,6 +35,9 @@ inline std::string_view checkstring(lua_State* L, int numArg) {
     const char* str = luaL_checklstring(L, numArg, &length);
     return {str, length};
 }
+
+void pushstring(lua_State* L, const std::string & str);
+void pushstring(lua_State* L, const char* str);
 }
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;

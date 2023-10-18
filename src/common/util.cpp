@@ -29,6 +29,9 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <string>
+#include "common/luahdr.h"
+#include "lua.h"
 
 const char* a_current_time_str(void) {
     static char buffer[25];
@@ -129,4 +132,12 @@ void a_exec(const char* cmd) {
     fatal("execlp() failed: %s", strerror(errno));
 }
 
+namespace Lua {
+void pushstring(lua_State* L, const std::string & str) {
+    lua_pushlstring(L, str.c_str(), str.size());
+}
+void pushstring(lua_State* L, const char* str) {
+    lua_pushstring(L, str);
+}
+}
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

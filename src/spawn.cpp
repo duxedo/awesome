@@ -53,13 +53,16 @@
 
 #include "spawn.h"
 
+#include "common/util.h"
 #include "glibconfig.h"
 #include "libsn/sn-monitor.h"
 #include "luaa.h"
 
+#include <algorithm>
 #include <glib.h>
 #include <memory>
 #include <set>
+#include <string_view>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -223,11 +226,11 @@ void spawn_start_notify(client* c, const char* startup_id) {
             found = true;
         } else {
             const char* seqclass = sn_startup_sequence_get_wmclass(seq);
-            if (A_STREQ(seqclass, c->cls) || A_STREQ(seqclass, c->instance)) {
+            if (c->getCls() == seqclass || c->getInstance() == seqclass) {
                 found = true;
             } else {
-                const char* seqbin = sn_startup_sequence_get_binary_name(seq);
-                if (A_STREQ_CASE(seqbin, c->cls) || A_STREQ_CASE(seqbin, c->instance)) {
+                auto seqbin = std::string_view(sn_startup_sequence_get_binary_name(seq));
+                if (std::ranges::equal(seqbin, c->getCls(), ichar_equals) || std::ranges::equal(seqbin, c->getInstance(), ichar_equals)) {
                     found = true;
                 }
             }
