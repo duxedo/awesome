@@ -31,6 +31,8 @@
 
 #include "common/backtrace.h"
 
+#include <fmt/format.h>
+
 /** Setup the object system at startup.
  * \param L The Lua VM state.
  */
@@ -209,10 +211,9 @@ void luaA_object_disconnect_signal_from_stack(lua_State* L, int oud, const char*
 
 void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name, int nargs) {
     auto signalIt = arr->find(name);
-
     if (signalIt != arr->end()) {
         int nbfunc = signalIt->second.functions.size();
-        luaL_checkstack(L, nbfunc + nargs + 1, "too much signal");
+        luaL_checkstack(L, nbfunc + nargs + 1, fmt::format("Not enough stack space to call signal '{}' (trying to push {} entries)", name, nbfunc + nargs + 1).c_str());
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
         for (auto func : signalIt->second.functions) {
