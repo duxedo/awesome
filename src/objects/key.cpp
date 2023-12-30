@@ -264,7 +264,7 @@ std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym) {
     ret->resize(ret->capacity() > 0 ? ret->capacity() : 64 );
     if (auto len = xkb_keysym_get_name(keysym, ret->data(), ret->size()); len == -1) {
         return {};
-    } else if (len > ret->size()) {
+    } else if (len > (int)ret->size()) {
         ret->resize(len);
         if (xkb_keysym_get_name(keysym, ret->data(), ret->capacity()) != len) {
             return {};
