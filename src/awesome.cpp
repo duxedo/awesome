@@ -217,7 +217,9 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
         fatal("cannot get tree children");
     }
 
-    std::vector winparams = wins.value() | std::ranges::views::transform([&conn](const auto& v) {
+    namespace views = std::ranges::views;
+
+    std::vector winparams = wins.value() | views::transform([&conn](const auto& v) {
                                 return std::tuple{v,
                                                   conn.get_window_attributes_unckecked(v),
                                                   xwindow_get_state_unchecked(v),
@@ -225,7 +227,7 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
                             }) |
                             range::to<std::vector>{};
 
-    auto clients_to_manage = winparams | std::ranges::views::transform([&conn](const auto& v) {
+    auto clients_to_manage = winparams | views::transform([&conn](const auto& v) {
                                  auto& [win, attr_c, state_c, geo_c] = v;
                                  return std::tuple{
                                    win,
