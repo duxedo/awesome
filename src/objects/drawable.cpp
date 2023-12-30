@@ -203,7 +203,7 @@ static int luaA_drawable_refresh(lua_State* L) {
  */
 static int luaA_drawable_geometry(lua_State* L) {
     drawable_t* d = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
-    return luaA_pusharea(L, d->geometry);
+    return Lua::pusharea(L, d->geometry);
 }
 
 void drawable_class_setup(lua_State* L) {

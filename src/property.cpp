@@ -351,7 +351,7 @@ static void property_handle_net_wm_opacity(uint8_t state, xcb_window_t window) {
 static void property_handle_xrootpmap_id(uint8_t state, xcb_window_t window) {
     lua_State* L = globalconf_get_lua_State();
     root_update_wallpaper();
-    signal_object_emit(L, &global_signals, "wallpaper_changed", 0);
+    signal_object_emit(L, &Lua::global_signals, "wallpaper_changed", 0);
 }
 
 /** The property notify event handler handling xproperties.
@@ -389,7 +389,7 @@ static void property_handle_propertynotify_xproperty(xcb_property_notify_event_t
         luaA_object_emit_signal(L, -1, buf.c_str(), 0);
         lua_pop(L, 1);
     } else {
-        signal_object_emit(L, &global_signals, buf.c_str(), 0);
+        signal_object_emit(L, &Lua::global_signals, buf.c_str(), 0);
     }
 }
 

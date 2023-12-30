@@ -189,11 +189,11 @@ static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls
     }                                                                                        \
                                                                                              \
     static inline int luaA_##prefix##_set_index_miss_handler(lua_State* L) {                 \
-        return luaA_registerfct(L, 1, &(lua_class).index_miss_handler);                      \
+        return Lua::registerfct(L, 1, &(lua_class).index_miss_handler);                      \
     }                                                                                        \
                                                                                              \
     static inline int luaA_##prefix##_set_newindex_miss_handler(lua_State* L) {              \
-        return luaA_registerfct(L, 1, &(lua_class).newindex_miss_handler);                   \
+        return Lua::registerfct(L, 1, &(lua_class).newindex_miss_handler);                   \
     }
 
 #define LUA_CLASS_METHODS(class)                                         \

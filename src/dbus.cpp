@@ -268,10 +268,10 @@ static bool a_dbus_convert_value(lua_State* L, int idx, DBusMessageIter* iter) {
         DBusMessageIter subiter;
         dbus_message_iter_open_container(iter, DBUS_TYPE_ARRAY, type + 1, &subiter);
 
-        int arraylen = luaA_rawlen(L, idx + 1);
+        int arraylen = Lua::rawlen(L, idx + 1);
 
         if (arraylen % 2 != 0) {
-            luaA_warn(L, "your D-Bus signal handling method returned wrong number of arguments");
+            Lua::warn(L, "your D-Bus signal handling method returned wrong number of arguments");
             return false;
         }
 
@@ -299,7 +299,7 @@ static bool a_dbus_convert_value(lua_State* L, int idx, DBusMessageIter* iter) {
     case DBUS_TYPE_STRING: {
         const char* s = lua_tostring(L, idx + 1);
         if (!s || !dbus_validate_utf8(s, NULL)) {
-            luaA_warn(L, "Your D-Bus signal handling method returned an invalid string");
+            Lua::warn(L, "Your D-Bus signal handling method returned an invalid string");
             return false;
         }
         dbus_message_iter_append_basic(iter, DBUS_TYPE_STRING, &s);
@@ -391,7 +391,7 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
             int n = lua_gettop(L) - nargs;
 
             luaA_object_push(L, (void*)func);
-            luaA_dofunction(L, nargs, LUA_MULTRET);
+            Lua::dofunction(L, nargs, LUA_MULTRET);
 
             n -= lua_gettop(L);
 
@@ -400,7 +400,7 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
             dbus_message_iter_init_append(reply, &iter);
 
             if (n % 2 != 0) {
-                luaA_warn(L,
+                Lua::warn(L,
                           "your D-Bus signal handling method returned wrong number of arguments");
                 /* Restore stack */
                 lua_settop(L, old_top);
@@ -410,7 +410,7 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
             /* i is negative */
             for (int i = n; i < 0; i += 2) {
                 if (!a_dbus_convert_value(L, i, &iter)) {
-                    luaA_warn(L, "your D-Bus signal handling method returned bad data");
+                    Lua::warn(L, "your D-Bus signal handling method returned bad data");
                     /* Restore stack */
                     lua_settop(L, old_top);
                     return;
@@ -686,10 +686,10 @@ static int luaA_dbus_remove_match(lua_State* L) {
  */
 static int luaA_dbus_connect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
-    luaA_checkfunction(L, 2);
+    Lua::checkfunction(L, 2);
     auto signalIt = dbus_signals.find(name);
     if (signalIt != dbus_signals.end()) {
-        luaA_warn(L, "cannot add signal %s on D-Bus, already existing", name.data());
+        Lua::warn(L, "cannot add signal %s on D-Bus, already existing", name.data());
         lua_pushnil(L);
         lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name.data());
         return 2;
@@ -708,7 +708,7 @@ static int luaA_dbus_connect_signal(lua_State* L) {
  */
 static int luaA_dbus_disconnect_signal(lua_State* L) {
     const char* name = luaL_checkstring(L, 1);
-    luaA_checkfunction(L, 2);
+    Lua::checkfunction(L, 2);
     const void* func = lua_topointer(L, 2);
     if (dbus_signals.disconnect(name, func)) {
         luaA_object_unref(L, func);
@@ -737,7 +737,7 @@ static int luaA_dbus_emit_signal(lua_State* L) {
     DBusConnection* dbus_connection = a_dbus_bus_getbyname(L, bus_name);
     DBusMessage* msg = dbus_message_new_signal(path, itface, name);
     if (msg == NULL) {
-        luaA_warn(L, "your D-Bus signal emitting method error'd");
+        Lua::warn(L, "your D-Bus signal emitting method error'd");
         return 0;
     }
 
@@ -747,14 +747,14 @@ static int luaA_dbus_emit_signal(lua_State* L) {
     int nargs = top - 4;
 
     if (nargs % 2 != 0) {
-        luaA_warn(L, "your D-Bus signal emitting method has wrong number of arguments");
+        Lua::warn(L, "your D-Bus signal emitting method has wrong number of arguments");
         dbus_message_unref(msg);
         lua_pushboolean(L, 0);
         return 1;
     }
     for (int i = 5; i < top; i += 2) {
         if (!a_dbus_convert_value(L, i, &iter)) {
-            luaA_warn(L, "your D-Bus signal emitting method has bad argument type");
+            Lua::warn(L, "your D-Bus signal emitting method has bad argument type");
             dbus_message_unref(msg);
             lua_pushboolean(L, 0);
             return 1;

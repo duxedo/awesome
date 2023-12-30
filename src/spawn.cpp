@@ -114,8 +114,8 @@ static inline bool spawn_sequence_remove(SnStartupSequence* s) {
 
 static gboolean spawn_monitor_timeout(gpointer sequence) {
     if (spawn_sequence_remove((SnStartupSequence*)sequence)) {
-        auto sigIt = global_signals.find("spawn::timeout");
-        if (sigIt != global_signals.end()) {
+        auto sigIt = Lua::global_signals.find("spawn::timeout");
+        if (sigIt != Lua::global_signals.end()) {
             /* send a timeout signal */
             lua_State* L = globalconf_get_lua_State();
             lua_createtable(L, 0, 2);
@@ -124,7 +124,7 @@ static gboolean spawn_monitor_timeout(gpointer sequence) {
             for (auto func : sigIt->second.functions) {
                 lua_pushvalue(L, -1);
                 luaA_object_push(L, (void*)func);
-                luaA_dofunction(L, 1, 0);
+                Lua::dofunction(L, 1, 0);
             }
             lua_pop(L, 1);
         }
@@ -200,13 +200,13 @@ static void spawn_monitor_event(SnMonitorEvent* event, void* data) {
     }
 
     /* send the signal */
-    auto sigIt = global_signals.find(event_type_str);
+    auto sigIt = Lua::global_signals.find(event_type_str);
 
-    if (sigIt != global_signals.end()) {
+    if (sigIt != Lua::global_signals.end()) {
         for (auto func : sigIt->second.functions) {
             lua_pushvalue(L, -1);
             luaA_object_push(L, (void*)func);
-            luaA_dofunction(L, 1, 0);
+            Lua::dofunction(L, 1, 0);
         }
         lua_pop(L, 1);
     }
@@ -280,8 +280,8 @@ static gchar** parse_table_array(lua_State* L, int idx, GError** error) {
     size_t i, len;
 
     luaL_checktype(L, idx, LUA_TTABLE);
-    idx = luaA_absindex(L, idx);
-    len = luaA_rawlen(L, idx);
+    idx = Lua::absindex(L, idx);
+    len = Lua::rawlen(L, idx);
 
     /* First verify that the table is sane: All integer keys must contain
      * strings. Do this by pushing them all onto the stack.
@@ -357,8 +357,8 @@ void spawn_child_exited(pid_t pid, int status) {
     }
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, exit_callback);
-    luaA_dofunction(L, 2, 0);
-    luaA_unregister(L, &exit_callback);
+    Lua::dofunction(L, 2, 0);
+    Lua::unregister(L, &exit_callback);
 }
 
 /** Spawn a program.
@@ -392,19 +392,19 @@ int luaA_spawn(lua_State* L) {
     GPid pid;
 
     if (lua_gettop(L) >= 2) {
-        use_sn = luaA_checkboolean(L, 2);
+        use_sn = Lua::checkboolean(L, 2);
     }
     if (lua_gettop(L) >= 3) {
-        return_stdin = luaA_checkboolean(L, 3);
+        return_stdin = Lua::checkboolean(L, 3);
     }
     if (lua_gettop(L) >= 4) {
-        return_stdout = luaA_checkboolean(L, 4);
+        return_stdout = Lua::checkboolean(L, 4);
     }
     if (lua_gettop(L) >= 5) {
-        return_stderr = luaA_checkboolean(L, 5);
+        return_stderr = Lua::checkboolean(L, 5);
     }
     if (!lua_isnoneornil(L, 6)) {
-        luaA_checkfunction(L, 6);
+        Lua::checkfunction(L, 6);
         flags |= G_SPAWN_DO_NOT_REAP_CHILD;
     }
     if (return_stdin) {
@@ -480,7 +480,7 @@ int luaA_spawn(lua_State* L) {
     if (flags & G_SPAWN_DO_NOT_REAP_CHILD) {
         /* Only do this down here to avoid leaks in case of errors */
         running_child_t child = {.pid = pid, .exit_callback = LUA_REFNIL};
-        luaA_registerfct(L, 6, &child.exit_callback);
+        Lua::registerfct(L, 6, &child.exit_callback);
         running_children.insert(child);
     }
 

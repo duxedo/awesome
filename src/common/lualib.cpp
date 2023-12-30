@@ -21,21 +21,23 @@
 
 #include "luaa.h"
 
+namespace Lua {
+
 lua_CFunction lualib_dofunction_on_error;
 
-void luaA_checkfunction(lua_State* L, int idx) {
+void checkfunction(lua_State* L, int idx) {
     if (!lua_isfunction(L, idx)) {
-        luaA_typerror(L, idx, "function");
+        typerror(L, idx, "function");
     }
 }
 
-void luaA_checktable(lua_State* L, int idx) {
+void checktable(lua_State* L, int idx) {
     if (!lua_istable(L, idx)) {
-        luaA_typerror(L, idx, "table");
+        typerror(L, idx, "table");
     }
 }
 
-void luaA_dumpstack(lua_State* L) {
+void dumpstack(lua_State* L) {
     fprintf(stderr, "-------- Lua stack dump ---------\n");
     for (int i = lua_gettop(L); i; i--) {
         int t = lua_type(L, i);
@@ -51,7 +53,7 @@ void luaA_dumpstack(lua_State* L) {
                     "%d: %s\t#%d\t%p\n",
                     i,
                     lua_typename(L, t),
-                    (int)luaA_rawlen(L, i),
+                    (int)rawlen(L, i),
                     lua_topointer(L, i));
             break;
         }
@@ -59,4 +61,5 @@ void luaA_dumpstack(lua_State* L) {
     fprintf(stderr, "------- Lua stack dump end ------\n");
 }
 
+} // namespace Lua
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
