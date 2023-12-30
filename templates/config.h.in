@@ -9,4 +9,5 @@
 #mesondefine WITH_DBUS
 #mesondefine WITH_XCB_ERRORS
 #mesondefine HAS_EXECINFO
+#mesondefine HAS_LUAJIT
 
