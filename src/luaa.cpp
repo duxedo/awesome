@@ -187,7 +187,7 @@ static bool composite_manager_running(void) {
     bool result;
 
     if (!(atom_name = xcb_atom_name_by_screen("_NET_WM_CM", getGlobals().default_screen))) {
-        warn("error getting composite manager atom");
+        log_warn("error getting composite manager atom");
         return false;
     }
 
@@ -803,10 +803,10 @@ static int awesome_emit_signal(lua_State* L) {
 }
 
 static int panic(lua_State* L) {
-    warn("unprotected error in call to Lua API (%s)", lua_tostring(L, -1));
+    log_warn("unprotected error in call to Lua API ({})", lua_tostring(L, -1));
     auto bt = backtrace_get();
-    warn("dumping backtrace\n%s", bt);
-    warn("restarting awesome");
+    log_warn("dumping backtrace\n{}", bt);
+    log_warn("restarting awesome");
     awesome_restart();
     return 0;
 }
@@ -965,7 +965,7 @@ static void setup_awesome_signals(lua_State* L) {
 /* Add things to the string on top of the stack */
 static void add_to_search_path(lua_State* L, const Paths& searchpath, bool for_lua) {
     if (LUA_TSTRING != lua_type(L, -1)) {
-        warn("package.path is not a string");
+        log_warn("package.path is not a string");
         return;
     }
 
@@ -1116,7 +1116,7 @@ void init(xdgHandle* xdg, const Paths& searchpath) {
     /* add Lua search paths */
     lua_getglobal(L, "package");
     if (LUA_TTABLE != lua_type(L, 1)) {
-        warn("package is not a table");
+        log_warn("package is not a table");
         return;
     }
     lua_getfield(L, 1, "path");

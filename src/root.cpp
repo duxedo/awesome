@@ -191,7 +191,7 @@ void root_update_wallpaper(void) {
     /* Only the default visual makes sense, so just the default depth */
     if (geom_r->depth !=
         draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id)) {
-        warn("Got a pixmap with depth %d, but the default depth is %d, continuing anyway",
+        log_warn("Got a pixmap with depth {}, but the default depth is {}, continuing anyway",
              geom_r->depth,
              draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
     }

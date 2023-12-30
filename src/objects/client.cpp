@@ -1782,7 +1782,7 @@ void client_ignore_enterleave_events(void) {
      * client_restore_enterleave_events(). Handle this nicely.
      */
     if (xcb_connection_has_error(getGlobals().connection)) {
-        fatal("X server connection broke (error %d)",
+        log_fatal("X server connection broke (error {})",
               xcb_connection_has_error(getGlobals().connection));
     }
     awsm_check(getGlobals().pending_enter_leave_begin.sequence != 0);
@@ -1922,9 +1922,9 @@ static void client_geometry_refresh(void) {
                                          c->titlebar[CLIENT_TITLEBAR_RIGHT].size) ||
                 (real_geometry.height < c->titlebar[CLIENT_TITLEBAR_TOP].size +
                                           c->titlebar[CLIENT_TITLEBAR_BOTTOM].size)) {
-                warn(
-                  "Resizing a window to a negative size!? Have width %d-%d-%d=%d"
-                  " and height %d-%d-%d=%d",
+                log_warn(
+                  "Resizing a window to a negative size!? Have width {}-{}-{}={}"
+                  " and height {}-{}-{}={}",
                   real_geometry.width,
                   c->titlebar[CLIENT_TITLEBAR_LEFT].size,
                   c->titlebar[CLIENT_TITLEBAR_RIGHT].size,
@@ -1945,7 +1945,7 @@ static void client_geometry_refresh(void) {
             real_geometry.height -= c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
 
             if (real_geometry.width == 0 || real_geometry.height == 0) {
-                warn("Resizing a window to size zero!?");
+                log_warn("Resizing a window to size zero!?");
             }
         } else {
             real_geometry.x = 0;
@@ -2256,8 +2256,8 @@ void client_manage(xcb_window_t w,
 
     xcb_generic_error_t* error = xcb_request_check(getGlobals().connection, reparent_cookie);
     if (error != NULL) {
-        warn(
-          "Failed to manage window with name '%s', class '%s', instance '%s', because reparenting "
+        log_warn(
+          "Failed to manage window with name '{}', class '{}', instance '{}', because reparenting "
           "failed.",
           c->getName().c_str(),
           c->getCls().c_str(),
@@ -3065,8 +3065,8 @@ void client_set_icon_from_pixmaps(client* c, xcb_pixmap_t icon, xcb_pixmap_t mas
     }
     if ((geom_icon_r->depth != 1 && geom_icon_r->depth != getGlobals().screen->root_depth) ||
         (geom_mask_r && geom_mask_r->depth != 1)) {
-        warn(
-          "Got pixmaps with depth (%d, %d) while processing icon, but only depth 1 and %d are "
+        log_warn(
+          "Got pixmaps with depth ({}, {}) while processing icon, but only depth 1 and {} are "
           "allowed",
           geom_icon_r->depth,
           geom_mask_r ? geom_mask_r->depth : 0,
@@ -3366,7 +3366,7 @@ static area_t titlebar_get_area(client* c, client_titlebar_t bar) {
         result.height -= c->titlebar[CLIENT_TITLEBAR_TOP].size;
         result.height -= c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
         break;
-    default: fatal("Unknown titlebar kind %d\n", (int)bar);
+    default: log_fatal("Unknown titlebar kind {}\n", (int)bar);
     }
 
     return result;
@@ -3460,7 +3460,7 @@ titlebar_get_drawable(lua_State* L, client* c, int cl_idx, client_titlebar_t bar
         case CLIENT_TITLEBAR_LEFT:
             drawable_allocator(L, (drawable_refresh_callback*)client_refresh_titlebar_left, c);
             break;
-        default: fatal("Unknown titlebar kind %d\n", (int)bar);
+        default: log_fatal("Unknown titlebar kind {}\n", (int)bar);
         }
         c->titlebar[bar].drawable = (drawable_t*)luaA_object_ref_item(L, cl_idx, -1);
     }
@@ -3505,7 +3505,7 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
         diff_left = change;
         property_name = "property::titlebar_left";
         break;
-    default: fatal("Unknown titlebar kind %d\n", (int)bar);
+    default: log_fatal("Unknown titlebar kind {}\n", (int)bar);
     }
 
     if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY) {

@@ -81,7 +81,7 @@ static inline bool luaA_dofunction(lua_State* L, int nargs, int nret) {
     lua_insert(L, -nargs - 2);
     int error_func_pos = lua_gettop(L) - nargs - 1;
     if (lua_pcall(L, nargs, nret, -nargs - 2)) {
-        warn("%s", lua_tostring(L, -1));
+        log_warn("{}", lua_tostring(L, -1));
         /* Remove error function and error string */
         lua_pop(L, 2);
         return false;
@@ -112,7 +112,7 @@ static inline int luaA_call_handler(lua_State* L, int handler) {
     lua_insert(L, -nargs - 1);
 
     if (lua_pcall(L, nargs, LUA_MULTRET, error_func_pos)) {
-        warn("%s", lua_tostring(L, -1));
+        log_warn("{}", lua_tostring(L, -1));
         /* Remove error function and error string */
         lua_pop(L, 2);
         return 0;

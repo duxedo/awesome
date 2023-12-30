@@ -189,7 +189,7 @@ static void xkb_fill_state(void) {
     if (getGlobals().have_xkb) {
         device_id = xkb_x11_get_core_keyboard_device_id(conn);
         if (device_id == -1) {
-            warn("Failed while getting XKB device id");
+            log_warn("Failed while getting XKB device id");
         }
     }
 
@@ -198,12 +198,12 @@ static void xkb_fill_state(void) {
           getGlobals().xkb_ctx, conn, device_id, XKB_KEYMAP_COMPILE_NO_FLAGS);
 
         if (!xkb_keymap) {
-            fatal("Failed while getting XKB keymap from device");
+            log_fatal("Failed while getting XKB keymap from device");
         }
 
         getGlobals().xkb_state = xkb_x11_state_new_from_device(xkb_keymap, conn, device_id);
         if (!getGlobals().xkb_state) {
-            fatal("Failed while getting XKB state from device");
+            log_fatal("Failed while getting XKB state from device");
         }
 
         /* xkb_keymap is no longer referenced directly; decreasing refcount */
@@ -211,7 +211,7 @@ static void xkb_fill_state(void) {
     } else {
         struct xkb_rule_names names = {NULL, NULL, NULL, NULL, NULL};
         if (!fill_rmlvo_from_root(&names)) {
-            warn("Could not get _XKB_RULES_NAMES from root window, falling back to defaults.");
+            log_warn("Could not get _XKB_RULES_NAMES from root window, falling back to defaults.");
         }
 
         struct xkb_keymap* xkb_keymap =
@@ -219,7 +219,7 @@ static void xkb_fill_state(void) {
 
         getGlobals().xkb_state = xkb_state_new(xkb_keymap);
         if (!getGlobals().xkb_state) {
-            fatal("Failed while creating XKB state");
+            log_fatal("Failed while creating XKB state");
         }
 
         /* xkb_keymap is no longer referenced directly; decreasing refcount */
@@ -238,7 +238,7 @@ static void xkb_fill_state(void) {
 static void xkb_init_keymap(void) {
     getGlobals().xkb_ctx = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
     if (!getGlobals().xkb_ctx) {
-        fatal("Failed while getting XKB context");
+        log_fatal("Failed while getting XKB context");
     }
 
     xkb_fill_state();
@@ -377,7 +377,7 @@ void xkb_init(void) {
     getGlobals().have_xkb = success_xkb;
 
     if (!success_xkb) {
-        warn("XKB not found or not supported");
+        log_warn("XKB not found or not supported");
         xkb_init_keymap();
         return;
     }

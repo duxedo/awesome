@@ -126,7 +126,7 @@ static bool event_handle_mousegrabber(int x, int y, uint16_t mask) {
         mousegrabber_handleevent(L, x, y, mask);
         lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().mousegrabber);
         if (!luaA_dofunction(L, 1, 1)) {
-            warn("Stopping mousegrabber.");
+            log_warn("Stopping mousegrabber.");
             luaA_mousegrabber_stop(L);
         } else {
             if (!lua_isboolean(L, -1) || !lua_toboolean(L, -1)) {
@@ -149,7 +149,7 @@ static void event_emit_button(lua_State* L, xcb_button_press_event_t* ev) {
     switch (XCB_EVENT_RESPONSE_TYPE(ev)) {
     case XCB_BUTTON_PRESS: name = "button::press"; break;
     case XCB_BUTTON_RELEASE: name = "button::release"; break;
-    default: fatal("Invalid event type");
+    default: log_fatal("Invalid event type");
     }
 
     /* Push the event's info */
@@ -712,7 +712,7 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().keygrabber);
 
             if (!luaA_dofunction(L, 3, 0)) {
-                warn("Stopping keygrabber.");
+                log_warn("Stopping keygrabber.");
                 luaA_keygrabber_stop(L);
             }
         }
@@ -932,7 +932,7 @@ static void event_handle_reparentnotify(xcb_reparent_notify_event_t* ev) {
 
 static void event_handle_selectionclear(xcb_selection_clear_event_t* ev) {
     if (ev->selection == getGlobals().selection_atom) {
-        warn("Lost WM_Sn selection, exiting...");
+        log_warn("Lost WM_Sn selection, exiting...");
         g_main_loop_quit(getGlobals().loop);
     } else {
         selection_handle_selectionclear(ev);
@@ -966,7 +966,7 @@ static void xerror(xcb_generic_error_t* e) {
     const char* extension = NULL;
     const char* error = xcb_event_get_error_label(e->error_code);
 #endif
-    warn("X error: request=%s%s%s (major %d, minor %d), error=%s%s%s (%d)",
+    log_warn("X error: request={}{}{} (major {}, minor {}), error={}{}{} ({})",
          major,
          minor == NULL ? "" : "-",
          NONULL(minor),
