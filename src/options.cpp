@@ -478,7 +478,7 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
         case 'k': (*init_flags) |= INIT_FLAG_RUN_TEST; break;
         case 'c':
             if (ret.configPath) {
-                fatal("--config may only be specified once");
+                log_fatal("--config may only be specified once");
             }
             ret.configPath = optarg;
 
@@ -488,7 +488,7 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
         case 'm':
             /* Validation */
             if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on"))) {
-                fatal("The possible values of -m/--screen are \"on\" or \"off\"");
+                log_fatal("The possible values of -m/--screen are \"on\" or \"off\"");
             }
 
             getGlobals().no_auto_screen = A_STREQ(optarg, "off");

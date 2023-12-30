@@ -337,7 +337,7 @@ void spawn_child_exited(pid_t pid, int status) {
 
     auto it = running_children.find(GPid(pid));
     if (it == running_children.end()) {
-        warn("Unknown child %d exited with %s %d",
+        log_warn("Unknown child {} exited with {} {}",
              (int)pid,
              WIFEXITED(status) ? "status" : "signal",
              status);
