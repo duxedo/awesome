@@ -144,7 +144,7 @@ class Connection {
         };
     }
 
-    xcb_get_window_attributes_cookie_t get_window_attributes_unckecked(xcb_window_t window) {
+    xcb_get_window_attributes_cookie_t get_window_attributes_unchecked(xcb_window_t window) {
         return xcb_get_window_attributes_unchecked(connection, window);
     }
     xcb_get_geometry_cookie_t get_geometry_unchecked(xcb_window_t window) {
