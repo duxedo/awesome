@@ -276,7 +276,7 @@ int luaA_window_set_type(lua_State* L, window_t* w) {
     } else if (A_STREQ(buf, "normal")) {
         type = WINDOW_TYPE_NORMAL;
     } else {
-        luaA_warn(L, "Unknown window type '%s'", buf);
+        Lua::warn(L, "Unknown window type '%s'", buf);
         return 0;
     }
 
@@ -316,8 +316,8 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
         getConnection().replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
     } else if (prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN) {
         uint32_t data = (prop->type == xproperty::PROP_NUMBER)
-                          ? luaA_checkinteger_range(L, value_idx, 0, UINT32_MAX)
-                          : luaA_checkboolean(L, value_idx);
+                          ? Lua::checkinteger_range(L, value_idx, 0, UINT32_MAX)
+                          : Lua::checkboolean(L, value_idx);
         getConnection().replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
     } else {
         log_fatal("Got an xproperty with invalid type");
@@ -409,7 +409,7 @@ uint32_t window_translate_type(window_type_t type) {
 }
 
 static int luaA_window_set_border_width(lua_State* L, window_t* c) {
-    window_set_border_width(L, -3, round(luaA_checknumber_range(L, -1, 0, MAX_X11_SIZE)));
+    window_set_border_width(L, -3, round(Lua::checknumber_range(L, -1, 0, MAX_X11_SIZE)));
     return 0;
 }
 

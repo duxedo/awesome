@@ -460,14 +460,14 @@ static int luaA_drawin_geometry(lua_State* L) {
     if (lua_gettop(L) == 2) {
         area_t wingeom;
 
-        luaA_checktable(L, 2);
-        wingeom.x = round(luaA_getopt_number_range(
+        Lua::checktable(L, 2);
+        wingeom.x = round(Lua::getopt_number_range(
           L, 2, "x", drawin->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        wingeom.y = round(luaA_getopt_number_range(
+        wingeom.y = round(Lua::getopt_number_range(
           L, 2, "y", drawin->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        wingeom.width = ceil(luaA_getopt_number_range(
+        wingeom.width = ceil(Lua::getopt_number_range(
           L, 2, "width", drawin->geometry.width, MIN_X11_SIZE, MAX_X11_SIZE));
-        wingeom.height = ceil(luaA_getopt_number_range(
+        wingeom.height = ceil(Lua::getopt_number_range(
           L, 2, "height", drawin->geometry.height, MIN_X11_SIZE, MAX_X11_SIZE));
 
         if (wingeom.width > 0 && wingeom.height > 0) {
@@ -475,7 +475,7 @@ static int luaA_drawin_geometry(lua_State* L) {
         }
     }
 
-    return luaA_pusharea(L, drawin->geometry);
+    return Lua::pusharea(L, drawin->geometry);
 }
 
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, ontop, lua_pushboolean)
@@ -483,7 +483,7 @@ LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, cursor, lua_pushstring)
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, visible, lua_pushboolean)
 
 static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
-    int x = round(luaA_checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+    int x = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     drawin_moveresize(L,
                       -3,
                       (area_t){.x = (int16_t)x,
@@ -499,7 +499,7 @@ static int luaA_drawin_get_x(lua_State* L, drawin_t* drawin) {
 }
 
 static int luaA_drawin_set_y(lua_State* L, drawin_t* drawin) {
-    int y = round(luaA_checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+    int y = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     drawin_moveresize(L,
                       -3,
                       (area_t){.x = drawin->geometry.x,
@@ -515,7 +515,7 @@ static int luaA_drawin_get_y(lua_State* L, drawin_t* drawin) {
 }
 
 static int luaA_drawin_set_width(lua_State* L, drawin_t* drawin) {
-    int width = ceil(luaA_checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
+    int width = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
     drawin_moveresize(L,
                       -3,
                       (area_t){.x = drawin->geometry.x,
@@ -531,7 +531,7 @@ static int luaA_drawin_get_width(lua_State* L, drawin_t* drawin) {
 }
 
 static int luaA_drawin_set_height(lua_State* L, drawin_t* drawin) {
-    int height = ceil(luaA_checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
+    int height = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
     drawin_moveresize(L,
                       -3,
                       (area_t){.x = drawin->geometry.x,
@@ -552,7 +552,7 @@ static int luaA_drawin_get_height(lua_State* L, drawin_t* drawin) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_drawin_set_ontop(lua_State* L, drawin_t* drawin) {
-    bool b = luaA_checkboolean(L, -1);
+    bool b = Lua::checkboolean(L, -1);
     if (b != drawin->ontop) {
         drawin->ontop = b;
         stack_windows();
@@ -587,7 +587,7 @@ static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_drawin_set_visible(lua_State* L, drawin_t* drawin) {
-    drawin_set_visible(L, -3, luaA_checkboolean(L, -1));
+    drawin_set_visible(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 

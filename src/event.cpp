@@ -125,7 +125,7 @@ static bool event_handle_mousegrabber(int x, int y, uint16_t mask) {
         lua_State* L = globalconf_get_lua_State();
         mousegrabber_handleevent(L, x, y, mask);
         lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().mousegrabber);
-        if (!luaA_dofunction(L, 1, 1)) {
+        if (!Lua::dofunction(L, 1, 1)) {
             log_warn("Stopping mousegrabber.");
             luaA_mousegrabber_stop(L);
         } else {
@@ -711,7 +711,7 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
         if (keygrabber_handlekpress(L, ev)) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, getGlobals().keygrabber);
 
-            if (!luaA_dofunction(L, 3, 0)) {
+            if (!Lua::dofunction(L, 3, 0)) {
                 log_warn("Stopping keygrabber.");
                 luaA_keygrabber_stop(L);
             }
@@ -857,7 +857,7 @@ static void event_handle_randr_output_change_notify(xcb_randr_notify_event_t* ev
                         (char*)xcb_randr_get_output_info_name(info),
                         xcb_randr_get_output_info_name_length(info));
         lua_pushstring(L, connection_str);
-        signal_object_emit(L, &global_signals, "screen::change", 2);
+        signal_object_emit(L, &Lua::global_signals, "screen::change", 2);
 
         p_delete(&info);
 

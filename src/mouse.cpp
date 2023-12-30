@@ -161,7 +161,7 @@ static int luaA_mouse_index(lua_State* L) {
     /* attr is not "screen"?! */
     if (A_STRNEQ(attr, "screen")) {
         if (miss_index_handler != LUA_REFNIL) {
-            return luaA_call_handler(L, miss_index_handler);
+            return Lua::call_handler(L, miss_index_handler);
         } else {
             return Lua::default_index(L);
         }
@@ -194,7 +194,7 @@ static int luaA_mouse_newindex(lua_State* L) {
     if (A_STRNEQ(attr, "screen")) {
         /* Call the lua mouse property handler */
         if (miss_newindex_handler != LUA_REFNIL) {
-            return luaA_call_handler(L, miss_newindex_handler);
+            return Lua::call_handler(L, miss_newindex_handler);
         } else {
             return Lua::default_newindex(L);
         }
@@ -241,17 +241,17 @@ static int luaA_mouse_coords(lua_State* L) {
     int16_t mouse_x, mouse_y;
 
     if (lua_gettop(L) >= 1) {
-        luaA_checktable(L, 1);
-        bool ignore_enter_notify = (lua_gettop(L) == 2 && luaA_checkboolean(L, 2));
+        Lua::checktable(L, 1);
+        bool ignore_enter_notify = (lua_gettop(L) == 2 && Lua::checkboolean(L, 2));
 
         if (!mouse_query_pointer_root(&mouse_x, &mouse_y, NULL, &mask)) {
             return 0;
         }
 
         x = round(
-          luaA_getopt_number_range(L, 1, "x", mouse_x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+          Lua::getopt_number_range(L, 1, "x", mouse_x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         y = round(
-          luaA_getopt_number_range(L, 1, "y", mouse_y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+          Lua::getopt_number_range(L, 1, "y", mouse_y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
 
         if (ignore_enter_notify) {
             client_ignore_enterleave_events();
@@ -304,14 +304,14 @@ static int luaA_mouse_object_under_pointer(lua_State* L) {
  * Add a custom property handler (getter).
  */
 static int luaA_mouse_set_index_miss_handler(lua_State* L) {
-    return luaA_registerfct(L, 1, &miss_index_handler);
+    return Lua::registerfct(L, 1, &miss_index_handler);
 }
 
 /**
  * Add a custom property handler (setter).
  */
 static int luaA_mouse_set_newindex_miss_handler(lua_State* L) {
-    return luaA_registerfct(L, 1, &miss_newindex_handler);
+    return Lua::registerfct(L, 1, &miss_newindex_handler);
 }
 
 const struct luaL_Reg awesome_mouse_methods[] = {

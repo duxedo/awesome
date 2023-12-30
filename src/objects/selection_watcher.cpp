@@ -95,7 +95,7 @@ static int luaA_selection_watcher_new(lua_State* L) {
 }
 
 static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* selection) {
-    bool b = luaA_checkboolean(L, -1);
+    bool b = Lua::checkboolean(L, -1);
     bool is_active = selection->active_ref != LUA_NOREF;
     if (b != is_active) {
         if (b) {
@@ -129,7 +129,7 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
                     XCB_XFIXES_SELECTION_EVENT_MASK_SELECTION_WINDOW_DESTROY |
                     XCB_XFIXES_SELECTION_EVENT_MASK_SELECTION_CLIENT_CLOSE);
             } else {
-                luaA_warn(
+                Lua::warn(
                   L, "X11 server does not support the XFixes extension; cannot watch selections");
             }
 

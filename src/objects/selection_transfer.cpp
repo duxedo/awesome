@@ -106,10 +106,10 @@ static void transfer_continue_incremental(lua_State* L, int ud) {
     selection_transfer_t* transfer =
       reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, ud, &selection_transfer_class));
 
-    ud = luaA_absindex(L, ud);
+    ud = Lua::absindex(L, ud);
 
     /* Get the data that is to be sent next */
-    luaA_getuservalue(L, ud);
+    Lua::getuservalue(L, ud);
     lua_pushliteral(L, TRANSFER_DATA_INDEX);
     lua_rawget(L, -2);
     lua_remove(L, -2);
@@ -151,7 +151,7 @@ void selection_transfer_begin(lua_State* L,
                               xcb_atom_t target,
                               xcb_atom_t property,
                               xcb_timestamp_t time) {
-    ud = luaA_absindex(L, ud);
+    ud = Lua::absindex(L, ud);
 
     /* Allocate a transfer object */
     auto transfer = (selection_transfer_t*)selection_transfer_class.allocator(L);
@@ -204,7 +204,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
         luaL_error(L, "Transfer object is not ready for more data to be sent");
     }
 
-    luaA_checktable(L, 2);
+    Lua::checktable(L, 2);
 
     lua_pushliteral(L, "continue");
     lua_rawget(L, 2);
@@ -219,7 +219,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
         lua_pushliteral(L, "data");
         lua_rawget(L, 2);
 
-        luaA_getuservalue(L, 1);
+        Lua::getuservalue(L, 1);
         lua_pushliteral(L, TRANSFER_DATA_INDEX);
         lua_pushvalue(L, -3);
         lua_rawset(L, -3);
@@ -250,7 +250,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
         }
 
         /* 'data' is a table with strings */
-        size_t len = luaA_rawlen(L, -1);
+        size_t len = Lua::rawlen(L, -1);
 
         /* Get an array with atoms */
         auto* atom_lengths = p_alloca(size_t, len);
@@ -294,7 +294,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
               transfer->requestor, transfer->property, INCR, incr_size);
 
             /* Save the data on the transfer object */
-            luaA_getuservalue(L, 1);
+            Lua::getuservalue(L, 1);
             lua_pushliteral(L, TRANSFER_DATA_INDEX);
             lua_pushvalue(L, -3);
             lua_rawset(L, -3);

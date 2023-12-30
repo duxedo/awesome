@@ -50,7 +50,7 @@ static int luaA_selection_getter_new(lua_State* L) {
     selection_getter_t* selection;
     xcb_atom_t name_atom, target_atom;
 
-    luaA_checktable(L, 2);
+    Lua::checktable(L, 2);
     lua_pushliteral(L, "selection");
     lua_gettable(L, 2);
     lua_pushliteral(L, "target");
@@ -150,7 +150,7 @@ static void selection_push_data(lua_State* L, xcb_get_property_reply_t* property
 static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t property) {
     selection_getter_t* selection;
 
-    ud = luaA_absindex(L, ud);
+    ud = Lua::absindex(L, ud);
     selection = (selection_getter_t*)lua_touserdata(L, ud);
 
     if (property != XCB_NONE) {

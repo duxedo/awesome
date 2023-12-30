@@ -52,7 +52,7 @@
 int luaA_xkb_set_layout_group(lua_State* L) {
     unsigned group = luaL_checkinteger(L, 1);
     if (!getGlobals().have_xkb) {
-        luaA_warn(L, "XKB not supported");
+        Lua::warn(L, "XKB not supported");
         return 0;
     }
     xcb_xkb_latch_lock_state(
@@ -68,7 +68,7 @@ int luaA_xkb_set_layout_group(lua_State* L) {
  */
 int luaA_xkb_get_layout_group(lua_State* L) {
     if (!getGlobals().have_xkb) {
-        luaA_warn(L, "XKB not supported");
+        Lua::warn(L, "XKB not supported");
         return 0;
     }
 
@@ -94,7 +94,7 @@ int luaA_xkb_get_layout_group(lua_State* L) {
  */
 int luaA_xkb_get_group_names(lua_State* L) {
     if (!getGlobals().have_xkb) {
-        luaA_warn(L, "XKB not supported");
+        Lua::warn(L, "XKB not supported");
         return 0;
     }
 
@@ -105,7 +105,7 @@ int luaA_xkb_get_group_names(lua_State* L) {
     name_r = xcb_xkb_get_names_reply(getGlobals().connection, name_c, NULL);
 
     if (!name_r) {
-        luaA_warn(L, "Failed to get xkb symbols name");
+        Lua::warn(L, "Failed to get xkb symbols name");
         return 0;
     }
 
@@ -127,7 +127,7 @@ int luaA_xkb_get_group_names(lua_State* L) {
     xcb_get_atom_name_reply_t* atom_name_r;
     atom_name_r = xcb_get_atom_name_reply(getGlobals().connection, atom_name_c, NULL);
     if (!atom_name_r) {
-        luaA_warn(L, "Failed to get atom symbols name");
+        Lua::warn(L, "Failed to get atom symbols name");
         free(name_r);
         return 0;
     }
@@ -287,10 +287,10 @@ static gboolean xkb_refresh(gpointer unused) {
         xkb_reload_keymap();
     }
     if (getGlobals().xkb_map_changed) {
-        signal_object_emit(L, &global_signals, "xkb::map_changed", 0);
+        signal_object_emit(L, &Lua::global_signals, "xkb::map_changed", 0);
     }
     if (getGlobals().xkb_group_changed) {
-        signal_object_emit(L, &global_signals, "xkb::group_changed", 0);
+        signal_object_emit(L, &Lua::global_signals, "xkb::group_changed", 0);
     }
 
     getGlobals().xkb_reload_keymap = false;

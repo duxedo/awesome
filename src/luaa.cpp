@@ -79,6 +79,9 @@
 #include <unistd.h> /* for gethostname() */
 #include <xcb/xcb_atom.h>
 #include <xcb/xcb_aux.h>
+
+namespace Lua {
+
 Signals global_signals;
 
 /** A call into the Lua code aborted with an error.
@@ -211,7 +214,6 @@ static bool composite_manager_running(void) {
 
     return result;
 }
-namespace Lua {
 /** Quit awesome.
  * @tparam[opt=0] integer code The exit code to use when exiting.
  * @staticfct quit
@@ -263,7 +265,7 @@ static int restart(lua_State* L) {
  */
 static int kill(lua_State* L) {
     int pid = luaL_checknumber(L, 1);
-    int sig = luaA_checknumber_range(L, 2, 0, INT_MAX);
+    int sig = Lua::checknumber_range(L, 2, 0, INT_MAX);
 
     int result = ::kill(pid, sig);
     lua_pushboolean(L, result == 0);
@@ -333,7 +335,7 @@ static int load_image(lua_State* L) {
  * @noreturn
  */
 static int set_preferred_icon_size(lua_State* L) {
-    getGlobals().preferred_icon_size = luaA_checkinteger_range(L, 1, 0, UINT32_MAX);
+    getGlobals().preferred_icon_size = Lua::checkinteger_range(L, 1, 0, UINT32_MAX);
     return 0;
 }
 
@@ -768,7 +770,7 @@ static int awesome_index(lua_State* L) {
  */
 static int awesome_connect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
-    luaA_checkfunction(L, 2);
+    Lua::checkfunction(L, 2);
     global_signals.connect(name, luaA_object_ref(L, 2));
     return 0;
 }
@@ -782,7 +784,7 @@ static int awesome_connect_signal(lua_State* L) {
  */
 static int awesome_disconnect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
-    luaA_checkfunction(L, 2);
+    Lua::checkfunction(L, 2);
     const void* func = lua_topointer(L, 2);
     if (global_signals.disconnect(name, func)) {
         luaA_object_unref(L, (void*)func);
@@ -1059,16 +1061,16 @@ void init(xdgHandle* xdg, const Paths& searchpath) {
 
 #ifdef WITH_DBUS
     /* Export D-Bus lib */
-    luaA_registerlib(L, "dbus", awesome_dbus_lib);
+    Lua::registerlib(L, "dbus", awesome_dbus_lib);
     lua_pop(L, 1); /* luaA_registerlib() leaves the table on stack */
 #endif
 
     /* Export keygrabber lib */
-    luaA_registerlib(L, "keygrabber", awesome_keygrabber_lib);
+    Lua::registerlib(L, "keygrabber", awesome_keygrabber_lib);
     lua_pop(L, 1); /* luaA_registerlib() leaves the table on stack */
 
     /* Export mousegrabber lib */
-    luaA_registerlib(L, "mousegrabber", awesome_mousegrabber_lib);
+    Lua::registerlib(L, "mousegrabber", awesome_mousegrabber_lib);
     lua_pop(L, 1); /* luaA_registerlib() leaves the table on stack */
 
     /* Export mouse */
@@ -1189,7 +1191,7 @@ bool parserc(xdgHandle* xdg, std::optional<std::filesystem::path> path) {
  */
 std::optional<std::filesystem::path> find_config(xdgHandle* xdg,
                                                  std::optional<std::filesystem::path> path,
-                                                 luaA_config_callback* callback) {
+                                                 Lua::config_callback* callback) {
     char* confpath = NULL;
 
     if (path && callback(*path)) {

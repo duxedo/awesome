@@ -61,7 +61,7 @@ void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
 void* luaA_checkudata(lua_State* L, int ud, lua_class_t* cls) {
     lua_object_t* p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
     if (!p) {
-        luaA_typerror(L, ud, cls->name);
+        Lua::typerror(L, ud, cls->name);
     } else if (cls->checker && !cls->checker(p)) {
         luaL_error(L, "invalid object");
     }
@@ -111,8 +111,8 @@ void luaA_openlib(lua_State* L,
     lua_pushvalue(L, -1);           /* dup metatable                      2 */
     lua_setfield(L, -2, "__index"); /* metatable.__index = metatable      1 */
 
-    luaA_setfuncs(L, meta);             /* 1 */
-    luaA_registerlib(L, name, methods); /* 2 */
+    Lua::setfuncs(L, meta);             /* 1 */
+    Lua::registerlib(L, name, methods); /* 2 */
     lua_pushvalue(L, -1);               /* dup self as metatable              3 */
     lua_setmetatable(L, -2);            /* set self as metatable              2 */
     lua_pop(L, 2);
@@ -216,8 +216,8 @@ void luaA_class_setup(lua_State* L,
 
     lua_setfield(L, -2, "__index"); /* metatable.__index = metatable      1 */
 
-    luaA_setfuncs(L, meta);             /* 1 */
-    luaA_registerlib(L, name, methods); /* 2 */
+    Lua::setfuncs(L, meta);             /* 1 */
+    Lua::registerlib(L, name, methods); /* 2 */
     lua_pushvalue(L, -1);               /* dup self as metatable              3 */
     lua_setmetatable(L, -2);            /* set self as metatable              2 */
     lua_pop(L, 2);
@@ -247,7 +247,7 @@ void luaA_class_connect_signal_from_stack(lua_State* L,
                                           lua_class_t* lua_class,
                                           const std::string_view& name,
                                           int ud) {
-    luaA_checkfunction(L, ud);
+    Lua::checkfunction(L, ud);
 
     /* Duplicate the function in the stack */
     lua_pushvalue(L, ud);
@@ -272,7 +272,7 @@ void luaA_class_disconnect_signal_from_stack(lua_State* L,
                                              lua_class_t* lua_class,
                                              const std::string_view& name,
                                              int ud) {
-    luaA_checkfunction(L, ud);
+    Lua::checkfunction(L, ud);
     void* ref = (void*)lua_topointer(L, ud);
     if (lua_class->signals.disconnect(name, ref)) {
         luaA_object_unref(L, (void*)ref);
@@ -369,13 +369,13 @@ int luaA_class_index(lua_State* L) {
      */
     if (A_STREQ(attr, "_private")) {
         luaA_checkudata(L, 1, cls);
-        luaA_getuservalue(L, 1);
+        Lua::getuservalue(L, 1);
         lua_getfield(L, -1, "data");
         return 1;
     } else if (A_STREQ(attr, "data")) {
         luaA_deprecate(L, "Use `._private` instead of `.data`");
         luaA_checkudata(L, 1, cls);
-        luaA_getuservalue(L, 1);
+        Lua::getuservalue(L, 1);
         lua_getfield(L, -1, "data");
         return 1;
     }
@@ -387,7 +387,7 @@ int luaA_class_index(lua_State* L) {
         }
     } else {
         if (cls->index_miss_handler != LUA_REFNIL) {
-            return luaA_call_handler(L, cls->index_miss_handler);
+            return Lua::call_handler(L, cls->index_miss_handler);
         }
         if (cls->index_miss_property) {
             return cls->index_miss_property(
@@ -419,7 +419,7 @@ int luaA_class_newindex(lua_State* L) {
         }
     } else {
         if (cls->newindex_miss_handler != LUA_REFNIL) {
-            return luaA_call_handler(L, cls->newindex_miss_handler);
+            return Lua::call_handler(L, cls->newindex_miss_handler);
         }
         if (cls->newindex_miss_property) {
             return cls->newindex_miss_property(
@@ -436,7 +436,7 @@ int luaA_class_newindex(lua_State* L) {
  */
 int luaA_class_new(lua_State* L, lua_class_t* lua_class) {
     /* Check we have a table that should contains some properties */
-    luaA_checktable(L, 2);
+    Lua::checktable(L, 2);
 
     /* Create a new object */
     lua_object_t* object = lua_class->allocator(L);

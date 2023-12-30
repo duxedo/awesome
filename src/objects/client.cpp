@@ -2647,7 +2647,7 @@ void client_set_fullscreen(lua_State* L, int cidx, bool s) {
             client_set_above(L, cidx, false);
             client_set_ontop(L, cidx, false);
         }
-        int abs_cidx = luaA_absindex(L, cidx);
+        int abs_cidx = Lua::absindex(L, cidx);
         lua_pushstring(L, "fullscreen");
         c->fullscreen = s;
         luaA_object_emit_signal(L, abs_cidx, "request::geometry", 1);
@@ -2679,7 +2679,7 @@ void client_set_maximized_common(lua_State* L, int cidx, bool s, const char* typ
     }
 
     if (current != next) {
-        int abs_cidx = luaA_absindex(L, cidx);
+        int abs_cidx = Lua::absindex(L, cidx);
         int max_before = c->maximized;
         int h_before = c->maximized_horizontal;
         int v_before = c->maximized_vertical;
@@ -2979,7 +2979,7 @@ static int luaA_client_get(lua_State* L) {
     }
 
     if (!lua_isnoneornil(L, 2)) {
-        stacked = luaA_checkboolean(L, 2);
+        stacked = Lua::checkboolean(L, 2);
     }
 
     lua_newtable(L);
@@ -3211,7 +3211,7 @@ static int luaA_client_tags(lua_State* L) {
     int j = 0;
 
     if (lua_gettop(L) == 2) {
-        luaA_checktable(L, 2);
+        Lua::checktable(L, 2);
         for (size_t i = 0; i < getGlobals().tags.size(); i++) {
             /* Only untag if we aren't going to add this tag again */
             bool found = false;
@@ -3446,7 +3446,7 @@ void client_refresh_partial(client* c, int16_t x, int16_t y, uint16_t width, uin
 static drawable_t*
 titlebar_get_drawable(lua_State* L, client* c, int cl_idx, client_titlebar_t bar) {
     if (c->titlebar[bar].drawable == NULL) {
-        cl_idx = luaA_absindex(L, cl_idx);
+        cl_idx = Lua::absindex(L, cl_idx);
         switch (bar) {
         case CLIENT_TITLEBAR_TOP:
             drawable_allocator(L, (drawable_refresh_callback*)client_refresh_titlebar_top, c);
@@ -3533,7 +3533,7 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
                 titlebar_resize(L, 1, c, index, 0);                                     \
             else                                                                        \
                 titlebar_resize(                                                        \
-                  L, 1, c, index, ceil(luaA_checknumber_range(L, 2, 0, MAX_X11_SIZE))); \
+                  L, 1, c, index, ceil(Lua::checknumber_range(L, 2, 0, MAX_X11_SIZE))); \
         }                                                                               \
                                                                                         \
         luaA_object_push_item(L, 1, titlebar_get_drawable(L, c, 1, index));             \
@@ -3568,25 +3568,25 @@ static int luaA_client_geometry(lua_State* L) {
     if (lua_gettop(L) == 2 && !lua_isnil(L, 2)) {
         area_t geometry;
 
-        luaA_checktable(L, 2);
-        geometry.x = round(luaA_getopt_number_range(
+        Lua::checktable(L, 2);
+        geometry.x = round(Lua::getopt_number_range(
           L, 2, "x", c->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        geometry.y = round(luaA_getopt_number_range(
+        geometry.y = round(Lua::getopt_number_range(
           L, 2, "y", c->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         if (client_isfixed(c)) {
             geometry.width = c->geometry.width;
             geometry.height = c->geometry.height;
         } else {
-            geometry.width = ceil(luaA_getopt_number_range(
+            geometry.width = ceil(Lua::getopt_number_range(
               L, 2, "width", c->geometry.width, MIN_X11_SIZE, MAX_X11_SIZE));
-            geometry.height = ceil(luaA_getopt_number_range(
+            geometry.height = ceil(Lua::getopt_number_range(
               L, 2, "height", c->geometry.height, MIN_X11_SIZE, MAX_X11_SIZE));
         }
 
         client_resize(c, geometry, c->size_hints_honor);
     }
 
-    return luaA_pusharea(L, c->geometry);
+    return Lua::pusharea(L, c->geometry);
 }
 
 /** Apply size hints to a size.
@@ -3609,8 +3609,8 @@ static int luaA_client_apply_size_hints(lua_State* L) {
     auto c = (client*)luaA_checkudata(L, 1, &client_class);
     area_t geometry = c->geometry;
     if (!client_isfixed(c)) {
-        geometry.width = ceil(luaA_checknumber_range(L, 2, MIN_X11_SIZE, MAX_X11_SIZE));
-        geometry.height = ceil(luaA_checknumber_range(L, 3, MIN_X11_SIZE, MAX_X11_SIZE));
+        geometry.width = ceil(Lua::checknumber_range(L, 2, MIN_X11_SIZE, MAX_X11_SIZE));
+        geometry.height = ceil(Lua::checknumber_range(L, 3, MIN_X11_SIZE, MAX_X11_SIZE));
     }
 
     if (c->size_hints_honor) {
@@ -3628,37 +3628,37 @@ static int luaA_client_set_screen(lua_State* L, client* c) {
 }
 
 static int luaA_client_set_hidden(lua_State* L, client* c) {
-    client_set_hidden(L, -3, luaA_checkboolean(L, -1));
+    client_set_hidden(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_minimized(lua_State* L, client* c) {
-    client_set_minimized(L, -3, luaA_checkboolean(L, -1));
+    client_set_minimized(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_fullscreen(lua_State* L, client* c) {
-    client_set_fullscreen(L, -3, luaA_checkboolean(L, -1));
+    client_set_fullscreen(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_modal(lua_State* L, client* c) {
-    client_set_modal(L, -3, luaA_checkboolean(L, -1));
+    client_set_modal(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_maximized(lua_State* L, client* c) {
-    client_set_maximized(L, -3, luaA_checkboolean(L, -1));
+    client_set_maximized(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_maximized_horizontal(lua_State* L, client* c) {
-    client_set_maximized_horizontal(L, -3, luaA_checkboolean(L, -1));
+    client_set_maximized_horizontal(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_maximized_vertical(lua_State* L, client* c) {
-    client_set_maximized_vertical(L, -3, luaA_checkboolean(L, -1));
+    client_set_maximized_vertical(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
@@ -3675,44 +3675,44 @@ static int luaA_client_set_focusable(lua_State* L, client* c) {
     if (lua_isnil(L, -1)) {
         client_unset_focusable(L, -3);
     } else {
-        client_set_focusable(L, -3, luaA_checkboolean(L, -1));
+        client_set_focusable(L, -3, Lua::checkboolean(L, -1));
     }
     return 0;
 }
 
 static int luaA_client_set_sticky(lua_State* L, client* c) {
-    client_set_sticky(L, -3, luaA_checkboolean(L, -1));
+    client_set_sticky(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_size_hints_honor(lua_State* L, client* c) {
-    c->size_hints_honor = luaA_checkboolean(L, -1);
+    c->size_hints_honor = Lua::checkboolean(L, -1);
     luaA_object_emit_signal(L, -3, "property::size_hints_honor", 0);
     return 0;
 }
 
 static int luaA_client_set_ontop(lua_State* L, client* c) {
-    client_set_ontop(L, -3, luaA_checkboolean(L, -1));
+    client_set_ontop(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_below(lua_State* L, client* c) {
-    client_set_below(L, -3, luaA_checkboolean(L, -1));
+    client_set_below(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_above(lua_State* L, client* c) {
-    client_set_above(L, -3, luaA_checkboolean(L, -1));
+    client_set_above(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_urgent(lua_State* L, client* c) {
-    client_set_urgent(L, -3, luaA_checkboolean(L, -1));
+    client_set_urgent(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
 static int luaA_client_set_skip_taskbar(lua_State* L, client* c) {
-    client_set_skip_taskbar(L, -3, luaA_checkboolean(L, -1));
+    client_set_skip_taskbar(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 

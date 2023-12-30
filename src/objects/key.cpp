@@ -111,19 +111,19 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
             gunichar unicode;
 
             if (!g_utf8_validate(str, -1, NULL)) {
-                luaA_warn(L, "failed to convert \"%s\" into keysym (invalid UTF-8 string)", str);
+                Lua::warn(L, "failed to convert \"%s\" into keysym (invalid UTF-8 string)", str);
                 return;
             }
 
             length = g_utf8_strlen(str, -1); /* This function counts combining characters. */
             if (length <= 0) {
-                luaA_warn(L, "failed to convert \"%s\" into keysym (empty UTF-8 string)", str);
+                Lua::warn(L, "failed to convert \"%s\" into keysym (empty UTF-8 string)", str);
                 return;
             } else if (length > 1) {
                 gchar* composed = g_utf8_normalize(str, -1, G_NORMALIZE_DEFAULT_COMPOSE);
                 if (g_utf8_strlen(composed, -1) != 1) {
                     p_delete(&composed);
-                    luaA_warn(
+                    Lua::warn(
                       L,
                       "failed to convert \"%s\" into keysym (failed to compose a single character)",
                       str);
@@ -136,7 +136,7 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
             }
 
             if (unicode == (gunichar)-1 || unicode == (gunichar)-2) {
-                luaA_warn(
+                Lua::warn(
                   L,
                   "failed to convert \"%s\" into keysym (neither keysym nor single unicode)",
                   str);
@@ -152,7 +152,7 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
             } else if (unicode >= 0x100 && unicode <= 0x10ffff) {
                 key->keysym = unicode | (1 << 24);
             } else {
-                luaA_warn(L,
+                Lua::warn(L,
                           "failed to convert \"%s\" into keysym (unicode out of range): \"%u\"",
                           str,
                           unicode);
@@ -177,7 +177,7 @@ static int luaA_key_new(lua_State* L) { return luaA_class_new(L, &key_class); }
  * \param keys The array key to fill.
  */
 void luaA_key_array_set(lua_State* L, int oidx, int idx, std::vector<keyb_t*>* keys) {
-    luaA_checktable(L, idx);
+    Lua::checktable(L, idx);
 
     for (auto* key : *keys) {
         luaA_object_unref_item(L, oidx, key);
@@ -238,8 +238,8 @@ int luaA_pushmodifiers(lua_State* L, uint16_t modifiers) {
  * \return The mask value.
  */
 uint16_t luaA_tomodifiers(lua_State* L, int ud) {
-    luaA_checktable(L, ud);
-    ssize_t len = luaA_rawlen(L, ud);
+    Lua::checktable(L, ud);
+    ssize_t len = Lua::rawlen(L, ud);
     uint16_t mod = XCB_NONE;
     for (int i = 1; i <= len; i++) {
         lua_rawgeti(L, ud, i);

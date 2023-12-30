@@ -108,10 +108,10 @@ static int luaA_keygrabber_run(lua_State* L) {
         luaL_error(L, "keygrabber already running");
     }
 
-    luaA_registerfct(L, 1, &getGlobals().keygrabber);
+    Lua::registerfct(L, 1, &getGlobals().keygrabber);
 
     if (!keygrabber_grab()) {
-        luaA_unregister(L, &getGlobals().keygrabber);
+        Lua::unregister(L, &getGlobals().keygrabber);
         luaL_error(L, "unable to grab keyboard");
     }
 
@@ -123,7 +123,7 @@ static int luaA_keygrabber_run(lua_State* L) {
  */
 int luaA_keygrabber_stop(lua_State* L) {
     xcb_ungrab_keyboard(getGlobals().connection, XCB_CURRENT_TIME);
-    luaA_unregister(L, &getGlobals().keygrabber);
+    Lua::unregister(L, &getGlobals().keygrabber);
     return 0;
 }
 
