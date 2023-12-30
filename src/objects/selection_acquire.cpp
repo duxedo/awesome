@@ -127,7 +127,7 @@ static int luaA_selection_acquire_new(lua_State* L) {
     xcb_atom_t name_atom;
     selection_acquire_t* selection;
 
-    luaA_checktable(L, 2);
+    Lua::checktable(L, 2);
     lua_pushliteral(L, "selection");
     lua_gettable(L, 2);
     name = luaL_checklstring(L, -1, &name_length);

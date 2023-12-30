@@ -48,11 +48,11 @@ int luaA_pushstrut(lua_State* L, strut_t strut) {
  * \param strut The strut to fill. Current values will be used as default.
  */
 void luaA_tostrut(lua_State* L, int idx, strut_t* strut) {
-    luaA_checktable(L, idx);
-    strut->left = ceil(luaA_getopt_number_range(L, idx, "left", strut->left, 0, UINT16_MAX));
-    strut->right = ceil(luaA_getopt_number_range(L, idx, "right", strut->right, 0, UINT16_MAX));
-    strut->top = ceil(luaA_getopt_number_range(L, idx, "top", strut->top, 0, UINT16_MAX));
-    strut->bottom = ceil(luaA_getopt_number_range(L, idx, "bottom", strut->bottom, 0, UINT16_MAX));
+    Lua::checktable(L, idx);
+    strut->left = ceil(Lua::getopt_number_range(L, idx, "left", strut->left, 0, UINT16_MAX));
+    strut->right = ceil(Lua::getopt_number_range(L, idx, "right", strut->right, 0, UINT16_MAX));
+    strut->top = ceil(Lua::getopt_number_range(L, idx, "top", strut->top, 0, UINT16_MAX));
+    strut->bottom = ceil(Lua::getopt_number_range(L, idx, "bottom", strut->bottom, 0, UINT16_MAX));
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

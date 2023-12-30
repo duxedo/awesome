@@ -38,28 +38,28 @@ inline std::string_view checkstring(lua_State* L, int numArg) {
 
 void pushstring(lua_State* L, const std::string & str);
 void pushstring(lua_State* L, const char* str);
-}
+
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;
 
-void luaA_checkfunction(lua_State*, int);
-void luaA_checktable(lua_State*, int);
+void checkfunction(lua_State*, int);
+void checktable(lua_State*, int);
 
 /** Dump the Lua stack. Useful for debugging.
  * \param L The Lua VM state.
  */
-void luaA_dumpstack(lua_State*);
+void dumpstack(lua_State*);
 
 /** Convert s stack index to positive.
  * \param L The Lua VM state.
  * \param ud The index.
  * \return A positive index.
  */
-static inline int luaA_absindex(lua_State* L, int ud) {
+static inline int absindex(lua_State* L, int ud) {
     return (ud > 0 || ud <= LUA_REGISTRYINDEX) ? ud : lua_gettop(L) + ud + 1;
 }
 
-static inline int luaA_dofunction_error(lua_State* L) {
+static inline int dofunction_error(lua_State* L) {
     if (lualib_dofunction_on_error) {
         return lualib_dofunction_on_error(L);
     }
@@ -72,11 +72,11 @@ static inline int luaA_dofunction_error(lua_State* L) {
  * \param nret The number of returned value from the Lua function.
  * \return True on no error, false otherwise.
  */
-static inline bool luaA_dofunction(lua_State* L, int nargs, int nret) {
+static inline bool dofunction(lua_State* L, int nargs, int nret) {
     /* Move function before arguments */
     lua_insert(L, -nargs - 1);
     /* Push error handling function */
-    lua_pushcfunction(L, luaA_dofunction_error);
+    lua_pushcfunction(L, dofunction_error);
     /* Move error handling function before args and function */
     lua_insert(L, -nargs - 2);
     int error_func_pos = lua_gettop(L) - nargs - 1;
@@ -96,14 +96,14 @@ static inline bool luaA_dofunction(lua_State* L, int nargs, int nret) {
  * \param handler The function to call.
  * \return The number of elements pushed on stack.
  */
-static inline int luaA_call_handler(lua_State* L, int handler) {
+static inline int call_handler(lua_State* L, int handler) {
     /* This is based on luaA_dofunction, but allows multiple return values */
     assert(handler != LUA_REFNIL);
 
     int nargs = lua_gettop(L);
 
     /* Push error handling function and move it before args */
-    lua_pushcfunction(L, luaA_dofunction_error);
+    lua_pushcfunction(L, dofunction_error);
     lua_insert(L, -nargs - 1);
     int error_func_pos = 1;
 
@@ -120,6 +120,7 @@ static inline int luaA_call_handler(lua_State* L, int handler) {
     /* Remove error function */
     lua_remove(L, error_func_pos);
     return lua_gettop(L);
+}
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

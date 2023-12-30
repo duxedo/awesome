@@ -93,7 +93,7 @@ static int luaA_button_new(lua_State* L) { return luaA_class_new(L, &button_clas
  * \param buttons The array button to fill.
  */
 void luaA_button_array_set(lua_State* L, int oidx, int idx, std::vector<button_t*>* buttons) {
-    luaA_checktable(L, idx);
+    Lua::checktable(L, idx);
 
     for (auto button : *buttons) {
         luaA_object_unref_item(L, oidx, button);

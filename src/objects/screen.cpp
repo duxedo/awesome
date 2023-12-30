@@ -278,7 +278,7 @@ screen_t* luaA_checkscreen(lua_State* L, int sidx) {
     if (lua_isnumber(L, sidx)) {
         int screen = lua_tointeger(L, sidx);
         if (screen < 1 || (size_t)screen > getGlobals().screens.size()) {
-            luaA_warn(L,
+            Lua::warn(L,
                       "invalid screen number: %d (of %d existing)",
                       screen,
                       (int)getGlobals().screens.size());
@@ -991,7 +991,7 @@ static void screen_modified(screen_t* existing_screen, screen_t* other_screen) {
         area_t old_geometry = existing_screen->geometry;
         existing_screen->geometry = other_screen->geometry;
         luaA_object_push(L, existing_screen);
-        luaA_pusharea(L, old_geometry);
+        Lua::pusharea(L, old_geometry);
         luaA_object_emit_signal(L, -2, "property::geometry", 1);
         lua_pop(L, 1);
         screen_update_workarea(existing_screen);
@@ -1272,7 +1272,7 @@ void screen_update_workarea(screen_t* screen) {
     screen->workarea = area;
     lua_State* L = globalconf_get_lua_State();
     luaA_object_push(L, screen);
-    luaA_pusharea(L, old_workarea);
+    Lua::pusharea(L, old_workarea);
     luaA_object_emit_signal(L, -2, "property::workarea", 1);
     lua_pop(L, 1);
 }
@@ -1461,7 +1461,7 @@ static int luaA_screen_module_index(lua_State* L) {
             }
         }
 
-        luaA_warn(L, "Unknown screen output name: %s", name);
+        Lua::warn(L, "Unknown screen output name: %s", name);
         lua_pushnil(L);
         return 1;
     }
@@ -1473,13 +1473,13 @@ static int luaA_screen_module_newindex(lua_State* L) {
     const char* buf = luaL_checkstring(L, 2);
 
     if (A_STREQ(buf, "automatic_factory")) {
-        getGlobals().ignore_screens = !luaA_checkboolean(L, 3);
+        getGlobals().ignore_screens = !Lua::checkboolean(L, 3);
 
         /* It *can* be useful if screens are added/removed later, but generally,
          * setting this should be done before screens are added
          */
         if (getGlobals().ignore_screens && !getGlobals().no_auto_screen) {
-            luaA_warn(L,
+            Lua::warn(L,
                       "Setting automatic_factory only makes sense when AwesomeWM is"
                       " started with `--screen off`");
         }
@@ -1513,7 +1513,7 @@ static int luaA_screen_module_call(lua_State* L) {
     return 1;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, luaA_pusharea)
+LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, Lua::pusharea)
 
 static int luaA_screen_get_index(lua_State* L, screen_t* s) {
     lua_pushinteger(L, screen_get_index(s));
@@ -1540,7 +1540,7 @@ static int luaA_screen_get_managed(lua_State* L, screen_t* s) {
 }
 
 static int luaA_screen_get_workarea(lua_State* L, screen_t* s) {
-    luaA_pusharea(L, s->workarea);
+    Lua::pusharea(L, s->workarea);
     return 1;
 }
 
@@ -1609,7 +1609,7 @@ static int luaA_screen_fake_add(lua_State* L) {
     /* Allow undocumented arguments for internal use only */
     if (lua_istable(L, 5)) {
         lua_getfield(L, 5, "_managed");
-        managed = lua_isboolean(L, 6) && luaA_checkboolean(L, 6);
+        managed = lua_isboolean(L, 6) && Lua::checkboolean(L, 6);
 
         lua_pop(L, 1);
     }
@@ -1652,7 +1652,7 @@ static int luaA_screen_fake_remove(lua_State* L) {
     }
 
     if (getGlobals().screens.size() == 1) {
-        luaA_warn(L,
+        Lua::warn(L,
                   "Removing last screen through fake_remove(). "
                   "This is a very, very, very bad idea!");
     }
@@ -1699,7 +1699,7 @@ static int luaA_screen_fake_resize(lua_State* L) {
 
     screen_update_workarea(screen);
 
-    luaA_pusharea(L, old_geometry);
+    Lua::pusharea(L, old_geometry);
     luaA_object_emit_signal(L, 1, "property::geometry", 1);
 
     /* Note: calling `screen_client_moveto` from here will create more issues

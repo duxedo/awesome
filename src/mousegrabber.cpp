@@ -102,15 +102,15 @@ static int luaA_mousegrabber_run(lua_State* L) {
     if (!lua_isnil(L, 2)) {
         cursor = xcursor_new(&getGlobals().cursor_cache, getGlobals().cursor_ctx, luaL_checkstring(L, 2));
         if (!cursor) {
-            luaA_warn(L, "invalid cursor");
+            Lua::warn(L, "invalid cursor");
             return 0;
         }
     }
 
-    luaA_registerfct(L, 1, &(getGlobals().mousegrabber));
+    Lua::registerfct(L, 1, &(getGlobals().mousegrabber));
 
     if (!mousegrabber_grab(cursor)) {
-        luaA_unregister(L, &(getGlobals().mousegrabber));
+        Lua::unregister(L, &(getGlobals().mousegrabber));
         luaL_error(L, "unable to grab mouse pointer");
     }
 
@@ -124,7 +124,7 @@ static int luaA_mousegrabber_run(lua_State* L) {
  */
 int luaA_mousegrabber_stop(lua_State* L) {
     xcb_ungrab_pointer(getGlobals().connection, XCB_CURRENT_TIME);
-    luaA_unregister(L, &getGlobals().mousegrabber);
+    Lua::unregister(L, &getGlobals().mousegrabber);
     return 0;
 }
 

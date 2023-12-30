@@ -138,7 +138,7 @@ static int luaA_selection_get(lua_State* L) {
 
 static void
 move_global_to_table(lua_State* L, int index, const char* global_name, const char* local_name) {
-    index = luaA_absindex(L, index);
+    index = Lua::absindex(L, index);
 
     /* Get the global */
     lua_getglobal(L, global_name);
