@@ -810,8 +810,11 @@ static int panic(lua_State* L) {
     awesome_restart();
     return 0;
 }
-
-#if LUA_VERSION_NUM >= 502
+#if HAS_LUAJIT
+static const char* tolstring(lua_State* L, int idx, size_t* len) {
+    return lua_tolstring(L, idx, len);
+}
+#elif LUA_VERSION_NUM >= 502
 static const char* tolstring(lua_State* L, int idx, size_t* len) {
     return luaL_tolstring(L, idx, len);
 }
