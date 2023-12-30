@@ -489,7 +489,7 @@ static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* nam
     int ret = dbus_bus_request_name(dbus_connection, name, 0, &err);
 
     if (dbus_error_is_set(&err)) {
-        warn("failed to request D-Bus name: %s", err.message);
+        log_warn("failed to request D-Bus name: {}", err.message);
         dbus_error_free(&err);
         return false;
     }
@@ -497,7 +497,7 @@ static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* nam
     switch (ret) {
     case DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER: return true;
     case DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER:
-        warn("already primary D-Bus name owner for %s", name);
+        log_warn("already primary D-Bus name owner for {}", name);
         return true;
     }
     return false;
@@ -521,17 +521,17 @@ static bool a_dbus_release_name(DBusConnection* dbus_connection, const char* nam
     int ret = dbus_bus_release_name(dbus_connection, name, &err);
 
     if (dbus_error_is_set(&err)) {
-        warn("failed to release D-Bus name: %s", err.message);
+        log_warn("failed to release D-Bus name: {}", err.message);
         dbus_error_free(&err);
         return false;
     }
 
     switch (ret) {
     case DBUS_RELEASE_NAME_REPLY_NOT_OWNER:
-        warn("not primary D-Bus name owner for %s", name);
+        log_warn("not primary D-Bus name owner for {}", name);
         return false;
     case DBUS_RELEASE_NAME_REPLY_NON_EXISTENT:
-        warn("non existent D-Bus name: %s", name);
+        log_warn("non existent D-Bus name: {}", name);
         return false;
     }
     return true;
@@ -554,7 +554,7 @@ a_dbus_connect(DBusBusType type, const char* type_name, GSourceFunc cb, GSource*
 
     dbus_connection = dbus_bus_get(type, &err);
     if (dbus_error_is_set(&err)) {
-        warn("Could not connect to D-Bus %s bus: %s", type_name, err.message);
+        log_warn("Could not connect to D-Bus {} bus: {}", type_name, err.message);
         dbus_connection = NULL;
         dbus_error_free(&err);
     } else {
@@ -568,7 +568,7 @@ a_dbus_connect(DBusBusType type, const char* type_name, GSourceFunc cb, GSource*
 
             fcntl(fd, F_SETFD, FD_CLOEXEC);
         } else {
-            warn("cannot get D-Bus connection file descriptor");
+            log_warn("cannot get D-Bus connection file descriptor");
             a_dbus_cleanup_bus(dbus_connection, source);
         }
     }

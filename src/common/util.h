@@ -21,7 +21,10 @@
  */
 #pragma once
 
+#include <fmt/core.h>
+#include <source_location>
 #include <type_traits>
+#include <utility>
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
 #endif
@@ -41,6 +44,8 @@
 #endif
 
 #include <cctype>
+
+#include <fmt/format.h>
 
 /** \brief replace \c NULL strings with empty strings */
 #define NONULL(x) (x ? x : "")
@@ -280,17 +285,20 @@ static inline unsigned long __attribute__((nonnull(1))) a_strhash(const unsigned
     return hash;
 }
 
-#define fatal(string, ...) _fatal(__LINE__, __FUNCTION__, string, ##__VA_ARGS__)
-void _fatal(int, const char*, const char*, ...) __attribute__((noreturn))
-__attribute__((format(printf, 3, 4)));
+void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args);
 
-#define warn(string, ...) _warn(__LINE__, __FUNCTION__, string, ##__VA_ARGS__)
-void _warn(int, const char*, const char*, ...) __attribute__((format(printf, 3, 4)));
+template <typename ... Args>
+void log_message(char tag, FILE *file, const std::source_location loc, std::string_view format, Args && ... args) {
+    log_messagev(tag, file, loc, format, fmt::make_format_args(std::forward<Args>(args)...));
+}
+
+#define log_fatal(string, ...) log_message('E', stderr, std::source_location::current(), string, ## __VA_ARGS__)
+#define log_warn(string, ...) log_message('W', stderr, std::source_location::current(), string, ## __VA_ARGS__)
 
 #define awsm_check(condition)                                                        \
     do {                                                                             \
         if (!(condition))                                                            \
-            _warn(__LINE__, __FUNCTION__, "Checking assertion failed: " #condition); \
+            log_warn("Checking assertion failed: " #condition); \
     } while (0)
 
 const char* a_current_time_str(void);

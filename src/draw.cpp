@@ -231,7 +231,8 @@ uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis) {
         }
     }
 
-    fatal("Could not find a visual's depth");
+    log_fatal("Could not find a visual's depth");
+    return 0;
 }
 
 void draw_test_cairo_xcb(void) {
@@ -241,7 +242,7 @@ void draw_test_cairo_xcb(void) {
     cairo_surface_t* surface =
       cairo_xcb_surface_create(getGlobals().connection, pixmap, getGlobals().visual, 1, 1);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
-        fatal("Could not set up display: got cairo surface with status %s",
+        log_fatal("Could not set up display: got cairo surface with status {}",
               cairo_status_to_string(cairo_surface_status(surface)));
     }
     cairo_surface_finish(surface);

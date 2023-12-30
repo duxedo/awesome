@@ -320,7 +320,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
                           : luaA_checkboolean(L, value_idx);
         getConnection().replace_property(window, prop->atom, XCB_ATOM_CARDINAL, data);
     } else {
-        fatal("Got an xproperty with invalid type");
+        log_fatal("Got an xproperty with invalid type");
     }
     return 0;
 }
