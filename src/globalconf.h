@@ -153,7 +153,7 @@ class Globals {
     /** Input focus information */
     struct {
         /** Focused client */
-        client* client = nullptr;
+        struct client* client = nullptr;
         /** Is there a focus change pending? */
         bool need_update = false;
         /** When nothing has the input focus, this window actually is focused */

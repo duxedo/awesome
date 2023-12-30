@@ -4204,11 +4204,12 @@ static int client_tostring(lua_State* L, client* c) {
     const auto& name = c->getName().empty() ? c->getAltName() : c->getName();
     ssize_t limit = 20;
 
-    lua_pushlstring(L, name.c_str(), MIN(name.size(), limit));
-    if (name.size() > limit) {
+    lua_pushlstring(L, name.c_str(), MIN((ssize_t)name.size(), limit));
+    if ((ssize_t)name.size() > limit) {
         lua_pushstring(L, "...");
+        return 2;
     }
-    return name.size() > limit ? 2 : 1;
+    return 1;
 }
 
 /* Client module.
