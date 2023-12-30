@@ -21,9 +21,11 @@
 
 #pragma once
 
+#include "config.h"
 #include "common/luaclass.h"
 #include "common/lualib.h"
 #include "draw.h"
+#include "lauxlib.h"
 
 #if !(501 <= LUA_VERSION_NUM && LUA_VERSION_NUM < 506)
 #error "Awesome only supports Lua versions 5.1-5.5 and LuaJIT2, please refer to https://awesomewm.org/apidoc/documentation/10-building-and-testing.md.html#Building"
@@ -62,7 +64,7 @@ luaA_warn(lua_State* L, const char* fmt, ...) {
     va_end(ap);
     fprintf(stderr, "\n");
 
-#if LUA_VERSION_NUM >= 502
+#if HAS_LUAJIT || LUA_VERSION_NUM >= 502
     luaL_traceback(L, L, NULL, 2);
     fprintf(stderr, "%s\n", lua_tostring(L, -1));
     lua_pop(L, 1);
@@ -71,7 +73,7 @@ luaA_warn(lua_State* L, const char* fmt, ...) {
 
 static inline int luaA_typerror(lua_State* L, int narg, const char* tname) {
     const char* msg = lua_pushfstring(L, "%s expected, got %s", tname, luaL_typename(L, narg));
-#if LUA_VERSION_NUM >= 502
+#if HAS_LUAJIT || LUA_VERSION_NUM >= 502
     luaL_traceback(L, L, NULL, 2);
     lua_concat(L, 2);
 #endif
@@ -81,7 +83,7 @@ static inline int luaA_typerror(lua_State* L, int narg, const char* tname) {
 static inline int luaA_rangerror(lua_State* L, int narg, double min, double max) {
     const char* msg = lua_pushfstring(
       L, "value in [%f, %f] expected, got %f", min, max, (double)lua_tonumber(L, narg));
-#if LUA_VERSION_NUM >= 502
+#if HAS_LUAJIT || LUA_VERSION_NUM >= 502
     luaL_traceback(L, L, NULL, 2);
     lua_concat(L, 2);
 #endif
@@ -125,7 +127,7 @@ static inline void luaA_registerlib(lua_State* L, const char* libname, const lua
 }
 
 static inline void luaA_setfuncs(lua_State* L, const luaL_Reg* l) {
-#if LUA_VERSION_NUM >= 502
+#if HAS_LUAJIT || LUA_VERSION_NUM >= 502
     luaL_setfuncs(L, l, 0);
 #else
     luaL_register(L, NULL, l);
