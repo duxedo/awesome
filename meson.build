@@ -114,6 +114,7 @@ confdata.set('AWESOME_DEFAULT_CONF', '/etc/xdg/awesome/rc.lua')
 confdata.set('WITH_DBUS', true)
 confdata.set('WITH_XCB_ERRORS', false)
 confdata.set('HAS_EXECINFO', 1)
+confdata.set('HAS_LUAJIT', 1)
 
 config_h = configure_file(input: 'templates/config.h.in', output: 'config.h', configuration:confdata, install:false)
 
