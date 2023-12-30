@@ -144,7 +144,7 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
     /* Tell Lua that the wallpaper changed */
     cairo_surface_destroy(getGlobals().wallpaper);
     getGlobals().wallpaper = surface;
-    signal_object_emit(L, &global_signals, "wallpaper_changed", 0);
+    signal_object_emit(L, &Lua::global_signals, "wallpaper_changed", 0);
 
     result = true;
     disconnect();
@@ -282,7 +282,7 @@ static xcb_keycode_t _string_to_key_code(const char* s) {
  */
 static int luaA_root_fake_input(lua_State* L) {
     if (!getGlobals().have_xtest) {
-        luaA_warn(L, "XTest extension is not available, cannot fake input.");
+        Lua::warn(L, "XTest extension is not available, cannot fake input.");
         return 0;
     }
 
@@ -312,9 +312,9 @@ static int luaA_root_fake_input(lua_State* L) {
         detail = luaL_checkinteger(L, 2); /* button number */
     } else if (A_STREQ(stype, "motion_notify")) {
         type = XCB_MOTION_NOTIFY;
-        detail = luaA_checkboolean(L, 2); /* relative to the current position or not */
-        x = round(luaA_checknumber_range(L, 3, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        y = round(luaA_checknumber_range(L, 4, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        detail = Lua::checkboolean(L, 2); /* relative to the current position or not */
+        x = round(Lua::checknumber_range(L, 3, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        y = round(Lua::checknumber_range(L, 4, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     } else {
         return 0;
     }
@@ -341,7 +341,7 @@ static int luaA_root_fake_input(lua_State* L) {
  */
 static int luaA_root_keys(lua_State* L) {
     if (lua_gettop(L) == 1) {
-        luaA_checktable(L, 1);
+        Lua::checktable(L, 1);
 
         for (auto* key : getGlobals().keys) {
             luaA_object_unref(L, key);
@@ -389,7 +389,7 @@ static int luaA_root_keys(lua_State* L) {
 static int luaA_root_buttons(lua_State* L) {
     auto& buttons = getGlobals().buttons;
     if (lua_gettop(L) == 1) {
-        luaA_checktable(L, 1);
+        Lua::checktable(L, 1);
 
         for (auto* button : buttons) {
             luaA_object_unref(L, button);
@@ -434,7 +434,7 @@ static int luaA_root_cursor(lua_State* L) {
         xcb_change_window_attributes(
           getGlobals().connection, getGlobals().screen->root, XCB_CW_CURSOR, change_win_vals);
     } else {
-        luaA_warn(L, "invalid cursor %s", cursor_name);
+        Lua::warn(L, "invalid cursor %s", cursor_name);
     }
 
     return 0;
@@ -550,21 +550,21 @@ static int luaA_root_tags(lua_State* L) {
  * Add a custom call handler.
  */
 static int luaA_root_set_call_handler(lua_State* L) {
-    return luaA_registerfct(L, 1, &miss_call_handler);
+    return Lua::registerfct(L, 1, &miss_call_handler);
 }
 
 /**
  * Add a custom property handler (getter).
  */
 static int luaA_root_set_index_miss_handler(lua_State* L) {
-    return luaA_registerfct(L, 1, &miss_index_handler);
+    return Lua::registerfct(L, 1, &miss_index_handler);
 }
 
 /**
  * Add a custom property handler (setter).
  */
 static int luaA_root_set_newindex_miss_handler(lua_State* L) {
-    return luaA_registerfct(L, 1, &miss_newindex_handler);
+    return Lua::registerfct(L, 1, &miss_newindex_handler);
 }
 
 /** Root library.
@@ -574,7 +574,7 @@ static int luaA_root_set_newindex_miss_handler(lua_State* L) {
  */
 static int luaA_root_index(lua_State* L) {
     if (miss_index_handler != LUA_REFNIL) {
-        return luaA_call_handler(L, miss_index_handler);
+        return Lua::call_handler(L, miss_index_handler);
     }
 
     return Lua::default_index(L);
@@ -587,7 +587,7 @@ static int luaA_root_index(lua_State* L) {
 static int luaA_root_newindex(lua_State* L) {
     /* Call the lua root property handler */
     if (miss_newindex_handler != LUA_REFNIL) {
-        return luaA_call_handler(L, miss_newindex_handler);
+        return Lua::call_handler(L, miss_newindex_handler);
     }
 
     return Lua::default_newindex(L);

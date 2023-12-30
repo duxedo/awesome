@@ -451,7 +451,7 @@ static int luaA_tag_clients(lua_State* L) {
     size_t i;
 
     if (lua_gettop(L) == 2) {
-        luaA_checktable(L, 2);
+        Lua::checktable(L, 2);
         for (size_t j = 0; j < clients.size(); j++) {
             client* c = clients[j];
 
@@ -519,7 +519,7 @@ static int luaA_tag_set_name(lua_State* L, tag_t* tag) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
-    tag_view(L, -3, luaA_checkboolean(L, -1));
+    tag_view(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
@@ -529,7 +529,7 @@ static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
-    bool activated = luaA_checkboolean(L, -1);
+    bool activated = Lua::checkboolean(L, -1);
     if (activated == tag->activated) {
         return 0;
     }

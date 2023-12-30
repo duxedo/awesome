@@ -120,7 +120,7 @@ static void init_rng(void) {
 void awesome_atexit(bool restart) {
     lua_State* L = globalconf_get_lua_State();
     lua_pushboolean(L, restart);
-    signal_object_emit(L, &global_signals, "exit", 1);
+    signal_object_emit(L, &Lua::global_signals, "exit", 1);
 
     /* Move clients where we want them to be and keep the stacking order intact */
     for (auto* c : getGlobals().getStack()) {
@@ -435,7 +435,7 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
     /* Check if the Lua stack is the way it should be */
     if (lua_gettop(L) != 0) {
         log_warn("Something was left on the Lua stack, this is a bug!");
-        luaA_dumpstack(L);
+        Lua::dumpstack(L);
         lua_settop(L, 0);
     }
 

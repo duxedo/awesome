@@ -188,7 +188,7 @@ void luaA_object_disconnect_signal(lua_State* L, int oud, const char* name, lua_
  * \param ud The index of function to call when signal is emitted.
  */
 void luaA_object_connect_signal_from_stack(lua_State* L, int oud, const char* name, int ud) {
-    luaA_checkfunction(L, ud);
+    Lua::checkfunction(L, ud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     obj->signals.connect(name, luaA_object_ref_item(L, oud, ud));
 }
@@ -200,7 +200,7 @@ void luaA_object_connect_signal_from_stack(lua_State* L, int oud, const char* na
  * \param ud The index of function to call when signal is emitted.
  */
 void luaA_object_disconnect_signal_from_stack(lua_State* L, int oud, const char* name, int ud) {
-    luaA_checkfunction(L, ud);
+    Lua::checkfunction(L, ud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     void* ref = (void*)lua_topointer(L, ud);
     if (obj->signals.disconnect(name, ref)) {
@@ -229,7 +229,7 @@ void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name
             lua_pushvalue(L, -nargs - nbfunc + i);
             /* remove this first function */
             lua_remove(L, -nargs - nbfunc - 1 + i);
-            luaA_dofunction(L, nargs, 0);
+            Lua::dofunction(L, nargs, 0);
         }
     }
 
@@ -243,14 +243,14 @@ void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name
  * @function emit_signal
  */
 void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs) {
-    int oud_abs = luaA_absindex(L, oud);
+    int oud_abs = Lua::absindex(L, oud);
     lua_class_t* lua_class = luaA_class_get(L, oud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(luaA_toudata(L, oud, lua_class));
     if (!obj) {
-        luaA_warn(L, "Trying to emit signal '%s' on non-object", name);
+        Lua::warn(L, "Trying to emit signal '%s' on non-object", name);
         return;
     } else if (lua_class->checker && !lua_class->checker(obj)) {
-        luaA_warn(L, "Trying to emit signal '%s' on invalid object", name);
+        Lua::warn(L, "Trying to emit signal '%s' on invalid object", name);
         return;
     }
     auto signalIt = obj->signals.find(name);
@@ -274,7 +274,7 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
             lua_pushvalue(L, -nargs - nbfunc - 1 + i);
             /* remove this first function */
             lua_remove(L, -nargs - nbfunc - 2 + i);
-            luaA_dofunction(L, nargs + 1, 0);
+            Lua::dofunction(L, nargs + 1, 0);
         }
     }
 
