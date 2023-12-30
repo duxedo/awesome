@@ -22,9 +22,12 @@
 
 #include "common/util.h"
 
+#include <cstdio>
 #include <errno.h>
 #include <fcntl.h>
+#include <fmt/core.h>
 #include <limits.h>
+#include <source_location>
 #include <stdarg.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -47,28 +50,11 @@ const char* a_current_time_str(void) {
     return buffer;
 }
 
-/** Print error and exit with EXIT_FAILURE code.
- */
-void _fatal(int line, const char* fct, const char* fmt, ...) {
-    va_list ap;
-
-    va_start(ap, fmt);
-    fprintf(stderr, "%sE: awesome: %s:%d: ", a_current_time_str(), fct, line);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
-    exit(EXIT_FAILURE);
-}
-
-/** Print error message on stderr.
- */
-void _warn(int line, const char* fct, const char* fmt, ...) {
-    va_list ap;
-    va_start(ap, fmt);
-    fprintf(stderr, "%sW: awesome: %s:%d: ", a_current_time_str(), fct, line);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-    fprintf(stderr, "\n");
+void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args) {
+    fmt::print("{}{}: awesome: {}:{}: {}\n", tag, a_current_time_str(), loc.function_name(), loc.line(), fmt::vformat(format, args));
+    if(tag == 'E') {
+        exit(EXIT_FAILURE);
+    }
 }
 
 /** \brief safe limited strcpy.
@@ -129,7 +115,7 @@ void a_exec(const char* cmd) {
     }
 
     execlp(shell, shell, "-c", cmd, NULL);
-    fatal("execlp() failed: %s", strerror(errno));
+    log_fatal("execlp() failed: {}", strerror(errno));
 }
 
 namespace Lua {

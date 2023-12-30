@@ -66,7 +66,7 @@ void systray_init(void) {
 
     atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", getGlobals().default_screen);
     if (!atom_name) {
-        fatal("error getting systray atom name");
+        log_fatal("error getting systray atom name");
     }
 
     atom_systray_q =
@@ -76,7 +76,7 @@ void systray_init(void) {
 
     atom_systray_r = xcb_intern_atom_reply(getGlobals().connection, atom_systray_q, NULL);
     if (!atom_systray_r) {
-        fatal("error getting systray atom");
+        log_fatal("error getting systray atom");
     }
 
     getGlobals().systray.atom = atom_systray_r->atom;

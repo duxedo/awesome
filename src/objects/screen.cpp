@@ -622,7 +622,7 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
     xcb_randr_monitor_info_iterator_t monitor_iter;
 
     if (monitors_r == NULL) {
-        warn("RANDR GetMonitors failed; this should not be possible");
+        log_warn("RANDR GetMonitors failed; this should not be possible");
         return;
     }
 
@@ -674,7 +674,7 @@ static void screen_get_randr_crtcs_outputs(lua_State* L,
         screen_output_t output;
 
         if (!output_info_r) {
-            warn("RANDR GetOutputInfo failed; this should not be possible");
+            log_warn("RANDR GetOutputInfo failed; this should not be possible");
             continue;
         }
 
@@ -700,7 +700,7 @@ static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screen
       xcb_randr_get_screen_resources_reply(getGlobals().connection, screen_res_c, NULL);
 
     if (screen_res_r == NULL) {
-        warn("RANDR GetScreenResources failed; this should not be possible");
+        log_warn("RANDR GetScreenResources failed; this should not be possible");
         return;
     }
 
@@ -715,7 +715,7 @@ static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screen
           xcb_randr_get_crtc_info_reply(getGlobals().connection, crtc_info_c, NULL);
 
         if (!crtc_info_r) {
-            warn("RANDR GetCRTCInfo failed; this should not be possible");
+            log_warn("RANDR GetCRTCInfo failed; this should not be possible");
             continue;
         }
 
@@ -751,7 +751,7 @@ static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screen
                 /* non RandR 1.2+ X driver don't return any usable multihead
                  * data. I'm looking at you, nvidia binary blob!
                  */
-                warn("Ignoring RandR, only a compatibility layer is present.");
+                log_warn("Ignoring RandR, only a compatibility layer is present.");
 
                 /* Get rid of the screens that we already created */
                 for (auto* screen : *screens) {
@@ -850,7 +850,7 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
       getGlobals().connection, xcb_xinerama_query_screens_unchecked(getGlobals().connection), NULL);
 
     if (!xsq) {
-        warn("Xinerama QueryScreens failed; this should not be possible");
+        log_warn("Xinerama QueryScreens failed; this should not be possible");
         return;
     }
 

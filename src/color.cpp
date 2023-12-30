@@ -53,7 +53,7 @@ static bool color_parse(
         p -= 2;
     }
     if (len != 7 || colstr[0] != '#' || (p - colstr) != 7) {
-        warn("awesome: error, invalid color '%s'", colstr);
+        log_warn("awesome: error, invalid color '{}'", colstr);
         return false;
     }
 
@@ -125,7 +125,7 @@ color_init_unchecked(color_t* color, const char* colstr, ssize_t len, xcb_visual
 
     /* The color is given in RGB value */
     if (!color_parse(colstr, len, &red, &green, &blue, &alpha)) {
-        warn("awesome: error, invalid color '%s'", colstr);
+        log_warn("awesome: error, invalid color '{}'", colstr);
         req.has_error = true;
         return req;
     }
@@ -188,7 +188,7 @@ bool color_init_reply(color_init_request_t req) {
         return true;
     }
 
-    warn("awesome: error, cannot allocate color '%s'", req.colstr);
+    log_warn("awesome: error, cannot allocate color '{}'", req.colstr);
     return false;
 }
 
