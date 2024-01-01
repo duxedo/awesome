@@ -715,7 +715,8 @@ static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
 
 void drawin_class_setup(lua_State* L) {
     const struct luaL_Reg drawin_methods[] = {
-      LUA_CLASS_METHODS(drawin){   "get", luaA_drawin_get},
+      LUA_CLASS_METHODS(drawin_class),
+      {   "get", luaA_drawin_get},
       {"__call", luaA_drawin_new},
       {    NULL,            NULL}
     };

@@ -146,7 +146,6 @@ int luaA_object_disconnect_signal_simple(lua_State*);
 int luaA_object_emit_signal_simple(lua_State*);
 
 #define LUA_OBJECT_FUNCS(lua_class, type, prefix)          \
-    LUA_CLASS_FUNCS(prefix, lua_class)                     \
     static inline type* prefix##_new(lua_State* L) {       \
         void* mem = lua_newuserdata(L, sizeof(type));      \
         auto p = new (mem) type{};                         \
@@ -159,7 +158,7 @@ int luaA_object_emit_signal_simple(lua_State*);
         lua_setfield(L, -2, "data");                       \
         Lua::setuservalue(L, -2);                          \
         lua_pushvalue(L, -1);                              \
-        luaA_class_emit_signal(L, &(lua_class), "new", 1); \
+        lua_class.emit_signal(L, "new", 1); \
         return p;                                          \
     }
 

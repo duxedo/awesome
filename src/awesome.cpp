@@ -196,7 +196,7 @@ static void restore_client_order(xcb_get_property_cookie_t prop_cookie) {
         }
     }
 
-    luaA_class_emit_signal(globalconf_get_lua_State(), &client_class, "list", 0);
+    client_class.emit_signal(globalconf_get_lua_State(), "list", 0);
 }
 /** Scan X to find windows to manage.
  */
