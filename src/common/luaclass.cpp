@@ -235,18 +235,12 @@ void luaA_class_setup(lua_State* L,
     cls->newindex_miss_handler = LUA_REFNIL;
 }
 
-void luaA_class_connect_signal(lua_State* L,
-                               lua_class_t* lua_class,
-                               const std::string_view& name,
-                               lua_CFunction fn) {
+void lua_class_t::connect_signal(lua_State* L, const std::string_view& name, lua_CFunction fn) {
     lua_pushcfunction(L, fn);
-    luaA_class_connect_signal_from_stack(L, lua_class, name, -1);
+    connect_signal(L, name, -1);
 }
 
-void luaA_class_connect_signal_from_stack(lua_State* L,
-                                          lua_class_t* lua_class,
-                                          const std::string_view& name,
-                                          int ud) {
+void lua_class_t::connect_signal(lua_State* L, const std::string_view& name, int ud) {
     Lua::checkfunction(L, ud);
 
     /* Duplicate the function in the stack */
@@ -262,29 +256,23 @@ void luaA_class_connect_signal_from_stack(lua_State* L,
      * artificially emitted for existing objects as soon as something connects
      * to it
      */
-    luaA_class_emit_signal(L, lua_class, buf, 1);
+    emit_signal(L, buf, 1);
 
     /* Register the signal to the CAPI list */
-    lua_class->signals.connect(name, luaA_object_ref(L, ud));
+    signals.connect(name, luaA_object_ref(L, ud));
 }
 
-void luaA_class_disconnect_signal_from_stack(lua_State* L,
-                                             lua_class_t* lua_class,
-                                             const std::string_view& name,
-                                             int ud) {
+void lua_class_t::disconnect_signal(lua_State* L, const std::string_view& name, int ud) {
     Lua::checkfunction(L, ud);
     void* ref = (void*)lua_topointer(L, ud);
-    if (lua_class->signals.disconnect(name, ref)) {
+    if (signals.disconnect(name, ref)) {
         luaA_object_unref(L, (void*)ref);
     }
     lua_remove(L, ud);
 }
 
-void luaA_class_emit_signal(lua_State* L,
-                            lua_class_t* lua_class,
-                            const std::string_view& name,
-                            int nargs) {
-    signal_object_emit(L, &lua_class->signals, name, nargs);
+void lua_class_t::emit_signal(lua_State* L, const std::string_view& name, int nargs) {
+    signal_object_emit(L, &signals, name, nargs);
 }
 
 /** Try to use the metatable of an object.

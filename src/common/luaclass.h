@@ -22,6 +22,7 @@
 
 #include "common/luahdr.h"
 #include "common/signal.h"
+#include "lua.h"
 
 #include <cstddef>
 #include <string_view>
@@ -122,18 +123,15 @@ struct lua_class_t {
         properties.insert(
           {.name = name, .newobj = cb_new, .index = cb_index, .newindex = cb_newindex});
     }
+    static lua_class_t* get(lua_State* state, int idx);
+    void connect_signal(lua_State* state, const std::string_view& name, lua_CFunction sigfun);
+    void connect_signal(lua_State* state, const std::string_view& name, int stackIdx);
+    void disconnect_signal(lua_State* state, const std::string_view& name, int stackIdx);
+    void emit_signal(lua_State*, const std::string_view& name, int nargs);
 };
 
 const char* luaA_typename(lua_State*, int);
 lua_class_t* luaA_class_get(lua_State*, int);
-
-void luaA_class_connect_signal(lua_State*, lua_class_t*, const std::string_view&, lua_CFunction);
-void luaA_class_connect_signal_from_stack(lua_State*, lua_class_t*, const std::string_view&, int);
-void luaA_class_disconnect_signal_from_stack(lua_State*,
-                                             lua_class_t*,
-                                             const std::string_view&,
-                                             int);
-void luaA_class_emit_signal(lua_State*, lua_class_t*, const std::string_view&, int);
 
 void luaA_openlib(lua_State*, const char*, const struct luaL_Reg[], const struct luaL_Reg[]);
 void luaA_class_setup(lua_State*,
@@ -167,41 +165,12 @@ static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls
     return luaA_checkudata(L, udx, cls);
 }
 
-#define LUA_CLASS_FUNCS(prefix, lua_class)                                                   \
-    static inline int luaA_##prefix##_class_connect_signal(lua_State* L) {                   \
-        luaA_class_connect_signal_from_stack(L, &(lua_class), Lua::checkstring(L, 1), 2);    \
-        return 0;                                                                            \
-    }                                                                                        \
-                                                                                             \
-    static inline int luaA_##prefix##_class_disconnect_signal(lua_State* L) {                \
-        luaA_class_disconnect_signal_from_stack(L, &(lua_class), Lua::checkstring(L, 1), 2); \
-        return 0;                                                                            \
-    }                                                                                        \
-                                                                                             \
-    static inline int luaA_##prefix##_class_emit_signal(lua_State* L) {                      \
-        luaA_class_emit_signal(L, &(lua_class), Lua::checkstring(L, 1), lua_gettop(L) - 1);  \
-        return 0;                                                                            \
-    }                                                                                        \
-                                                                                             \
-    static inline int luaA_##prefix##_class_instances(lua_State* L) {                        \
-        lua_pushinteger(L, (lua_class).instances);                                           \
-        return 1;                                                                            \
-    }                                                                                        \
-                                                                                             \
-    static inline int luaA_##prefix##_set_index_miss_handler(lua_State* L) {                 \
-        return Lua::registerfct(L, 1, &(lua_class).index_miss_handler);                      \
-    }                                                                                        \
-                                                                                             \
-    static inline int luaA_##prefix##_set_newindex_miss_handler(lua_State* L) {              \
-        return Lua::registerfct(L, 1, &(lua_class).newindex_miss_handler);                   \
-    }
-
-#define LUA_CLASS_METHODS(class)                                         \
-    {"connect_signal", luaA_##class##_class_connect_signal},             \
-      {"disconnect_signal", luaA_##class##_class_disconnect_signal},     \
-      {"emit_signal", luaA_##class##_class_emit_signal},                 \
-      {"instances", luaA_##class##_class_instances},                     \
-      {"set_index_miss_handler", luaA_##class##_set_index_miss_handler}, \
-      {"set_newindex_miss_handler", luaA_##class##_set_newindex_miss_handler},
+#define LUA_CLASS_METHODS(lua_class)                              \
+      {"connect_signal", [](lua_State* L) { lua_class.connect_signal(L, Lua::checkstring(L, 1), 2); return 0;} },    \
+      {"disconnect_signal", [](lua_State* L) { lua_class.disconnect_signal(L, Lua::checkstring(L, 1), 2); return 0;} }, \
+      {"emit_signal", [](lua_State* L) { lua_class.emit_signal(L, Lua::checkstring(L, 1), lua_gettop(L) - 1); return 0;} }, \
+      {"instances", [](lua_State* L) { lua_pushinteger(L, (lua_class).instances); return 0;} }, \
+      {"set_index_miss_handler", [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).index_miss_handler);} }, \
+      {"set_newindex_miss_handler", [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).newindex_miss_handler);} }
 
 #define LUA_CLASS_META {"__index", luaA_class_index}, {"__newindex", luaA_class_newindex},

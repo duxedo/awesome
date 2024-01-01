@@ -464,7 +464,7 @@ static void viewports_notify(lua_State* L) {
 
     luaA_viewports(L);
 
-    luaA_class_emit_signal(L, &screen_class, "property::_viewports", 1);
+    screen_class.emit_signal(L, "property::_viewports", 1);
 }
 
 static viewport_t* viewport_add(lua_State* L, int x, int y, int w, int h) {
@@ -908,12 +908,12 @@ static void screen_added(lua_State* L, screen_t* screen) {
 
 void screen_emit_scanned(void) {
     lua_State* L = globalconf_get_lua_State();
-    luaA_class_emit_signal(L, &screen_class, "scanned", 0);
+    screen_class.emit_signal(L, "scanned", 0);
 }
 
 void screen_emit_scanning(void) {
     lua_State* L = globalconf_get_lua_State();
-    luaA_class_emit_signal(L, &screen_class, "scanning", 0);
+    screen_class.emit_signal(L, "scanning", 0);
 }
 
 static void screen_scan_common(bool quiet) {
@@ -1117,7 +1117,7 @@ static gboolean screen_refresh(gpointer unused) {
     screen_update_primary();
 
     if (list_changed) {
-        luaA_class_emit_signal(L, &screen_class, "list", 0);
+        screen_class.emit_signal(L, "list", 0);
     }
 
     return G_SOURCE_REMOVE;
@@ -1626,7 +1626,7 @@ static int luaA_screen_fake_add(lua_State* L) {
     s->xid = FAKE_SCREEN_XID;
 
     screen_added(L, s);
-    luaA_class_emit_signal(L, &screen_class, "list", 0);
+    screen_class.emit_signal(L, "list", 0);
     luaA_object_push(L, s);
 
     for (auto* c : getGlobals().clients) {
@@ -1661,7 +1661,7 @@ static int luaA_screen_fake_remove(lua_State* L) {
     luaA_object_push(L, s);
     screen_removed(L, -1);
     lua_pop(L, 1);
-    luaA_class_emit_signal(L, &screen_class, "list", 0);
+    screen_class.emit_signal(L, "list", 0);
     luaA_object_unref(L, s);
     s->valid = false;
 
@@ -1742,7 +1742,7 @@ static int luaA_screen_swap(lua_State* L) {
         *ref_s = swap;
         *ref_swap = s;
 
-        luaA_class_emit_signal(L, &screen_class, "list", 0);
+        screen_class.emit_signal(L, "list", 0);
 
         luaA_object_push(L, swap);
         lua_pushboolean(L, true);
@@ -1759,7 +1759,8 @@ static int luaA_screen_swap(lua_State* L) {
 
 void screen_class_setup(lua_State* L) {
     static const struct luaL_Reg screen_methods[] = {
-      LUA_CLASS_METHODS(screen){      "count",           luaA_screen_count},
+      LUA_CLASS_METHODS(screen_class),
+      {      "count",           luaA_screen_count},
       { "_viewports",              luaA_viewports},
       {"_scan_quiet",             luaA_scan_quiet},
       {    "__index",    luaA_screen_module_index},
