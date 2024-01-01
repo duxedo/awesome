@@ -65,7 +65,6 @@
 #include <span>
 
 lua_class_t window_class;
-LUA_CLASS_FUNCS(window, window_class)
 
 static xcb_window_t window_get(window_t* window) {
     if (window->frame_window != XCB_NONE) {

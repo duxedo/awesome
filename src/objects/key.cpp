@@ -308,7 +308,8 @@ static int luaA_key_set_key(lua_State* L, keyb_t* k) {
 
 void key_class_setup(lua_State* L) {
     static const struct luaL_Reg key_methods[] = {
-      LUA_CLASS_METHODS(key){"__call", luaA_key_new},
+      LUA_CLASS_METHODS(key_class),
+      {"__call", luaA_key_new},
       {    NULL,         NULL}
     };
 

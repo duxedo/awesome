@@ -172,7 +172,8 @@ static int luaA_selection_watcher_get_active(lua_State* L, selection_watcher_t* 
 
 void selection_watcher_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_watcher_methods[] = {
-      LUA_CLASS_METHODS(selection_watcher){"__call", luaA_selection_watcher_new},
+      LUA_CLASS_METHODS(selection_watcher_class),
+      {"__call", luaA_selection_watcher_new},
       {    NULL,                       NULL}
     };
 

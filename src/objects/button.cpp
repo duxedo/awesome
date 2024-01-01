@@ -143,7 +143,8 @@ static int luaA_button_set_button(lua_State* L, button_t* b) {
 
 void button_class_setup(lua_State* L) {
     static const struct luaL_Reg button_methods[] = {
-      LUA_CLASS_METHODS(button){"__call", luaA_button_new},
+      LUA_CLASS_METHODS(button_class),
+      {"__call", luaA_button_new},
       {    NULL,            NULL}
     };
 

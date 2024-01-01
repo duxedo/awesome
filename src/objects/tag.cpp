@@ -564,7 +564,8 @@ static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
 
 void tag_class_setup(lua_State* L) {
     static const struct luaL_Reg tag_methods[] = {
-      LUA_CLASS_METHODS(tag){"__call", luaA_tag_new},
+      LUA_CLASS_METHODS(tag_class),
+      {"__call", luaA_tag_new},
       {    NULL,         NULL}
     };
 

@@ -1611,12 +1611,12 @@ DO_CLIENT_SET_STRING_PROPERTY4(Machine, machine)
 
 void client_emit_scanned(void) {
     lua_State* L = globalconf_get_lua_State();
-    luaA_class_emit_signal(L, &client_class, "scanned", 0);
+    client_class.emit_signal(L, "scanned", 0);
 }
 
 void client_emit_scanning(void) {
     lua_State* L = globalconf_get_lua_State();
-    luaA_class_emit_signal(L, &client_class, "scanning", 0);
+    client_class.emit_signal(L, "scanning", 0);
 }
 
 void client_set_motif_wm_hints(lua_State* L, int cidx, motif_wm_hints_t hints) {
@@ -2236,7 +2236,7 @@ void client_manage(xcb_window_t w,
 
     spawn_start_notify(c, startup_id.c_str());
 
-    luaA_class_emit_signal(L, &client_class, "list", 0);
+    client_class.emit_signal(L, "list", 0);
 
     /* Add the context */
     if (getGlobals().loop == NULL) {
@@ -2868,7 +2868,7 @@ void client_unmanage(client* c, client_unmanage_t reason) {
     luaA_object_emit_signal(L, -1, "unmanage", 0);
     lua_pop(L, 1);
 
-    luaA_class_emit_signal(L, &client_class, "list", 0);
+    client_class.emit_signal(L, "list", 0);
 
     if (strut_has_value(&c->strut)) {
         screen_update_workarea(c->screen);
@@ -3177,7 +3177,7 @@ static int luaA_client_swap(lua_State* L) {
         *ref_c = swap;
         *ref_swap = c;
 
-        luaA_class_emit_signal(L, &client_class, "list", 0);
+        client_class.emit_signal(L, "list", 0);
 
         luaA_object_push(L, swap);
         lua_pushboolean(L, true);
@@ -4249,7 +4249,8 @@ static bool client_checker(client* c) { return c->window != XCB_NONE; }
 
 void client_class_setup(lua_State* L) {
     static const struct luaL_Reg client_methods[] = {
-      LUA_CLASS_METHODS(client){       "get",             luaA_client_get},
+      LUA_CLASS_METHODS(client_class),
+      {       "get",             luaA_client_get},
       {   "__index",    luaA_client_module_index},
       {"__newindex", luaA_client_module_newindex},
       {        NULL,                        NULL}
