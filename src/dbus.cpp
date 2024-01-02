@@ -687,14 +687,14 @@ static int luaA_dbus_remove_match(lua_State* L) {
 static int luaA_dbus_connect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
     Lua::checkfunction(L, 2);
-    auto signalIt = dbus_signals.find(name);
+    auto signalIt = dbus_signals.find(*name);
     if (signalIt != dbus_signals.end()) {
-        Lua::warn(L, "cannot add signal %s on D-Bus, already existing", name.data());
+        Lua::warn(L, "cannot add signal %s on D-Bus, already existing", name->data());
         lua_pushnil(L);
-        lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name.data());
+        lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name->data());
         return 2;
     } else {
-        dbus_signals.connect(name, luaA_object_ref(L, 2));
+        dbus_signals.connect(*name, luaA_object_ref(L, 2));
         lua_pushboolean(L, 1);
         return 1;
     }

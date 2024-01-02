@@ -1443,7 +1443,7 @@ static int luaA_screen_module_index(lua_State* L) {
     if(type != LUA_TSTRING) {
         return luaA_object_push(L, luaA_checkscreen(L, 2));
     }
-    std::string_view name = Lua::tostring(L, 2);
+    auto name = Lua::tostring(L, 2);
 
     if (name == "primary") {
         return luaA_object_push(L, screen_get_primary());
@@ -1464,7 +1464,7 @@ static int luaA_screen_module_index(lua_State* L) {
         }
     }
 
-    Lua::warn(L, "Unknown screen output name: %s", name.data());
+    Lua::warn(L, "Unknown screen output name: %s", name->data());
     lua_pushnil(L);
     return 1;
 
@@ -1546,7 +1546,7 @@ static int luaA_screen_get_workarea(lua_State* L, screen_t* s) {
 }
 
 static int luaA_screen_set_name(lua_State* L, screen_t* s) {
-    s->name = Lua::checkstring(L, -1);
+    s->name = *Lua::checkstring(L, -1);
     return 0;
 }
 

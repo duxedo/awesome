@@ -771,7 +771,7 @@ static int awesome_index(lua_State* L) {
 static int awesome_connect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
     Lua::checkfunction(L, 2);
-    global_signals.connect(name, luaA_object_ref(L, 2));
+    global_signals.connect(*name, luaA_object_ref(L, 2));
     return 0;
 }
 
@@ -786,7 +786,7 @@ static int awesome_disconnect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
     Lua::checkfunction(L, 2);
     const void* func = lua_topointer(L, 2);
-    if (global_signals.disconnect(name, func)) {
+    if (global_signals.disconnect(*name, func)) {
         luaA_object_unref(L, (void*)func);
     }
     return 0;
@@ -800,7 +800,7 @@ static int awesome_disconnect_signal(lua_State* L) {
  * @noreturn
  */
 static int awesome_emit_signal(lua_State* L) {
-    signal_object_emit(L, &global_signals, Lua::checkstring(L, 1), lua_gettop(L) - 1);
+    signal_object_emit(L, &global_signals, *Lua::checkstring(L, 1), lua_gettop(L) - 1);
     return 0;
 }
 

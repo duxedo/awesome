@@ -3728,7 +3728,7 @@ static int luaA_client_get_name(lua_State* L, client* c) {
  */
 static int luaA_client_set_name(lua_State* L, client* c) {
     const auto name = Lua::checkstring(L, -1);
-    client_set_Name(L, 1, std::string{name.begin(), name.end()});
+    client_set_Name(L, 1, std::string{name->begin(), name->end()});
     return 0;
 }
 
