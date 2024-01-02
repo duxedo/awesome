@@ -103,28 +103,6 @@ void p_delete(PtrT** ptr) {
 #define unlikely(expr) expr
 #endif
 
-/** \brief \c NULL resistant strcmp.
- * \param[in]  a     the first string.
- * \param[in]  b     the second string.
- * \return <tt>strcmp(a, b)</tt>, and treats \c NULL strings like \c ""
- * ones.
- */
-static inline int a_strcmp(const char* a, const char* b) { return strcmp(NONULL(a), NONULL(b)); }
-
-/** \brief \c NULL resistant strcasecmp.
- * \param[in]  a     the first string.
- * \param[in]  b     the second string.
- * \return <tt>strcasecmp(a, b)</tt>, and treats \c NULL strings like \c ""
- * ones.
- */
-static inline int a_strcasecmp(const char* a, const char* b) {
-    return strcasecmp(NONULL(a), NONULL(b));
-}
-
-#define A_STREQ_CASE(a, b) (((a) == (b)) || a_strcasecmp(a, b) == 0)
-#define A_STRNEQ_CASE(a, b) (!A_STREQ_CASE(a, b))
-
-
 void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args);
 
 template <typename ... Args>

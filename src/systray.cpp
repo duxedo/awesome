@@ -382,7 +382,7 @@ int luaA_systray(lua_State* L) {
         } else {
             getConnection().configure_window(getGlobals().systray.window,
                                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
-                                             std::array<uint32_t, 2>{(uint32_t)x, (uint32_t)y});
+                                             std::array{(uint32_t)x, (uint32_t)y});
         }
 
         getGlobals().systray.parent = w;
