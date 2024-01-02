@@ -30,16 +30,16 @@
 #include <string_view>
 
 namespace Lua {
-inline std::string_view checkstring(lua_State* L, int numArg) {
+inline std::optional<std::string_view> checkstring(lua_State* L, int numArg) {
     size_t length(0);
     const char* str = luaL_checklstring(L, numArg, &length);
-    return {str, length};
+    return std::string_view{str, length};
 }
 
-inline std::string_view tostring(lua_State* L, int numArg) {
+inline std::optional<std::string_view> tostring(lua_State* L, int numArg) {
     size_t length(0);
     const char* str = lua_tolstring(L, numArg, &length);
-    return {str, length};
+    return std::string_view{str, length};
 }
 
 void pushstring(lua_State* L, const std::string & str);
