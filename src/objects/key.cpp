@@ -36,6 +36,7 @@
 
 #include "objects/key.h"
 
+#include "common/lualib.h"
 #include "common/xutil.h"
 #include "xkb.h"
 
@@ -243,8 +244,8 @@ uint16_t luaA_tomodifiers(lua_State* L, int ud) {
     uint16_t mod = XCB_NONE;
     for (int i = 1; i <= len; i++) {
         lua_rawgeti(L, ud, i);
-        const char* key = luaL_checkstring(L, -1);
-        mod |= xutil_key_mask_fromstr(key);
+        auto key = Lua::checkstring(L, -1);
+        mod |= xutil_key_mask_fromstr(key.value());
         lua_pop(L, 1);
     }
     return mod;

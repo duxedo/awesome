@@ -34,9 +34,11 @@
 
 #include "dbus.h"
 
+#include "common/lualib.h"
 #include "config.h"
 
 #include <glib.h>
+#include <string_view>
 
 #ifdef WITH_DBUS
 
@@ -477,7 +479,7 @@ static gboolean a_dbus_process_requests_system(gpointer data) {
  * \return true if the name is primary owner or the name is already
  * the owner, otherwise false.
  */
-static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* name) {
+static bool a_dbus_request_name(DBusConnection* dbus_connection, const std::string_view name) {
     DBusError err;
 
     if (!dbus_connection) {
@@ -486,7 +488,7 @@ static bool a_dbus_request_name(DBusConnection* dbus_connection, const char* nam
 
     dbus_error_init(&err);
 
-    int ret = dbus_bus_request_name(dbus_connection, name, 0, &err);
+    int ret = dbus_bus_request_name(dbus_connection, name.data(), 0, &err);
 
     if (dbus_error_is_set(&err)) {
         log_warn("failed to request D-Bus name: {}", err.message);
@@ -596,11 +598,11 @@ void a_dbus_cleanup(void) {
  * \param name The name of the bus.
  * \return The corresponding D-Bus connection.
  */
-static DBusConnection* a_dbus_bus_getbyname(lua_State* L, const char* name) {
-    if (A_STREQ(name, "system")) {
+static DBusConnection* a_dbus_bus_getbyname(lua_State* L, const std::string_view name) {
+    if (name == "system") {
         return dbus_connection_system;
     }
-    if (A_STREQ(name, "session")) {
+    if (name == "session") {
         return dbus_connection_session;
     }
     luaL_error(L, "Unknown dbus connection '%s', only 'system' and 'session' are valid", name);
@@ -615,10 +617,10 @@ static DBusConnection* a_dbus_bus_getbyname(lua_State* L, const char* name) {
  * @function request_name
  */
 static int luaA_dbus_request_name(lua_State* L) {
-    const char* bus = luaL_checkstring(L, 1);
-    const char* name = luaL_checkstring(L, 2);
-    DBusConnection* dbus_connection = a_dbus_bus_getbyname(L, bus);
-    lua_pushboolean(L, a_dbus_request_name(dbus_connection, name));
+    auto bus = Lua::checkstring(L, 1);
+    auto name = Lua::checkstring(L, 2);
+    DBusConnection* dbus_connection = a_dbus_bus_getbyname(L, *bus);
+    lua_pushboolean(L, a_dbus_request_name(dbus_connection, *name));
     return 1;
 }
 

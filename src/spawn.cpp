@@ -222,7 +222,7 @@ void spawn_start_notify(client* c, const char* startup_id) {
         bool found = false;
         const char* seqid = sn_startup_sequence_get_id(seq);
 
-        if (A_STRNEQ(seqid, startup_id)) {
+        if (strcmp(seqid, startup_id) != 0) {
             found = true;
         } else {
             const char* seqclass = sn_startup_sequence_get_wmclass(seq);

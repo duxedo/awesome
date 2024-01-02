@@ -89,7 +89,7 @@ using Properties =
 
 struct lua_class_t {
     /** Class name */
-    const char* name;
+    std::string name;
     /** Class signals */
     Signals signals;
     /** Parent class */

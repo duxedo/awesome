@@ -63,6 +63,7 @@
 #include "mouse.h"
 
 #include "common/luaclass.h"
+#include "common/lualib.h"
 #include "common/util.h"
 #include "common/xutil.h"
 #include "globalconf.h"
@@ -155,11 +156,11 @@ static inline void mouse_warp_pointer(xcb_window_t window, int16_t x, int16_t y)
  * \lfield screen Mouse screen.
  */
 static int luaA_mouse_index(lua_State* L) {
-    const char* attr = luaL_checkstring(L, 2);
+    auto attr = Lua::checkstring(L, 2);
     int16_t mouse_x, mouse_y;
 
     /* attr is not "screen"?! */
-    if (A_STRNEQ(attr, "screen")) {
+    if (attr != "screen") {
         if (miss_index_handler != LUA_REFNIL) {
             return Lua::call_handler(L, miss_index_handler);
         } else {
@@ -188,10 +189,10 @@ static int luaA_mouse_index(lua_State* L) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_mouse_newindex(lua_State* L) {
-    const char* attr = luaL_checkstring(L, 2);
+    auto attr = Lua::checkstring(L, 2);
     screen_t* screen;
 
-    if (A_STRNEQ(attr, "screen")) {
+    if (attr != "screen") {
         /* Call the lua mouse property handler */
         if (miss_newindex_handler != LUA_REFNIL) {
             return Lua::call_handler(L, miss_newindex_handler);

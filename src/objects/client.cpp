@@ -4217,9 +4217,9 @@ static int client_tostring(lua_State* L, client* c) {
  * \return The number of pushed elements.
  */
 static int luaA_client_module_index(lua_State* L) {
-    const char* buf = luaL_checkstring(L, 2);
+    auto buf = Lua::checkstring(L, 2);
 
-    if (A_STREQ(buf, "focus")) {
+    if (buf == "focus") {
         return luaA_object_push(L, getGlobals().focus.client);
     }
     return 0;
@@ -4230,10 +4230,10 @@ static int luaA_client_module_index(lua_State* L) {
  * \return The number of pushed elements.
  */
 static int luaA_client_module_newindex(lua_State* L) {
-    const char* buf = luaL_checkstring(L, 2);
+    auto buf = Lua::checkstring(L, 2);
     client* c;
 
-    if (A_STREQ(buf, "focus")) {
+    if (buf == "focus") {
         c = (client*)luaA_checkudataornil(L, 3, &client_class);
         if (c) {
             client_focus(c);

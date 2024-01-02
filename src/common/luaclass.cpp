@@ -21,6 +21,7 @@
 
 #include "common/luaclass.h"
 
+#include "common/lualib.h"
 #include "common/luaobject.h"
 
 #define CONNECTED_SUFFIX "::connected"
@@ -61,7 +62,7 @@ void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
 void* luaA_checkudata(lua_State* L, int ud, lua_class_t* cls) {
     lua_object_t* p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
     if (!p) {
-        Lua::typerror(L, ud, cls->name);
+        Lua::typerror(L, ud, cls->name.c_str());
     } else if (cls->checker && !cls->checker(p)) {
         luaL_error(L, "invalid object");
     }
@@ -96,7 +97,7 @@ const char* luaA_typename(lua_State* L, int idx) {
     if (type == LUA_TUSERDATA) {
         lua_class_t* lua_class = luaA_class_get(L, idx);
         if (lua_class) {
-            return lua_class->name;
+            return lua_class->name.c_str();
         }
     }
 
@@ -131,8 +132,8 @@ static int luaA_class_newindex_invalid(lua_State* L) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_class_index_invalid(lua_State* L) {
-    const char* attr = luaL_checkstring(L, 2);
-    if (A_STREQ(attr, "valid")) {
+    auto attr = Lua::checkstring(L, 2);
+    if (attr == "valid") {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -343,8 +344,8 @@ int luaA_class_index(lua_State* L) {
 
     /* Is this the special 'valid' property? This is the only property
      * accessible for invalid objects and thus needs special handling. */
-    const char* attr = luaL_checkstring(L, 2);
-    if (A_STREQ(attr, "valid")) {
+    auto attr = Lua::checkstring(L, 2);
+    if (attr == "valid") {
         void* p = luaA_toudata(L, 1, cls);
         lua_pushboolean(L,
                         p && (!cls->checker || cls->checker(reinterpret_cast<lua_object_t*>(p))));
@@ -355,12 +356,12 @@ int luaA_class_index(lua_State* L) {
 
     /* This is the table storing the object private variables.
      */
-    if (A_STREQ(attr, "_private")) {
+    if (attr == "_private") {
         luaA_checkudata(L, 1, cls);
         Lua::getuservalue(L, 1);
         lua_getfield(L, -1, "data");
         return 1;
-    } else if (A_STREQ(attr, "data")) {
+    } else if (attr == "data") {
         luaA_deprecate(L, "Use `._private` instead of `.data`");
         luaA_checkudata(L, 1, cls);
         Lua::getuservalue(L, 1);
