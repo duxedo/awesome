@@ -42,7 +42,6 @@
 void systray_init(void) {
     xcb_intern_atom_cookie_t atom_systray_q;
     xcb_intern_atom_reply_t* atom_systray_r;
-    char* atom_name;
     xcb_screen_t* xscreen = getGlobals().screen;
 
     getGlobals().systray.window = getConnection().generate_id();
@@ -64,13 +63,13 @@ void systray_init(void) {
     xwindow_set_class_instance(getGlobals().systray.window);
     xwindow_set_name_static(getGlobals().systray.window, "Awesome systray window");
 
-    atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", getGlobals().default_screen);
+    auto atom_name = xcb_atom_name_by_screen("_NET_SYSTEM_TRAY", getGlobals().default_screen);
     if (!atom_name) {
         log_fatal("error getting systray atom name");
     }
 
     atom_systray_q =
-      xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name);
+      xcb_intern_atom_unchecked(getGlobals().connection, false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 

@@ -1471,9 +1471,9 @@ static int luaA_screen_module_index(lua_State* L) {
 }
 
 static int luaA_screen_module_newindex(lua_State* L) {
-    const char* buf = luaL_checkstring(L, 2);
+    auto buf = Lua::checkstring(L, 2);
 
-    if (A_STREQ(buf, "automatic_factory")) {
+    if (buf == "automatic_factory") {
         getGlobals().ignore_screens = !Lua::checkboolean(L, 3);
 
         /* It *can* be useful if screens are added/removed later, but generally,

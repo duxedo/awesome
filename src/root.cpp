@@ -286,31 +286,31 @@ static int luaA_root_fake_input(lua_State* L) {
         return 0;
     }
 
-    const char* stype = luaL_checkstring(L, 1);
+    auto stype = Lua::checkstring(L, 1);
     uint8_t type, detail;
     int x = 0, y = 0;
 
-    if (A_STREQ(stype, "key_press")) {
+    if (stype == "key_press") {
         type = XCB_KEY_PRESS;
         if (lua_type(L, 2) == LUA_TSTRING) {
             detail = _string_to_key_code(lua_tostring(L, 2)); /* keysym */
         } else {
             detail = luaL_checkinteger(L, 2); /* keycode */
         }
-    } else if (A_STREQ(stype, "key_release")) {
+    } else if (stype == "key_release") {
         type = XCB_KEY_RELEASE;
         if (lua_type(L, 2) == LUA_TSTRING) {
             detail = _string_to_key_code(lua_tostring(L, 2)); /* keysym */
         } else {
             detail = luaL_checkinteger(L, 2); /* keycode */
         }
-    } else if (A_STREQ(stype, "button_press")) {
+    } else if (stype == "button_press") {
         type = XCB_BUTTON_PRESS;
         detail = luaL_checkinteger(L, 2); /* button number */
-    } else if (A_STREQ(stype, "button_release")) {
+    } else if (stype == "button_release") {
         type = XCB_BUTTON_RELEASE;
         detail = luaL_checkinteger(L, 2); /* button number */
-    } else if (A_STREQ(stype, "motion_notify")) {
+    } else if (stype == "motion_notify") {
         type = XCB_MOTION_NOTIFY;
         detail = Lua::checkboolean(L, 2); /* relative to the current position or not */
         x = round(Lua::checknumber_range(L, 3, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
