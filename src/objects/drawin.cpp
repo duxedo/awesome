@@ -33,6 +33,7 @@
 #include "drawin.h"
 
 #include "common/atoms.h"
+#include "common/lualib.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
 #include "event.h"
@@ -567,15 +568,13 @@ static int luaA_drawin_set_ontop(lua_State* L, drawin_t* drawin) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
-    const char* buf = luaL_checkstring(L, -1);
-    if (buf) {
-        uint16_t cursor_font = xcursor_font_fromstr(buf);
-        if (cursor_font) {
-            xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
-            drawin->cursor = buf ? buf : "";
-            xwindow_set_cursor(drawin->window, cursor);
-            luaA_object_emit_signal(L, -3, "property::cursor", 0);
-        }
+    auto buf = Lua::checkstring(L, -1);
+    uint16_t cursor_font = xcursor_font_fromstr(buf->data());
+    if (cursor_font) {
+        xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
+        drawin->cursor = buf ? buf.value() : "";
+        xwindow_set_cursor(drawin->window, cursor);
+        luaA_object_emit_signal(L, -3, "property::cursor", 0);
     }
     return 0;
 }

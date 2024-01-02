@@ -244,38 +244,38 @@ int luaA_window_get_type(lua_State* L, window_t* w) {
  */
 int luaA_window_set_type(lua_State* L, window_t* w) {
     window_type_t type;
-    const char* buf = luaL_checkstring(L, -1);
+    auto buf = Lua::checkstring(L, -1);
 
-    if (A_STREQ(buf, "desktop")) {
+    if (buf == "desktop") {
         type = WINDOW_TYPE_DESKTOP;
-    } else if (A_STREQ(buf, "dock")) {
+    } else if (buf == "dock") {
         type = WINDOW_TYPE_DOCK;
-    } else if (A_STREQ(buf, "splash")) {
+    } else if (buf == "splash") {
         type = WINDOW_TYPE_SPLASH;
-    } else if (A_STREQ(buf, "dialog")) {
+    } else if (buf == "dialog") {
         type = WINDOW_TYPE_DIALOG;
-    } else if (A_STREQ(buf, "menu")) {
+    } else if (buf == "menu") {
         type = WINDOW_TYPE_MENU;
-    } else if (A_STREQ(buf, "toolbar")) {
+    } else if (buf == "toolbar") {
         type = WINDOW_TYPE_TOOLBAR;
-    } else if (A_STREQ(buf, "utility")) {
+    } else if (buf == "utility") {
         type = WINDOW_TYPE_UTILITY;
-    } else if (A_STREQ(buf, "dropdown_menu")) {
+    } else if (buf == "dropdown_menu") {
         type = WINDOW_TYPE_DROPDOWN_MENU;
-    } else if (A_STREQ(buf, "popup_menu")) {
+    } else if (buf == "popup_menu") {
         type = WINDOW_TYPE_POPUP_MENU;
-    } else if (A_STREQ(buf, "tooltip")) {
+    } else if (buf == "tooltip") {
         type = WINDOW_TYPE_TOOLTIP;
-    } else if (A_STREQ(buf, "notification")) {
+    } else if (buf == "notification") {
         type = WINDOW_TYPE_NOTIFICATION;
-    } else if (A_STREQ(buf, "combo")) {
+    } else if (buf == "combo") {
         type = WINDOW_TYPE_COMBO;
-    } else if (A_STREQ(buf, "dnd")) {
+    } else if (buf == "dnd") {
         type = WINDOW_TYPE_DND;
-    } else if (A_STREQ(buf, "normal")) {
+    } else if (buf == "normal") {
         type = WINDOW_TYPE_NORMAL;
     } else {
-        Lua::warn(L, "Unknown window type '%s'", buf);
+        Lua::warn(L, "Unknown window type '%s'", buf->data());
         return 0;
     }
 

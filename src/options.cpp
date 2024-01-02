@@ -25,6 +25,8 @@
 #include "common/version.h"
 
 #include <basedir_fs.h>
+#include <bits/getopt_core.h>
+#include <cstring>
 #include <filesystem>
 #include <getopt.h>
 #include <stdio.h>
@@ -414,6 +416,7 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
 
     ConfigResult ret;
     int opt;
+    using namespace std::literals;
 
     while ((opt = getopt_long(argc, argv, "vhfkc:arms:l:", long_options, NULL)) != -1) {
         switch (opt) {
@@ -436,11 +439,11 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
             break;
         case 'm':
             /* Validation */
-            if ((!optarg) || !(A_STREQ(optarg, "off") || A_STREQ(optarg, "on"))) {
+            if ((!optarg) || ("off"sv != optarg && "on"sv != optarg)) {
                 log_fatal("The possible values of -m/--screen are \"on\" or \"off\"");
             }
 
-            getGlobals().no_auto_screen = A_STREQ(optarg, "off");
+            getGlobals().no_auto_screen = ("off"sv == optarg);
 
             (*init_flags) &= ~INIT_FLAG_AUTO_SCREEN;
 

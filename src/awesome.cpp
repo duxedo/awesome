@@ -250,7 +250,6 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
 static void acquire_WM_Sn(bool replace) {
     xcb_intern_atom_cookie_t atom_q;
     xcb_intern_atom_reply_t* atom_r;
-    char* atom_name;
     xcb_get_selection_owner_reply_t* get_sel_reply;
 
     /* Get the WM_Sn atom */
@@ -272,13 +271,13 @@ static void acquire_WM_Sn(bool replace) {
     xwindow_set_name_static(getGlobals().selection_owner_window,
                             "Awesome WM_Sn selection owner window");
 
-    atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().default_screen);
+    auto atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().default_screen);
     if (!atom_name) {
         log_fatal("error getting WM_Sn atom name");
     }
 
     atom_q =
-      xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name);
+      xcb_intern_atom_unchecked(getGlobals().connection, false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
