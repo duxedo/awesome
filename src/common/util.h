@@ -79,7 +79,6 @@ struct to {
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))
 
-#define p_new(type, count) ((type*)xmalloc(sizeof(type) * (count)))
 #define p_clear(p, count) ((void)memset((p), 0, sizeof(*(p)) * (count)))
 #define p_dup(p, count) xmemdup((p), sizeof(*(p)) * (count))
 
@@ -162,21 +161,6 @@ static inline ssize_t a_strnlen(const char* s, ssize_t n) {
     return 0;
 }
 
-/** \brief \c NULL resistant strdup.
- *
- * The a_strdup() function returns a pointer to a new string, which is a
- * duplicate of \c s. Memory should be freed using p_delete().
- *
- * \warning when s is \c "", it returns NULL !
- *
- * \param[in] s the string to duplicate.
- * \return a pointer to the duplicated string.
- */
-static inline char* a_strdup(const char* s) {
-    ssize_t len = a_strlen(s);
-    return len ? (char*)p_dup(s, len + 1) : (char*)NULL;
-}
-
 /** \brief safe limited strdup.
  *
  * Copies at most min(<tt>n-1</tt>, \c l) characters from \c src into a newly
@@ -222,68 +206,6 @@ static inline int a_strcasecmp(const char* a, const char* b) {
 #define A_STREQ_CASE(a, b) (((a) == (b)) || a_strcasecmp(a, b) == 0)
 #define A_STRNEQ_CASE(a, b) (!A_STREQ_CASE(a, b))
 
-/** \brief \c NULL resistant strncmp.
- * \param[in]  a     the first string.
- * \param[in]  b     the second string.
- * \param[in]  n     the number of maximum chars to compare.
- * \return <tt>strncmp(a, b, n)</tt>, and treats \c NULL strings like \c ""
- * ones.
- */
-static inline int a_strncmp(const char* a, const char* b, ssize_t n) {
-    return strncmp(NONULL(a), NONULL(b), n);
-}
-
-#define A_STREQ_N(a, b, n) (((a) == (b)) || (n) == ((ssize_t)0) || a_strncmp(a, b, n) == 0)
-#define A_STRNEQ_N(a, b) (!A_STREQN(a, b))
-
-ssize_t a_strncpy(char* dst, ssize_t n, const char* src, ssize_t l) __attribute__((nonnull(1)));
-ssize_t a_strcpy(char* dst, ssize_t n, const char* src) __attribute__((nonnull(1)));
-
-/** \brief safe strcat.
- *
- * The a_strcat() function appends the string \c src at the end of the buffer
- * \c dst if space is available.
- *
- * \param[in]  dst   destination buffer.
- * \param[in]  n     size of the buffer, Negative sizes are allowed.
- * \param[in]  src   the string to append.
- * \return <tt>a_strlen(dst) + a_strlen(src)</tt>
- */
-static inline ssize_t a_strcat(char* dst, ssize_t n, const char* src) {
-    ssize_t dlen = a_strnlen(dst, n - 1);
-    return dlen + a_strcpy(dst + dlen, n - dlen, src);
-}
-
-/** \brief safe strncat.
- *
- * The a_strncat() function appends at most \c n chars from the string \c src
- * at the end of the buffer \c dst if space is available.
- *
- * \param[in]  dst   destination buffer.
- * \param[in]  n     size of the buffer, Negative sizes are allowed.
- * \param[in]  src   the string to append.
- * \param[in]  l     maximum number of chars of src to consider.
- * \return the smallest value between <tt>a_strlen(dst) + a_strlen(src)</tt>
- * and <tt>a_strlen(dst) + l</tt>
- */
-static inline ssize_t a_strncat(char* dst, ssize_t n, const char* src, ssize_t l) {
-    ssize_t dlen = a_strnlen(dst, n - 1);
-    return dlen + a_strncpy(dst + dlen, n - dlen, src, l);
-}
-
-/** Compute a hash for a string.
- * This is based on 'djb2' algorithm.
- */
-static inline unsigned long __attribute__((nonnull(1))) a_strhash(const unsigned char* str) {
-    unsigned long hash = 5381;
-    int c;
-
-    while ((c = *str++)) {
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-    }
-
-    return hash;
-}
 
 void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args);
 
