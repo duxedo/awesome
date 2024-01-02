@@ -173,7 +173,7 @@ void luaA_drawin_systray_kickout(lua_State* L) {
 static void drawin_wipe(drawin_t* w) {
     /* The drawin must already be unmapped, else it
      * couldn't be garbage collected -> no unmap needed */
-    p_delete(&(w->cursor));
+    w->cursor.clear();
     if (w->window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(w);
@@ -392,7 +392,7 @@ static drawin_t* drawin_allocator(lua_State* L) {
     w->visible = false;
 
     w->opacity = -1;
-    w->cursor = a_strdup("left_ptr");
+    w->cursor = "left_ptr";
     w->geometry.width = 1;
     w->geometry.height = 1;
     w->geometry_dirty = false;
@@ -412,7 +412,7 @@ static drawin_t* drawin_allocator(lua_State* L) {
         XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE |
         XCB_EVENT_MASK_PROPERTY_CHANGE,
       getGlobals().default_cmap,
-      xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor))};
+      xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
     xcb_create_window(getGlobals().connection,
                       getGlobals().default_depth,
                       w->window,
@@ -479,7 +479,7 @@ static int luaA_drawin_geometry(lua_State* L) {
 }
 
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, ontop, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, cursor, lua_pushstring)
+LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, cursor, Lua::pushstring)
 LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, visible, lua_pushboolean)
 
 static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
@@ -572,8 +572,7 @@ static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
         uint16_t cursor_font = xcursor_font_fromstr(buf);
         if (cursor_font) {
             xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
-            p_delete(&(drawin->cursor));
-            drawin->cursor = a_strdup(buf);
+            drawin->cursor = buf ? buf : "";
             xwindow_set_cursor(drawin->window, cursor);
             luaA_object_emit_signal(L, -3, "property::cursor", 0);
         }

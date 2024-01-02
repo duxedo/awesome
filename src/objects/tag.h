@@ -36,7 +36,7 @@ void tag_unref_simplified(tag_t*);
 struct tag_t {
     LUA_OBJECT_HEADER
     /** Tag name */
-    char* name;
+    std::string name;
     /** true if activated */
     bool activated;
     /** true if selected */
@@ -51,4 +51,4 @@ LUA_OBJECT_FUNCS(tag_class, tag_t, tag)
 void tag_class_setup(lua_State*);
 
 bool tag_get_selected(const tag_t*);
-char* tag_get_name(const tag_t*);
+const std::string& tag_get_name(const tag_t*);

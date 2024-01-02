@@ -4257,7 +4257,8 @@ void client_class_setup(lua_State* L) {
     };
 
     static const struct luaL_Reg client_meta[] = {
-      LUA_OBJECT_META(client) LUA_CLASS_META{           "_keys",             luaA_client_keys},
+      LUA_OBJECT_META(client)
+          LUA_CLASS_META{           "_keys",             luaA_client_keys},
       {       "isvisible",        luaA_client_isvisible},
       {        "geometry",         luaA_client_geometry},
       {"apply_size_hints", luaA_client_apply_size_hints},
