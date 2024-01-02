@@ -166,9 +166,9 @@ static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls
 }
 
 #define LUA_CLASS_METHODS(lua_class)                              \
-      {"connect_signal", [](lua_State* L) { lua_class.connect_signal(L, Lua::checkstring(L, 1), 2); return 0;} },    \
-      {"disconnect_signal", [](lua_State* L) { lua_class.disconnect_signal(L, Lua::checkstring(L, 1), 2); return 0;} }, \
-      {"emit_signal", [](lua_State* L) { lua_class.emit_signal(L, Lua::checkstring(L, 1), lua_gettop(L) - 1); return 0;} }, \
+      {"connect_signal", [](lua_State* L) { lua_class.connect_signal(L, *Lua::checkstring(L, 1), 2); return 0;} },    \
+      {"disconnect_signal", [](lua_State* L) { lua_class.disconnect_signal(L, *Lua::checkstring(L, 1), 2); return 0;} }, \
+      {"emit_signal", [](lua_State* L) { lua_class.emit_signal(L, *Lua::checkstring(L, 1), lua_gettop(L) - 1); return 0;} }, \
       {"instances", [](lua_State* L) { lua_pushinteger(L, (lua_class).instances); return 0;} }, \
       {"set_index_miss_handler", [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).index_miss_handler);} }, \
       {"set_newindex_miss_handler", [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).newindex_miss_handler);} }
