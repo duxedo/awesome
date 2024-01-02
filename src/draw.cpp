@@ -31,6 +31,7 @@
 #include <langinfo.h>
 #include <lauxlib.h>
 #include <math.h>
+#include <vector>
 
 static cairo_user_data_key_t data_key;
 
@@ -45,7 +46,7 @@ static inline void free_data(void* data) { p_delete(&data); }
 cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data) {
     unsigned long int len = width * height;
     unsigned long int i;
-    uint32_t* buffer = p_new(uint32_t, len);
+    std::vector<uint32_t> buf(len, 0);
     cairo_surface_t* surface;
 
     /* Cairo wants premultiplied alpha, meh :( */
@@ -55,13 +56,13 @@ cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data) {
         uint8_t r = ((data[i] >> 16) & 0xff) * alpha;
         uint8_t g = ((data[i] >> 8) & 0xff) * alpha;
         uint8_t b = ((data[i] >> 0) & 0xff) * alpha;
-        buffer[i] = (a << 24) | (r << 16) | (g << 8) | b;
+        buf[i] = (a << 24) | (r << 16) | (g << 8) | b;
     }
 
     surface = cairo_image_surface_create_for_data(
-      (unsigned char*)buffer, CAIRO_FORMAT_ARGB32, width, height, width * 4);
+      reinterpret_cast<unsigned char*>(buf.data()), CAIRO_FORMAT_ARGB32, width, height, width * 4);
     /* This makes sure that buffer will be freed */
-    cairo_surface_set_user_data(surface, &data_key, buffer, &free_data);
+    cairo_surface_set_user_data(surface, &data_key, buf.data(), &free_data);
 
     return surface;
 }

@@ -47,7 +47,6 @@ struct ConfigResult {
     Paths searchPaths;
 };
 
-char* options_detect_shebang(int argc, char** argv);
 bool options_init_config(
   xdgHandle* xdg, char* execpath, const char* configpath, int* init_flags, Paths& paths);
 ConfigResult options_check_args(int argc, char** argv, int* init_flags);
