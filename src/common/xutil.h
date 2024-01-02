@@ -24,6 +24,7 @@
 #include "common/util.h"
 #include <string>
 
+#include <string_view>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 
@@ -59,5 +60,5 @@ static inline void xutil_ungrab_server(xcb_connection_t* connection) {
 }
 #define xcb_ungrab_server do_not_use_xcb_ungrab_server_directly
 
-uint16_t xutil_key_mask_fromstr(const char*);
+uint16_t xutil_key_mask_fromstr(const std::string_view);
 void xutil_key_mask_tostr(uint16_t, const char**, size_t*);

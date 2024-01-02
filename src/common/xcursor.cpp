@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-static std::unordered_map<uint16_t, std::string_view> xcursor_font = {
+static const std::unordered_map<uint16_t, std::string_view> xcursor_font = {
   {           XC_X_cursor,            "X_cursor"},
   {              XC_arrow,               "arrow"},
   {   XC_based_arrow_down,    "based_arrow_down"},
@@ -108,6 +108,13 @@ static std::unordered_map<uint16_t, std::string_view> xcursor_font = {
   {              XC_xterm,               "xterm"},
 };
 
+static const std::unordered_map<std::string_view, uint16_t> font_xcursor = [](){
+    std::unordered_map<std::string_view, uint16_t> ret;
+    for(auto & each : xcursor_font) {
+        ret.insert({each.second, each.first});
+    }
+    return ret;
+}();
 /** Get a cursor from a string.
  * \param s The string.
  */
@@ -115,12 +122,11 @@ uint16_t xcursor_font_fromstr(const char* s) {
     if (!s) {
         return 0;
     }
-    for (const auto& each : xcursor_font) {
-        if (each.second == s) {
-            return each.first;
-        }
+    auto it = font_xcursor.find(s);
+    if(it == font_xcursor.end()) {
+        return 0;
     }
-    return 0;
+    return it->second;
 }
 
 /** Get a cursor name.
@@ -128,7 +134,7 @@ uint16_t xcursor_font_fromstr(const char* s) {
  */
 const char* xcursor_font_tostr(uint16_t c) {
     if (auto it = xcursor_font.find(c); it != xcursor_font.end()) {
-        return xcursor_font[c].data();
+        return it->second.data();
     }
     return nullptr;
 }

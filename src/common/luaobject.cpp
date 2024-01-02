@@ -309,7 +309,7 @@ int luaA_object_tostring(lua_State* L) {
             lua_pushliteral(L, "/");
             lua_insert(L, -++offset);
         }
-        lua_pushstring(L, NONULL(lua_class->name));
+        Lua::pushstring(L, lua_class->name);
         lua_insert(L, -++offset);
 
         if (lua_class->tostring) {

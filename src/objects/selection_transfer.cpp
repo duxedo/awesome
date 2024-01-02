@@ -22,6 +22,7 @@
 #include "objects/selection_transfer.h"
 
 #include "common/atoms.h"
+#include "common/lualib.h"
 #include "common/luaobject.h"
 #include "common/util.h"
 #include "globalconf.h"
@@ -241,8 +242,8 @@ static int luaA_selection_transfer_send(lua_State* L) {
     lua_rawget(L, 2);
 
     if (lua_isstring(L, -2)) {
-        const char* format_string = luaL_checkstring(L, -2);
-        if (A_STRNEQ(format_string, "atom")) {
+        auto format_string = Lua::checkstring(L, -2);
+        if (format_string != "atom") {
             luaL_error(L, "Unknown format '%s'", format_string);
         }
         if (incr) {

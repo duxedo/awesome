@@ -460,13 +460,12 @@ void property_handle_propertynotify(xcb_property_notify_event_t* ev) {
  * \lparam One of "string", "number" or "boolean"
  */
 int luaA_register_xproperty(lua_State* L) {
-    const char* name;
     struct xproperty property;
     const char* const args[] = {"string", "number", "boolean"};
     xcb_intern_atom_reply_t* atom_r;
     int type;
 
-    name = luaL_checkstring(L, 1);
+    auto name = Lua::checkstring(L, 1);
     type = luaL_checkoption(L, 2, NULL, args);
     if (type == 0) {
         property.type = xproperty::PROP_STRING;
@@ -478,7 +477,7 @@ int luaA_register_xproperty(lua_State* L) {
 
     atom_r = xcb_intern_atom_reply(
       getGlobals().connection,
-      xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(name), name),
+      xcb_intern_atom_unchecked(getGlobals().connection, false, name->size(), name->data()),
       NULL);
     if (!atom_r) {
         return 0;
@@ -494,7 +493,7 @@ int luaA_register_xproperty(lua_State* L) {
             return luaL_error(L, "xproperty '%s' already registered with different type", name);
         }
     } else {
-        property.name = name;
+        property.name = *name;
         getGlobals().xproperties.insert(property);
     }
 

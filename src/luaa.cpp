@@ -196,7 +196,7 @@ static bool composite_manager_running(void) {
 
     atom_r = xcb_intern_atom_reply(
       getGlobals().connection,
-      xcb_intern_atom_unchecked(getGlobals().connection, false, a_strlen(atom_name), atom_name),
+      xcb_intern_atom_unchecked(getGlobals().connection, false, strlen(atom_name), atom_name),
       NULL);
     p_delete(&atom_name);
     if (!atom_r) {
@@ -1209,7 +1209,7 @@ std::optional<std::filesystem::path> find_config(xdgHandle* xdg,
             p_delete(&confpath);
             return path;
         }
-        tmp += a_strlen(tmp) + 1;
+        tmp += strlen(tmp) + 1;
     }
     p_delete(&confpath);
 
