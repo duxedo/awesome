@@ -295,7 +295,7 @@ void ewmh_update_net_desktop_names(void) {
 
     for (const auto& tag : getGlobals().tags) {
         auto tagname = tag_get_name(tag.get());
-        buf.insert(buf.begin() + buf.size(), tagname, tagname + strlen(tagname) + 1);
+        buf.insert(buf.begin() + buf.size(), tagname.data(), tagname.data() + (tagname.size()) + 1);
     }
 
     getConnection().replace_property(

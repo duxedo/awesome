@@ -41,7 +41,7 @@ struct screen_t {
     /** Screen workarea */
     area_t workarea;
     /** The name of the screen */
-    char* name;
+    std::string name;
     /** Opaque pointer to the viewport */
     struct viewport_t* viewport;
     /** Some XID identifying this screen */

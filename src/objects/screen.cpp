@@ -47,8 +47,11 @@
 #include "objects/screen.h"
 
 #include "banning.h"
+#include "common/lualib.h"
 #include "event.h"
 #include "globalconf.h"
+#include "lua.h"
+#include "luaconf.h"
 #include "objects/client.h"
 #include "objects/drawin.h"
 
@@ -574,10 +577,7 @@ static screen_t* screen_add(lua_State* L, std::vector<screen_t*>* screens) {
 }
 
 static void screen_wipe(screen_t* c) {
-    if (c->name) {
-        free(c->name);
-        c->name = NULL;
-    }
+    c->name.clear();
 }
 
 /* Monitors were introduced in RandR 1.5 */
@@ -1439,34 +1439,35 @@ screen_t* screen_get_primary(void) {
  * \lfield number The screen number, to get a screen.
  */
 static int luaA_screen_module_index(lua_State* L) {
-    const char* name;
+    auto type = lua_type(L, 2);
+    if(type != LUA_TSTRING) {
+        return luaA_object_push(L, luaA_checkscreen(L, 2));
+    }
+    std::string_view name = Lua::tostring(L, 2);
 
-    if (lua_type(L, 2) == LUA_TSTRING && (name = lua_tostring(L, 2))) {
-        if (A_STREQ(name, "primary")) {
-            return luaA_object_push(L, screen_get_primary());
-        } else if (A_STREQ(name, "automatic_factory")) {
-            lua_pushboolean(L, !getGlobals().ignore_screens);
-            return 1;
-        }
-
-        for (auto* screen : getGlobals().screens) {
-            if (screen->name && A_STREQ(name, screen->name)) {
-                return luaA_object_push(L, screen);
-            } else if (screen->viewport) {
-                for (const auto& output : screen->viewport->outputs) {
-                    if (output.name == name) {
-                        return luaA_object_push(L, screen);
-                    }
-                }
-            }
-        }
-
-        Lua::warn(L, "Unknown screen output name: %s", name);
-        lua_pushnil(L);
+    if (name == "primary") {
+        return luaA_object_push(L, screen_get_primary());
+    } else if (name == "automatic_factory") {
+        lua_pushboolean(L, !getGlobals().ignore_screens);
         return 1;
     }
 
-    return luaA_object_push(L, luaA_checkscreen(L, 2));
+    for (auto* screen : getGlobals().screens) {
+        if (name == screen->name) {
+            return luaA_object_push(L, screen);
+        } else if (screen->viewport) {
+            for (const auto& output : screen->viewport->outputs) {
+                if (output.name == name) {
+                    return luaA_object_push(L, screen);
+                }
+            }
+        }
+    }
+
+    Lua::warn(L, "Unknown screen output name: %s", name.data());
+    lua_pushnil(L);
+    return 1;
+
 }
 
 static int luaA_screen_module_newindex(lua_State* L) {
@@ -1545,22 +1546,15 @@ static int luaA_screen_get_workarea(lua_State* L, screen_t* s) {
 }
 
 static int luaA_screen_set_name(lua_State* L, screen_t* s) {
-    const char* buf = luaL_checkstring(L, -1);
-
-    if (s->name) {
-        free(s->name);
-    }
-
-    s->name = a_strdup(buf);
-
+    s->name = Lua::checkstring(L, -1);
     return 0;
 }
 
 static int luaA_screen_get_name(lua_State* L, screen_t* s) {
-    lua_pushstring(L, s->name ? s->name : "screen");
+    Lua::pushstring(L, s->name.empty() ? s->name : "screen");
 
     /* Fallback to "screen1", "screen2", etc if no name is set */
-    if (!s->name) {
+    if (s->name.empty()) {
         lua_pushinteger(L, screen_get_index(s));
         lua_concat(L, 2);
     }

@@ -32,7 +32,7 @@ struct drawin_t {
     /** Visible */
     bool visible;
     /** Cursor */
-    char* cursor;
+    std::string cursor;
     /** The drawable for this drawin. */
     drawable_t* drawable;
     /** The window geometry. */

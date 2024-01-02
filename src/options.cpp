@@ -106,7 +106,7 @@ bool options_init_config(
     size_t pos = 0;
 
     std::vector<char*> argv;
-    argv.push_back(a_strdup(execpath));
+    argv.push_back(execpath ? strdup(execpath) : strdup(""));
 
     FILE* fp = NULL;
 
@@ -370,57 +370,6 @@ bool options_init_config(
     }
 
     return state == MODELINE_STATE_COMPLETE;
-}
-
-char* options_detect_shebang(int argc, char** argv) {
-    /* There is no cross-platform ways to check if it is *really* called by a
-     * shebang. There is a couple Linux specific hacks which work with the
-     * most common C libraries, but they won't work on *BSD.
-     *
-     * On some platforms, the argv is going to be parsed by the OS, in other
-     * they will be concatenated in one big string. There is some ambiguities
-     * caused by that. For example, `awesome -s foo` and and `#!/bin/awesome -s`
-     * are both technically valid if `foo` is a directory in the first and
-     * lua file (without extension) in the second. While `-s` with a file
-     * won't work, it is hard to know by looking at the string.
-     *
-     * The trick to avoid any ambiguity is to just read the file and see if
-     * the args match. `options_init_config` will be called later and the args
-     * will be parsed properly.
-     */
-
-    /* On WSL and some other *nix this isn't true, but it is true often enough */
-    if (argc > 3 || argc == 1) {
-        return NULL;
-    }
-
-    /* Check if it is executable */
-    struct stat inf;
-    if (stat(argv[argc - 1], &inf) || !(inf.st_mode & S_IXUSR)) {
-        return NULL;
-    }
-
-    FILE* fp = fopen(argv[argc - 1], "r");
-
-    if (!fp) {
-        return NULL;
-    }
-
-    char buf[3];
-
-    if (!fgets(buf, 2, fp)) {
-        fclose(fp);
-        return NULL;
-    }
-
-    fclose(fp);
-
-    if (!strcmp(buf, "#!")) {
-        return NULL;
-    }
-
-    /* Ok, good enough, this is a shebang script, assume it called `awesome` */
-    return a_strdup(argv[argc - 1]);
 }
 
 /** Print help and exit(2) with given exit_code.

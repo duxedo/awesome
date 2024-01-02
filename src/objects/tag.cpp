@@ -311,7 +311,7 @@ void tag_unref_simplified(tag_t* tag) {
 
 static void tag_wipe(tag_t* tag) {
     tag->clients.clear();
-    p_delete(&(tag->name));
+    tag->name.clear();
 }
 
 OBJECT_EXPORT_PROPERTY(tag, tag_t, selected)
@@ -495,7 +495,7 @@ static int luaA_tag_clients(lua_State* L) {
     return 1;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, name, lua_pushstring)
+LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, name, Lua::pushstring)
 LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, selected, lua_pushboolean)
 LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, activated, lua_pushboolean)
 
@@ -506,8 +506,7 @@ LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, activated, lua_pushboolean)
  */
 static int luaA_tag_set_name(lua_State* L, tag_t* tag) {
     const char* buf = luaL_checkstring(L, -1);
-    p_delete(&tag->name);
-    tag->name = a_strdup(buf);
+    tag->name = buf ? buf : "";
     luaA_object_emit_signal(L, -3, "property::name", 0);
     ewmh_update_net_desktop_names();
     return 0;

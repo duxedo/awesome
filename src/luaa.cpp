@@ -1214,7 +1214,7 @@ std::optional<std::filesystem::path> find_config(xdgHandle* xdg,
     p_delete(&confpath);
 
     if (callback(AWESOME_DEFAULT_CONF)) {
-        return a_strdup(AWESOME_DEFAULT_CONF);
+        return AWESOME_DEFAULT_CONF;
     }
 
     return {};
