@@ -230,7 +230,8 @@ void spawn_start_notify(client* c, const char* startup_id) {
                 found = true;
             } else {
                 auto seqbin = std::string_view(sn_startup_sequence_get_binary_name(seq));
-                if (std::ranges::equal(seqbin, c->getCls(), ichar_equals) || std::ranges::equal(seqbin, c->getInstance(), ichar_equals)) {
+                if (std::ranges::equal(seqbin, c->getCls(), ichar_equals) ||
+                    std::ranges::equal(seqbin, c->getInstance(), ichar_equals)) {
                     found = true;
                 }
             }
@@ -338,9 +339,9 @@ void spawn_child_exited(pid_t pid, int status) {
     auto it = running_children.find(GPid(pid));
     if (it == running_children.end()) {
         log_warn("Unknown child {} exited with {} {}",
-             (int)pid,
-             WIFEXITED(status) ? "status" : "signal",
-             status);
+                 (int)pid,
+                 WIFEXITED(status) ? "status" : "signal",
+                 status);
         return;
     }
     exit_callback = it->exit_callback;

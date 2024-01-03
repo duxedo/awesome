@@ -108,9 +108,9 @@ static const std::unordered_map<uint16_t, std::string_view> xcursor_font = {
   {              XC_xterm,               "xterm"},
 };
 
-static const std::unordered_map<std::string_view, uint16_t> font_xcursor = [](){
+static const std::unordered_map<std::string_view, uint16_t> font_xcursor = []() {
     std::unordered_map<std::string_view, uint16_t> ret;
-    for(auto & each : xcursor_font) {
+    for (auto& each : xcursor_font) {
         ret.insert({each.second, each.first});
     }
     return ret;
@@ -123,7 +123,7 @@ uint16_t xcursor_font_fromstr(const char* s) {
         return 0;
     }
     auto it = font_xcursor.find(s);
-    if(it == font_xcursor.end()) {
+    if (it == font_xcursor.end()) {
         return 0;
     }
     return it->second;

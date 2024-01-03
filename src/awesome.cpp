@@ -390,7 +390,7 @@ static gboolean a_xcb_io_cb(GIOChannel* source, GIOCondition cond, gpointer data
 
     if (xcb_connection_has_error(getGlobals().connection)) {
         log_fatal("X server connection broke (error {})",
-              xcb_connection_has_error(getGlobals().connection));
+                  xcb_connection_has_error(getGlobals().connection));
     }
 
     return TRUE;
@@ -535,10 +535,9 @@ int main(int argc, char** argv) {
     getGlobals().have_searchpaths = opts.have_searchpaths;
     getGlobals().had_overriden_depth = opts.had_overriden_depth;
 
-    if(opts.no_auto_screen.has_value()) {
+    if (opts.no_auto_screen.has_value()) {
         getGlobals().no_auto_screen = opts.no_auto_screen.value();
     }
-
 
     /* Check the configfile syntax and exit */
     if (default_init_flags & Options::INIT_FLAG_RUN_TEST) {
@@ -608,7 +607,6 @@ int main(int argc, char** argv) {
     sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
     sigaction(SIGCHLD, &sa, 0);
 
-
     /* We have no clue where the input focus is right now */
     getGlobals().focus.need_update = true;
 
@@ -619,7 +617,8 @@ int main(int argc, char** argv) {
     getGlobals().connection = xcb_connect(NULL, &getGlobals().default_screen);
 
     if (xcb_connection_has_error(getGlobals().connection)) {
-        log_fatal("cannot open display (error {})", xcb_connection_has_error(getGlobals().connection));
+        log_fatal("cannot open display (error {})",
+                  xcb_connection_has_error(getGlobals().connection));
     }
 
     getGlobals().screen = xcb_aux_get_screen(getGlobals().connection, getGlobals().default_screen);
@@ -698,7 +697,8 @@ int main(int argc, char** argv) {
         cookie = xcb_change_window_attributes_checked(
           getGlobals().connection, getGlobals().screen->root, XCB_CW_EVENT_MASK, &select_input_val);
         if (xcb_request_check(getGlobals().connection, cookie)) {
-            log_fatal("another window manager is already running (can't select SubstructureRedirect)");
+            log_fatal(
+              "another window manager is already running (can't select SubstructureRedirect)");
         }
     }
 
@@ -786,7 +786,8 @@ int main(int argc, char** argv) {
                   create_gc_flags);
 
     /* Get the window tree associated to this screen */
-    xcb_query_tree_cookie_t tree_c = getConnection().query_tree_unckecked(getGlobals().screen->root);
+    xcb_query_tree_cookie_t tree_c =
+      getConnection().query_tree_unckecked(getGlobals().screen->root);
 
     getConnection().change_attributes(
       getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);

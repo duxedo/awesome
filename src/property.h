@@ -29,7 +29,7 @@ extern "C" {
 #include <string>
 struct client;
 
-#define PROPERTY(funcname)                                          \
+#define PROPERTY(funcname)                                        \
     xcb_get_property_cookie_t property_get_##funcname(client* c); \
     void property_update_##funcname(client* c, xcb_get_property_cookie_t cookie)
 

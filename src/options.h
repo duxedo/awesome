@@ -20,10 +20,10 @@
  */
 #pragma once
 
+#include <basedir.h>
 #include <filesystem>
 #include <optional>
 #include <vector>
-#include <basedir.h>
 
 namespace Options {
 /**
@@ -49,7 +49,6 @@ struct ConfigResult {
     std::optional<bool> no_auto_screen;
 
     Paths searchPaths;
-
 };
 
 bool options_init_config(

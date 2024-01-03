@@ -1562,13 +1562,13 @@ void client_set_urgent(lua_State* L, int cidx, bool urgent) {
     }
 }
 
-#define DO_CLIENT_SET_PROPERTY(prop)                                                    \
+#define DO_CLIENT_SET_PROPERTY(prop)                                                              \
     void client_set_##prop(lua_State* L, int cidx, decltype(std::declval<client>().prop) value) { \
-        auto c = (client*)luaA_checkudata(L, cidx, &client_class);               \
-        if (c->prop != value) {                                                         \
-            c->prop = value;                                                            \
-            luaA_object_emit_signal(L, cidx, "property::" #prop, 0);                    \
-        }                                                                               \
+        auto c = (client*)luaA_checkudata(L, cidx, &client_class);                                \
+        if (c->prop != value) {                                                                   \
+            c->prop = value;                                                                      \
+            luaA_object_emit_signal(L, cidx, "property::" #prop, 0);                              \
+        }                                                                                         \
     }
 DO_CLIENT_SET_PROPERTY(group_window)
 DO_CLIENT_SET_PROPERTY(type)
@@ -1577,28 +1577,28 @@ DO_CLIENT_SET_PROPERTY(pid)
 DO_CLIENT_SET_PROPERTY(skip_taskbar)
 #undef DO_CLIENT_SET_PROPERTY
 
-#define DO_CLIENT_SET_STRING_PROPERTY2(prop, signal)                      \
-    void client_set_##prop(lua_State* L, int cidx, char* value) {         \
+#define DO_CLIENT_SET_STRING_PROPERTY2(prop, signal)               \
+    void client_set_##prop(lua_State* L, int cidx, char* value) {  \
         auto c = (client*)luaA_checkudata(L, cidx, &client_class); \
-        if (A_STREQ(c->prop, value)) {                                    \
-            p_delete(&value);                                             \
-            return;                                                       \
-        }                                                                 \
-        p_delete(&c->prop);                                               \
-        c->prop = value;                                                  \
-        luaA_object_emit_signal(L, cidx, "property::" #signal, 0);        \
+        if (A_STREQ(c->prop, value)) {                             \
+            p_delete(&value);                                      \
+            return;                                                \
+        }                                                          \
+        p_delete(&c->prop);                                        \
+        c->prop = value;                                           \
+        luaA_object_emit_signal(L, cidx, "property::" #signal, 0); \
     }
-#define DO_CLIENT_SET_STRING_PROPERTY3(prop, getter, setter, signal)                      \
-    void client_set_##prop(lua_State* L, int cidx, const std::string& value) {         \
-        auto c = (client*)luaA_checkudata(L, cidx, &client_class); \
-        if (c->getter() == value) {                                    \
-            return;                                                       \
-        }                                                                 \
-        c->setter(value);                                                  \
-        luaA_object_emit_signal(L, cidx, "property::" #signal, 0);        \
+#define DO_CLIENT_SET_STRING_PROPERTY3(prop, getter, setter, signal)           \
+    void client_set_##prop(lua_State* L, int cidx, const std::string& value) { \
+        auto c = (client*)luaA_checkudata(L, cidx, &client_class);             \
+        if (c->getter() == value) {                                            \
+            return;                                                            \
+        }                                                                      \
+        c->setter(value);                                                      \
+        luaA_object_emit_signal(L, cidx, "property::" #signal, 0);             \
     }
-#define DO_CLIENT_SET_STRING_PROPERTY4(name, signal)                      \
-    DO_CLIENT_SET_STRING_PROPERTY3(name, get ## name, set ## name, signal)
+#define DO_CLIENT_SET_STRING_PROPERTY4(name, signal) \
+    DO_CLIENT_SET_STRING_PROPERTY3(name, get##name, set##name, signal)
 #define DO_CLIENT_SET_STRING_PROPERTY(prop) DO_CLIENT_SET_STRING_PROPERTY2(prop, prop)
 DO_CLIENT_SET_STRING_PROPERTY4(Name, name)
 DO_CLIENT_SET_STRING_PROPERTY4(AltName, name)
@@ -1631,7 +1631,7 @@ void client_set_motif_wm_hints(lua_State* L, int cidx, motif_wm_hints_t hints) {
 
 void client_find_transient_for(client* c) {
     size_t counter;
-    client*tc, *tmp;
+    client *tc, *tmp;
     lua_State* L = globalconf_get_lua_State();
 
     /* This might return NULL, in which case we unset transient_for */
@@ -1656,7 +1656,10 @@ void client_find_transient_for(client* c) {
     lua_pop(L, 1);
 }
 
-void client_set_ClassInstance(lua_State* L, int cidx, const std::string& cls, const std::string& instance) {
+void client_set_ClassInstance(lua_State* L,
+                              int cidx,
+                              const std::string& cls,
+                              const std::string& instance) {
     auto c = (client*)luaA_checkudata(L, cidx, &client_class);
     c->setCls(cls);
     luaA_object_emit_signal(L, cidx, "property::class", 0);
@@ -1783,7 +1786,7 @@ void client_ignore_enterleave_events(void) {
      */
     if (xcb_connection_has_error(getGlobals().connection)) {
         log_fatal("X server connection broke (error {})",
-              xcb_connection_has_error(getGlobals().connection));
+                  xcb_connection_has_error(getGlobals().connection));
     }
     awsm_check(getGlobals().pending_enter_leave_begin.sequence != 0);
 }
@@ -3424,7 +3427,7 @@ static void client_refresh_titlebar_partial(
 }
 
 #define HANDLE_TITLEBAR_REFRESH(name, index)                                                \
-    static void client_refresh_titlebar_##name(client* c) {                               \
+    static void client_refresh_titlebar_##name(client* c) {                                 \
         area_t area = titlebar_get_area(c, index);                                          \
         client_refresh_titlebar_partial(c, index, area.x, area.y, area.width, area.height); \
     }
@@ -3525,7 +3528,7 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
 
 #define HANDLE_TITLEBAR(name, index)                                                    \
     static int luaA_client_titlebar_##name(lua_State* L) {                              \
-        auto c = (client*)luaA_checkudata(L, 1, &client_class);                       \
+        auto c = (client*)luaA_checkudata(L, 1, &client_class);                         \
                                                                                         \
         if (lua_gettop(L) == 2) {                                                       \
             if (lua_isnil(L, 2))                                                        \
@@ -3732,7 +3735,8 @@ static int luaA_client_set_name(lua_State* L, client* c) {
 }
 
 static int luaA_client_get_icon_name(lua_State* L, client* c) {
-    lua_pushstring(L, !c->getIconName().empty() ? c->getIconName().c_str() : c->getAltIconName().c_str());
+    lua_pushstring(
+      L, !c->getIconName().empty() ? c->getIconName().c_str() : c->getAltIconName().c_str());
     return 1;
 }
 
@@ -4256,8 +4260,7 @@ void client_class_setup(lua_State* L) {
     };
 
     static const struct luaL_Reg client_meta[] = {
-      LUA_OBJECT_META(client)
-          LUA_CLASS_META{           "_keys",             luaA_client_keys},
+      LUA_OBJECT_META(client) LUA_CLASS_META{           "_keys",             luaA_client_keys},
       {       "isvisible",        luaA_client_isvisible},
       {        "geometry",         luaA_client_geometry},
       {"apply_size_hints", luaA_client_apply_size_hints},

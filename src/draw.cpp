@@ -244,7 +244,7 @@ void draw_test_cairo_xcb(void) {
       cairo_xcb_surface_create(getGlobals().connection, pixmap, getGlobals().visual, 1, 1);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         log_fatal("Could not set up display: got cairo surface with status {}",
-              cairo_status_to_string(cairo_surface_status(surface)));
+                  cairo_status_to_string(cairo_surface_status(surface)));
     }
     cairo_surface_finish(surface);
     cairo_surface_destroy(surface);

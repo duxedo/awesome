@@ -44,12 +44,10 @@
 #endif
 
 #include <cctype>
-
 #include <fmt/format.h>
 
 /** \brief replace \c NULL strings with empty strings */
 #define NONULL(x) (x ? x : "")
-
 
 #undef MAX
 #undef MIN
@@ -73,7 +71,6 @@ struct to {
         else                    \
             a -= b;             \
     } while (0)
-
 
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))
@@ -103,19 +100,26 @@ void p_delete(PtrT** ptr) {
 #define unlikely(expr) expr
 #endif
 
-void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args);
+void log_messagev(char tag,
+                  FILE* file,
+                  const std::source_location loc,
+                  std::string_view format,
+                  fmt::format_args args);
 
-template <typename ... Args>
-void log_message(char tag, FILE *file, const std::source_location loc, std::string_view format, Args && ... args) {
+template <typename... Args>
+void log_message(
+  char tag, FILE* file, const std::source_location loc, std::string_view format, Args&&... args) {
     log_messagev(tag, file, loc, format, fmt::make_format_args(std::forward<Args>(args)...));
 }
 
-#define log_fatal(string, ...) log_message('E', stderr, std::source_location::current(), string, ## __VA_ARGS__)
-#define log_warn(string, ...) log_message('W', stderr, std::source_location::current(), string, ## __VA_ARGS__)
+#define log_fatal(string, ...) \
+    log_message('E', stderr, std::source_location::current(), string, ##__VA_ARGS__)
+#define log_warn(string, ...) \
+    log_message('W', stderr, std::source_location::current(), string, ##__VA_ARGS__)
 
-#define awsm_check(condition)                                                        \
-    do {                                                                             \
-        if (!(condition))                                                            \
+#define awsm_check(condition)                                   \
+    do {                                                        \
+        if (!(condition))                                       \
             log_warn("Checking assertion failed: " #condition); \
     } while (0)
 
@@ -123,8 +127,7 @@ const char* a_current_time_str(void);
 
 void a_exec(const char*);
 
-inline bool ichar_equals(char a, char b)
-{
+inline bool ichar_equals(char a, char b) {
     return std::tolower(static_cast<unsigned char>(a)) ==
            std::tolower(static_cast<unsigned char>(b));
 }

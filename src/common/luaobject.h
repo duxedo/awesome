@@ -146,28 +146,32 @@ int luaA_object_connect_signal_simple(lua_State*);
 int luaA_object_disconnect_signal_simple(lua_State*);
 int luaA_object_emit_signal_simple(lua_State*);
 
-template<typename T>
-using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32, T, std::add_lvalue_reference_t<std::add_const_t<T>>>;
+template <typename T>
+using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
+                                        T,
+                                        std::add_lvalue_reference_t<std::add_const_t<T>>>;
 
-#define LUA_OBJECT_FUNCS(lua_class, type, prefix)          \
-    static inline type* prefix##_new(lua_State* L) {       \
-        void* mem = lua_newuserdata(L, sizeof(type));      \
-        auto p = new (mem) type{};                         \
-        (lua_class).instances++;                           \
-        luaA_settype(L, &(lua_class));                     \
-        lua_newtable(L);                                   \
-        lua_newtable(L);                                   \
-        lua_setmetatable(L, -2);                           \
-        lua_newtable(L);                                   \
-        lua_setfield(L, -2, "data");                       \
-        Lua::setuservalue(L, -2);                          \
-        lua_pushvalue(L, -1);                              \
-        lua_class.emit_signal(L, "new", 1); \
-        return p;                                          \
+#define LUA_OBJECT_FUNCS(lua_class, type, prefix)     \
+    static inline type* prefix##_new(lua_State* L) {  \
+        void* mem = lua_newuserdata(L, sizeof(type)); \
+        auto p = new (mem) type{};                    \
+        (lua_class).instances++;                      \
+        luaA_settype(L, &(lua_class));                \
+        lua_newtable(L);                              \
+        lua_newtable(L);                              \
+        lua_setmetatable(L, -2);                      \
+        lua_newtable(L);                              \
+        lua_setfield(L, -2, "data");                  \
+        Lua::setuservalue(L, -2);                     \
+        lua_pushvalue(L, -1);                         \
+        lua_class.emit_signal(L, "new", 1);           \
+        return p;                                     \
     }
 
-#define OBJECT_EXPORT_PROPERTY(pfx, type, field) \
-    FieldAccessT<decltype(std::declval<type>().field)> pfx##_get_##field(const type* object) { return object->field; }
+#define OBJECT_EXPORT_PROPERTY(pfx, type, field)                                               \
+    FieldAccessT<decltype(std::declval<type>().field)> pfx##_get_##field(const type* object) { \
+        return object->field;                                                                  \
+    }
 
 #define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
     static int luaA_##pfx##_get_##field(lua_State* L, type* object) { \
@@ -189,11 +193,11 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
     }
 
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(pfx, type, field, name, pusher, empty_value) \
-    static int luaA_##pfx##_get_##name(lua_State* L, type* object) {              \
-        if (object->field == empty_value)                                          \
-            return 0;                                                              \
-        pusher(L, object->field);                                                  \
-        return 1;                                                                  \
+    static int luaA_##pfx##_get_##name(lua_State* L, type* object) {                      \
+        if (object->field == empty_value)                                                 \
+            return 0;                                                                     \
+        pusher(L, object->field);                                                         \
+        return 1;                                                                         \
     }
 int luaA_object_tostring(lua_State*);
 

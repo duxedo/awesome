@@ -22,6 +22,9 @@
 
 #include "common/util.h"
 
+#include "common/luahdr.h"
+#include "lua.h"
+
 #include <cstdio>
 #include <errno.h>
 #include <fcntl.h>
@@ -29,12 +32,10 @@
 #include <limits.h>
 #include <source_location>
 #include <stdarg.h>
+#include <string>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
-#include <string>
-#include "common/luahdr.h"
-#include "lua.h"
 
 const char* a_current_time_str(void) {
     static char buffer[25];
@@ -50,9 +51,18 @@ const char* a_current_time_str(void) {
     return buffer;
 }
 
-void log_messagev(char tag, FILE* file, const std::source_location loc, std::string_view format, fmt::format_args args) {
-    fmt::print("{}{}: awesome: {}:{}: {}\n", tag, a_current_time_str(), loc.function_name(), loc.line(), fmt::vformat(format, args));
-    if(tag == 'E') {
+void log_messagev(char tag,
+                  FILE* file,
+                  const std::source_location loc,
+                  std::string_view format,
+                  fmt::format_args args) {
+    fmt::print("{}{}: awesome: {}:{}: {}\n",
+               tag,
+               a_current_time_str(),
+               loc.function_name(),
+               loc.line(),
+               fmt::vformat(format, args));
+    if (tag == 'E') {
         exit(EXIT_FAILURE);
     }
 }
@@ -72,12 +82,10 @@ void a_exec(const char* cmd) {
 }
 
 namespace Lua {
-void pushstring(lua_State* L, const std::string & str) {
+void pushstring(lua_State* L, const std::string& str) {
     lua_pushlstring(L, str.c_str(), str.size());
 }
-void pushstring(lua_State* L, const char* str) {
-    lua_pushstring(L, str);
-}
+void pushstring(lua_State* L, const char* str) { lua_pushstring(L, str); }
 void pushstring(lua_State* L, const std::string_view str) {
     lua_pushlstring(L, str.data(), str.size());
 }
