@@ -34,7 +34,7 @@ uint16_t xutil_key_mask_fromstr(const std::string_view keyname) {
     if (keyname == "Lock") {
         return XCB_MOD_MASK_LOCK;
     }
-    if (keyname == "Ctrl"|| keyname == "Control") {
+    if (keyname == "Ctrl" || keyname == "Control") {
         return XCB_MOD_MASK_CONTROL;
     }
     if (keyname == "Mod1") {

@@ -262,7 +262,7 @@ LUA_OBJECT_EXPORT_PROPERTY(key, keyb_t, modifiers, luaA_pushmodifiers)
 /* It's caller's responsibility to release the returned string. */
 std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym) {
     std::optional<std::string> ret = std::string{};
-    ret->resize(ret->capacity() > 0 ? ret->capacity() : 64 );
+    ret->resize(ret->capacity() > 0 ? ret->capacity() : 64);
     if (auto len = xkb_keysym_get_name(keysym, ret->data(), ret->size()); len == -1) {
         return {};
     } else if (len > (int)ret->size()) {
@@ -309,9 +309,8 @@ static int luaA_key_set_key(lua_State* L, keyb_t* k) {
 
 void key_class_setup(lua_State* L) {
     static const struct luaL_Reg key_methods[] = {
-      LUA_CLASS_METHODS(key_class),
-      {"__call", luaA_key_new},
-      {    NULL,         NULL}
+      LUA_CLASS_METHODS(key_class), {"__call", luaA_key_new},
+       {    NULL,         NULL}
     };
 
     static const struct luaL_Reg key_meta[] = {

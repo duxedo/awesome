@@ -967,15 +967,15 @@ static void xerror(xcb_generic_error_t* e) {
     const char* error = xcb_event_get_error_label(e->error_code);
 #endif
     log_warn("X error: request={}{}{} (major {}, minor {}), error={}{}{} ({})",
-         major,
-         minor == NULL ? "" : "-",
-         NONULL(minor),
-         e->major_code,
-         e->minor_code,
-         NONULL(extension),
-         extension == NULL ? "" : "-",
-         error,
-         e->error_code);
+             major,
+             minor == NULL ? "" : "-",
+             NONULL(minor),
+             e->major_code,
+             e->minor_code,
+             NONULL(extension),
+             extension == NULL ? "" : "-",
+             error,
+             e->error_code);
 
     return;
 }
