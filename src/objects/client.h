@@ -25,10 +25,12 @@
 #include "stack.h"
 
 enum {
-    CLIENT_SELECT_INPUT_EVENT_MASK = (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_FOCUS_CHANGE),
-    FRAME_SELECT_INPUT_EVENT_MASK =  (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
-             XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
-                  XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE)
+    CLIENT_SELECT_INPUT_EVENT_MASK = (XCB_EVENT_MASK_STRUCTURE_NOTIFY |
+                                      XCB_EVENT_MASK_PROPERTY_CHANGE | XCB_EVENT_MASK_FOCUS_CHANGE),
+    FRAME_SELECT_INPUT_EVENT_MASK =
+      (XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW |
+       XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT |
+       XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE)
 
 };
 
@@ -99,23 +101,25 @@ struct client {
     /** Client logical screen */
     screen_t* screen;
     /** Client name */
-    private:
+  private:
     std::string name, alt_name, icon_name, alt_icon_name;
-    public:
+
+  public:
     const std::string& getName() const { return name; }
     const std::string& getAltName() const { return alt_name; }
     const std::string& getIconName() const { return icon_name; }
     const std::string& getAltIconName() const { return alt_icon_name; }
 
-    void setName(const std::string & name) { this->name = name; }
-    void setAltName(const std::string & name) { this->alt_name = name; }
-    void setIconName(const std::string & name) { this->icon_name = name; }
-    void setAltIconName(const std::string & name) { this->alt_icon_name = name; }
+    void setName(const std::string& name) { this->name = name; }
+    void setAltName(const std::string& name) { this->alt_name = name; }
+    void setIconName(const std::string& name) { this->icon_name = name; }
+    void setAltIconName(const std::string& name) { this->alt_icon_name = name; }
     /** WM_CLASS stuff */
-    private:
+  private:
     std::string cls;
     std::string instance;
-    public:
+
+  public:
     const std::string& getCls() const { return cls; }
     const std::string& getInstance() const { return instance; }
 
@@ -129,9 +133,10 @@ struct client {
     /** Got a configure request and have to call client_send_configure() if its ignored? */
     bool got_configure_request;
     /** Startup ID */
-    private:
+  private:
     std::string startup_id;
-    public:
+
+  public:
     const std::string& getStartupId() const { return startup_id; }
     void setStartupId(const std::string& id) { startup_id = id; }
 
@@ -194,15 +199,17 @@ struct client {
     /** Do we honor the client's size hints? */
     bool size_hints_honor;
     /** Machine the client is running on. */
-    private:
+  private:
     std::string machine;
-    public:
+
+  public:
     const std::string& getMachine() const { return machine; }
     void setMachine(const std::string& machine) { this->machine = machine; }
     /** Role of the client */
-    private:
+  private:
     std::string role;
-    public:
+
+  public:
     const std::string& getRole() const { return role; }
     void setRole(const std::string& val) { role = val; }
 

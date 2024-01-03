@@ -464,7 +464,7 @@ static int get_key_name(lua_State* L) {
         return 0;
     } else {
         auto name = key_get_keysym_name(keysym);
-        if(!name) {
+        if (!name) {
             return 0;
         }
         lua_pushstring(L, name->c_str());

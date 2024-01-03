@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "config.h"
 #include "common/luaclass.h"
 #include "common/lualib.h"
+#include "config.h"
 #include "draw.h"
 #include "lauxlib.h"
 
@@ -44,7 +44,7 @@ using Paths = std::vector<std::filesystem::path>;
         Lua::warn(                                                                               \
           L, "%s: This function is deprecated and will be removed, see %s", __FUNCTION__, repl); \
         lua_pushlstring(L, __FUNCTION__, sizeof(__FUNCTION__));                                  \
-        signal_object_emit(L, &Lua::global_signals, "debug::deprecation", 1);                         \
+        signal_object_emit(L, &Lua::global_signals, "debug::deprecation", 1);                    \
     } while (0)
 
 static inline void free_string(char** c) { p_delete(c); }
@@ -57,8 +57,7 @@ namespace Lua {
  * \param L The Lua VM state.
  * \param fmt The warning message.
  */
-static inline void __attribute__((format(printf, 2, 3)))
-warn(lua_State* L, const char* fmt, ...) {
+static inline void __attribute__((format(printf, 2, 3))) warn(lua_State* L, const char* fmt, ...) {
     va_list ap;
     luaL_where(L, 1);
     fprintf(stderr, "%s%sW: ", a_current_time_str(), lua_tostring(L, -1));
@@ -145,8 +144,7 @@ static inline bool checkboolean(lua_State* L, int n) {
     return lua_toboolean(L, n);
 }
 
-static inline lua_Number
-getopt_number(lua_State* L, int idx, const char* name, lua_Number def) {
+static inline lua_Number getopt_number(lua_State* L, int idx, const char* name, lua_Number def) {
     lua_getfield(L, idx, name);
     if (lua_isnil(L, -1) || lua_isnumber(L, -1)) {
         def = luaL_optnumber(L, -1, def);
@@ -155,8 +153,7 @@ getopt_number(lua_State* L, int idx, const char* name, lua_Number def) {
     return def;
 }
 
-static inline lua_Number
-checknumber_range(lua_State* L, int n, lua_Number min, lua_Number max) {
+static inline lua_Number checknumber_range(lua_State* L, int n, lua_Number min, lua_Number max) {
     lua_Number result = lua_tonumber(L, n);
     if (result < min || result > max) {
         rangerror(L, n, min, max);
@@ -304,4 +301,4 @@ int default_newindex(lua_State*);
 void emit_startup(void);
 
 void systray_invalidate(void);
-}
+} // namespace Lua
