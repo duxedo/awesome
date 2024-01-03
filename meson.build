@@ -12,6 +12,7 @@ xorg_deps = [
     dependency('xcb-icccm', version : '>=0.3.8'),
     dependency('xcb-xfixes'),
     dependency('xcb-xkb'),
+    dependency('xcb-errors'),
     dependency('xkbcommon-x11'),
     dependency('cairo-xcb'),
     dependency('xproto', version : '>=7.0.15'),
@@ -112,7 +113,7 @@ confdata.set('AWESOME_THEMES_PATH', data_path / 'themes')
 confdata.set('AWESOME_ICON_PATH', data_path / 'icons')
 confdata.set('AWESOME_DEFAULT_CONF', '/etc/xdg/awesome/rc.lua')
 confdata.set('WITH_DBUS', true)
-confdata.set('WITH_XCB_ERRORS', false)
+confdata.set('WITH_XCB_ERRORS', true)
 confdata.set('HAS_EXECINFO', 1)
 confdata.set('HAS_LUAJIT', 1)
 

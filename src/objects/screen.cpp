@@ -358,10 +358,7 @@ static void screen_deduplicate(lua_State* L, std::vector<screen_t*>* screens) {
  */
 typedef struct viewport_t {
     bool marked;
-    int x;
-    int y;
-    int width;
-    int height;
+    area_t area;
     int id;
     struct viewport_t* next;
     screen_t* screen;
@@ -422,22 +419,7 @@ static int luaA_viewports(lua_State* L) {
 
         /* The geometry */
         lua_pushstring(L, "geometry");
-
-        lua_newtable(L);
-
-        lua_pushstring(L, "x");
-        lua_pushinteger(L, a->x);
-        lua_settable(L, -3);
-        lua_pushstring(L, "y");
-        lua_pushinteger(L, a->y);
-        lua_settable(L, -3);
-        lua_pushstring(L, "width");
-        lua_pushinteger(L, a->width);
-        lua_settable(L, -3);
-        lua_pushstring(L, "height");
-        lua_pushinteger(L, a->height);
-        lua_settable(L, -3);
-
+        Lua::pusharea(L, a->area);
         /* Add the geometry table to the arguments */
         lua_settable(L, -3);
 
@@ -470,22 +452,19 @@ static void viewports_notify(lua_State* L) {
     screen_class.emit_signal(L, "property::_viewports", 1);
 }
 
-static viewport_t* viewport_add(lua_State* L, int x, int y, int w, int h) {
+static viewport_t* viewport_add(lua_State* L, area_t area) {
     /* Search existing to avoid having to deduplicate later */
     viewport_t* a = first_screen_viewport;
 
     do {
-        if (a && a->x == x && a->y == y && a->width == w && a->height == h) {
+        if (a && a->area == area) {
             a->marked = true;
             return a;
         }
     } while (a && (a = a->next));
 
     auto node = new viewport_t;
-    node->x = x;
-    node->y = y;
-    node->width = w;
-    node->height = h;
+    node->area = area;
     node->id = screen_area_gid++;
     node->next = NULL;
     node->screen = NULL;
@@ -633,10 +612,10 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         screen_output_t output = screen_get_randr_output(L, &monitor_iter);
 
         viewport_t* viewport = viewport_add(L,
-                                            monitor_iter.data->x,
+                                            area_t {monitor_iter.data->x,
                                             monitor_iter.data->y,
                                             monitor_iter.data->width,
-                                            monitor_iter.data->height);
+                                            monitor_iter.data->height});
 
         viewport->outputs.push_back(output);
 
@@ -725,7 +704,7 @@ static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screen
         }
 
         viewport_t* viewport =
-          viewport_add(L, crtc_info_r->x, crtc_info_r->y, crtc_info_r->width, crtc_info_r->height);
+          viewport_add(L, area_t{crtc_info_r->x, crtc_info_r->y, crtc_info_r->width, crtc_info_r->height});
 
         screen_get_randr_crtcs_outputs(L, crtc_info_r, &viewport->outputs);
 
@@ -859,7 +838,7 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
 
     for (int screen = 0; screen < xinerama_screen_number; screen++) {
         viewport_t* viewport = viewport_add(
-          L, xsi[screen].x_org, xsi[screen].y_org, xsi[screen].width, xsi[screen].height);
+          L, area_t{xsi[screen].x_org, xsi[screen].y_org, xsi[screen].width, xsi[screen].height});
 
         if (getGlobals().ignore_screens) {
             continue;
@@ -882,7 +861,7 @@ static void screen_scan_x11(lua_State* L, std::vector<screen_t*>* screens) {
     xcb_screen_t* xcb_screen = getGlobals().screen;
 
     viewport_t* viewport =
-      viewport_add(L, 0, 0, xcb_screen->width_in_pixels, xcb_screen->height_in_pixels);
+      viewport_add(L, area_t{0, 0, xcb_screen->width_in_pixels, xcb_screen->height_in_pixels});
 
     if (getGlobals().ignore_screens) {
         return;
@@ -987,7 +966,7 @@ void screen_cleanup(void) {
 static void screen_modified(screen_t* existing_screen, screen_t* other_screen) {
     lua_State* L = globalconf_get_lua_State();
 
-    if (!AREA_EQUAL(existing_screen->geometry, other_screen->geometry)) {
+    if (existing_screen->geometry != other_screen->geometry) {
         area_t old_geometry = existing_screen->geometry;
         existing_screen->geometry = other_screen->geometry;
         luaA_object_push(L, existing_screen);
@@ -1264,7 +1243,7 @@ void screen_update_workarea(screen_t* screen) {
     area.width -= MIN(area.width, left + right);
     area.height -= MIN(area.height, top + bottom);
 
-    if (AREA_EQUAL(area, screen->workarea)) {
+    if (area == screen->workarea) {
         return;
     }
 

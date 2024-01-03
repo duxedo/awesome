@@ -133,7 +133,7 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     area_t old = d->geometry;
     d->geometry = geom;
 
-    bool area_changed = !AREA_EQUAL(old, geom);
+    const bool area_changed = old != geom;
     if (area_changed) {
         drawable_unset_surface(d);
     }

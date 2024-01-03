@@ -116,7 +116,7 @@ class Globals {
     bool have_xkb = false;
     /** Check for XFixes extension */
     bool have_xfixes = false;
-    /** Custom searchpaths are present, the runtime is tinted */
+    /** Custom searchpaths are present, the runtime is tainted */
     bool have_searchpaths = false;
     /** When --no-argb is used in the modeline or command line */
     bool had_overriden_depth = false;
