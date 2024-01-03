@@ -20,11 +20,10 @@
  */
 #pragma once
 
-#include "globalconf.h"
-
 #include <filesystem>
 #include <optional>
 #include <vector>
+#include <basedir.h>
 
 namespace Options {
 /**
@@ -44,7 +43,13 @@ using Paths = std::vector<std::filesystem::path>;
 
 struct ConfigResult {
     std::optional<std::filesystem::path> configPath;
+    std::optional<int> api_level;
+    bool have_searchpaths;
+    bool had_overriden_depth;
+    std::optional<bool> no_auto_screen;
+
     Paths searchPaths;
+
 };
 
 bool options_init_config(
