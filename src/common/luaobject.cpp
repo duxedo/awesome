@@ -213,7 +213,13 @@ void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name
     auto signalIt = arr->find(name);
     if (signalIt != arr->end()) {
         int nbfunc = signalIt->second.functions.size();
-        luaL_checkstack(L, nbfunc + nargs + 1, fmt::format("Not enough stack space to call signal '{}' (trying to push {} entries)", name, nbfunc + nargs + 1).c_str());
+        luaL_checkstack(
+          L,
+          nbfunc + nargs + 1,
+          fmt::format("Not enough stack space to call signal '{}' (trying to push {} entries)",
+                      name,
+                      nbfunc + nargs + 1)
+            .c_str());
         /* Push all functions and then execute, because this list can change
          * while executing funcs. */
         for (auto func : signalIt->second.functions) {

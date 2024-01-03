@@ -192,8 +192,8 @@ void root_update_wallpaper(void) {
     if (geom_r->depth !=
         draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id)) {
         log_warn("Got a pixmap with depth {}, but the default depth is {}, continuing anyway",
-             geom_r->depth,
-             draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
+                 geom_r->depth,
+                 draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
     }
 
     getGlobals().wallpaper = cairo_xcb_surface_create(getGlobals().connection,

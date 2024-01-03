@@ -22,16 +22,14 @@
 #include "common/backtrace.h"
 
 #include "config.h"
-#include <cstring>
+
 #include <cstdlib>
+#include <cstring>
 
 #ifdef HAS_EXECINFO
 #include <execinfo.h>
 #endif
-enum {
- MAX_STACK_SIZE = 32,
- MAX_BT_SIZE = 2048
-};
+enum { MAX_STACK_SIZE = 32, MAX_BT_SIZE = 2048 };
 
 #include <array>
 
@@ -48,7 +46,7 @@ const char* backtrace_get() {
 
     stack_size = backtrace(stack, std::size(stack));
     bt = backtrace_symbols(stack, stack_size);
-    char * curr = bt_text;
+    char* curr = bt_text;
     if (bt) {
         for (int i = 0; i < stack_size && curr < bt_text + MAX_BT_SIZE; i++) {
             size_t dataleft = (MAX_BT_SIZE - (curr - bt_text));
@@ -58,7 +56,7 @@ const char* backtrace_get() {
                 dataleft -= 2;
             }
             auto len = std::min(dataleft - 1, strlen(bt[i]));
-            if(len <= 4) {
+            if (len <= 4) {
                 free(bt);
                 return bt_text;
             }

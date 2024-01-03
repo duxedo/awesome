@@ -20,10 +20,10 @@
  */
 
 #include "options.h"
-#include "config.h"
 
 #include "common/util.h"
 #include "common/version.h"
+#include "config.h"
 
 #include <basedir_fs.h>
 #include <bits/getopt_core.h>
@@ -449,9 +449,7 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
             (*init_flags) &= ~INIT_FLAG_AUTO_SCREEN;
 
             break;
-        case 's':
-            ret.searchPaths.push_back(optarg);
-            break;
+        case 's': ret.searchPaths.push_back(optarg); break;
         case 'a':
             ret.had_overriden_depth = true;
             (*init_flags) &= ~INIT_FLAG_ARGB;

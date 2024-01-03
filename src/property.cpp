@@ -35,29 +35,29 @@
 #include <format>
 #include <xcb/xcb_atom.h>
 
-#define HANDLE_TEXT_PROPERTY(funcname, atom, setfunc)                                \
+#define HANDLE_TEXT_PROPERTY(funcname, atom, setfunc)                              \
     xcb_get_property_cookie_t property_get_##funcname(client* c) {                 \
-        return xcb_get_property(getGlobals().connection,                             \
-                                false,                                               \
-                                c->window,                                           \
-                                atom,                                                \
-                                XCB_GET_PROPERTY_TYPE_ANY,                           \
-                                0,                                                   \
-                                UINT_MAX);                                           \
-    }                                                                                \
+        return xcb_get_property(getGlobals().connection,                           \
+                                false,                                             \
+                                c->window,                                         \
+                                atom,                                              \
+                                XCB_GET_PROPERTY_TYPE_ANY,                         \
+                                0,                                                 \
+                                UINT_MAX);                                         \
+    }                                                                              \
     void property_update_##funcname(client* c, xcb_get_property_cookie_t cookie) { \
-        lua_State* L = globalconf_get_lua_State();                                   \
-        xcb_get_property_reply_t* reply =                                            \
-          xcb_get_property_reply(getGlobals().connection, cookie, NULL);             \
-        luaA_object_push(L, c);                                                      \
-        setfunc(L, -1, xutil_get_text_property_from_reply(reply));                   \
-        lua_pop(L, 1);                                                               \
-        p_delete(&reply);                                                            \
-    }                                                                                \
-    static void property_handle_##funcname(uint8_t state, xcb_window_t window) {     \
+        lua_State* L = globalconf_get_lua_State();                                 \
+        xcb_get_property_reply_t* reply =                                          \
+          xcb_get_property_reply(getGlobals().connection, cookie, NULL);           \
+        luaA_object_push(L, c);                                                    \
+        setfunc(L, -1, xutil_get_text_property_from_reply(reply));                 \
+        lua_pop(L, 1);                                                             \
+        p_delete(&reply);                                                          \
+    }                                                                              \
+    static void property_handle_##funcname(uint8_t state, xcb_window_t window) {   \
         client* c = client_getbywin(window);                                       \
-        if (c)                                                                       \
-            property_update_##funcname(c, property_get_##funcname(c));               \
+        if (c)                                                                     \
+            property_update_##funcname(c, property_get_##funcname(c));             \
     }
 
 HANDLE_TEXT_PROPERTY(wm_name, XCB_ATOM_WM_NAME, client_set_AltName)
@@ -71,7 +71,7 @@ HANDLE_TEXT_PROPERTY(wm_window_role, WM_WINDOW_ROLE, client_set_Role)
 
 #define HANDLE_PROPERTY(name)                                                \
     static void property_handle_##name(uint8_t state, xcb_window_t window) { \
-        client* c = client_getbywin(window);                               \
+        client* c = client_getbywin(window);                                 \
         if (c)                                                               \
             property_update_##name(c, property_get_##name(c));               \
     }

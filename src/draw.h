@@ -38,7 +38,7 @@ struct area_t {
     uint16_t width;
     uint16_t height;
 
-    bool operator<=>(const area_t &) const = default;
+    bool operator<=>(const area_t&) const = default;
 
     auto left() { return x; }
     auto top() { return y; }

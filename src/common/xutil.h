@@ -22,8 +22,8 @@
 
 #include "common/atoms.h"
 #include "common/util.h"
-#include <string>
 
+#include <string>
 #include <string_view>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>

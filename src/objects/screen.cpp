@@ -555,9 +555,7 @@ static screen_t* screen_add(lua_State* L, std::vector<screen_t*>* screens) {
     return new_screen;
 }
 
-static void screen_wipe(screen_t* c) {
-    c->name.clear();
-}
+static void screen_wipe(screen_t* c) { c->name.clear(); }
 
 /* Monitors were introduced in RandR 1.5 */
 #ifdef XCB_RANDR_GET_MONITORS
@@ -612,10 +610,10 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         screen_output_t output = screen_get_randr_output(L, &monitor_iter);
 
         viewport_t* viewport = viewport_add(L,
-                                            area_t {monitor_iter.data->x,
-                                            monitor_iter.data->y,
-                                            monitor_iter.data->width,
-                                            monitor_iter.data->height});
+                                            area_t{monitor_iter.data->x,
+                                                   monitor_iter.data->y,
+                                                   monitor_iter.data->width,
+                                                   monitor_iter.data->height});
 
         viewport->outputs.push_back(output);
 
@@ -703,8 +701,8 @@ static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screen
             continue;
         }
 
-        viewport_t* viewport =
-          viewport_add(L, area_t{crtc_info_r->x, crtc_info_r->y, crtc_info_r->width, crtc_info_r->height});
+        viewport_t* viewport = viewport_add(
+          L, area_t{crtc_info_r->x, crtc_info_r->y, crtc_info_r->width, crtc_info_r->height});
 
         screen_get_randr_crtcs_outputs(L, crtc_info_r, &viewport->outputs);
 
@@ -1419,7 +1417,7 @@ screen_t* screen_get_primary(void) {
  */
 static int luaA_screen_module_index(lua_State* L) {
     auto type = lua_type(L, 2);
-    if(type != LUA_TSTRING) {
+    if (type != LUA_TSTRING) {
         return luaA_object_push(L, luaA_checkscreen(L, 2));
     }
     auto name = Lua::tostring(L, 2);
@@ -1446,7 +1444,6 @@ static int luaA_screen_module_index(lua_State* L) {
     Lua::warn(L, "Unknown screen output name: %s", name->data());
     lua_pushnil(L);
     return 1;
-
 }
 
 static int luaA_screen_module_newindex(lua_State* L) {

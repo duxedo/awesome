@@ -42,7 +42,7 @@ inline std::optional<std::string_view> tostring(lua_State* L, int numArg) {
     return std::string_view{str, length};
 }
 
-void pushstring(lua_State* L, const std::string & str);
+void pushstring(lua_State* L, const std::string& str);
 void pushstring(lua_State* L, const char* str);
 void pushstring(lua_State* L, const std::string_view str);
 
@@ -128,6 +128,6 @@ static inline int call_handler(lua_State* L, int handler) {
     lua_remove(L, error_func_pos);
     return lua_gettop(L);
 }
-}
+} // namespace Lua
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
