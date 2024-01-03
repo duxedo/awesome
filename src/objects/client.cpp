@@ -1953,8 +1953,7 @@ static void client_geometry_refresh(void) {
         }
 
         /* Is there anything to do? */
-        if (AREA_EQUAL(geometry, c->x11_frame_geometry) &&
-            AREA_EQUAL(real_geometry, c->x11_client_geometry)) {
+        if (geometry == c->x11_frame_geometry && real_geometry == c->x11_client_geometry) {
             if (c->got_configure_request) {
                 /* ICCCM 4.1.5 / 4.2.3, if nothing was changed, send an event saying so */
                 client_send_configure(c);
@@ -2428,7 +2427,7 @@ static void client_resize_do(client* c, area_t geometry) {
     c->geometry = geometry;
 
     luaA_object_push(L, c);
-    if (!AREA_EQUAL(old_geometry, geometry)) {
+    if (old_geometry != geometry) {
         luaA_object_emit_signal(L, -1, "property::geometry", 0);
     }
     if (old_geometry.x != geometry.x || old_geometry.y != geometry.y) {
@@ -2514,7 +2513,7 @@ bool client_resize(client* c, area_t geometry, bool honor_hints) {
         return false;
     }
 
-    if (!AREA_EQUAL(c->geometry, geometry)) {
+    if (c->geometry != geometry) {
         client_resize_do(c, geometry);
 
         return true;
@@ -3375,10 +3374,10 @@ static area_t titlebar_get_area(client* c, client_titlebar_t bar) {
 drawable_t* client_get_drawable_offset(client* c, int* x, int* y) {
     for (int bar = CLIENT_TITLEBAR_TOP; bar < CLIENT_TITLEBAR_COUNT; bar++) {
         area_t area = titlebar_get_area(c, (client_titlebar_t)bar);
-        if (AREA_LEFT(area) > *x || AREA_RIGHT(area) <= *x) {
+        if (area.left() > *x || area.right() <= *x) {
             continue;
         }
-        if (AREA_TOP(area) > *y || AREA_BOTTOM(area) <= *y) {
+        if (area.top() > *y || area.bottom() <= *y) {
             continue;
         }
 
@@ -3403,10 +3402,10 @@ static void client_refresh_titlebar_partial(
 
     /* Is the titlebar part of the area that should get redrawn? */
     area_t area = titlebar_get_area(c, bar);
-    if (AREA_LEFT(area) >= x + width || AREA_RIGHT(area) <= x) {
+    if (area.left() >= x + width || area.right() <= x) {
         return;
     }
-    if (AREA_TOP(area) >= y + height || AREA_BOTTOM(area) <= y) {
+    if (area.top() >= y + height || area.bottom() <= y) {
         return;
     }
 
