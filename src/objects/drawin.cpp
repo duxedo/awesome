@@ -261,7 +261,7 @@ static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
     w->geometry_dirty = true;
     drawin_update_drawing(L, udx);
 
-    if (!AREA_EQUAL(old_geometry, w->geometry)) {
+    if (old_geometry != w->geometry) {
         luaA_object_emit_signal(L, udx, "property::geometry", 0);
     }
     if (old_geometry.x != w->geometry.x) {

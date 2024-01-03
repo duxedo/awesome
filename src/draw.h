@@ -37,14 +37,14 @@ struct area_t {
     int16_t y;
     uint16_t width;
     uint16_t height;
-};
 
-#define AREA_LEFT(a) ((a).x)
-#define AREA_TOP(a) ((a).y)
-#define AREA_RIGHT(a) ((a).x + (a).width)
-#define AREA_BOTTOM(a) ((a).y + (a).height)
-#define AREA_EQUAL(a, b) \
-    ((a).x == (b).x && (a).y == (b).y && (a).width == (b).width && (a).height == (b).height)
+    bool operator<=>(const area_t &) const = default;
+
+    auto left() { return x; }
+    auto top() { return y; }
+    auto bottom() { return y + height; }
+    auto right() { return x + width; }
+};
 
 struct CairoDeleter {
     void operator()(cairo_surface_t* ptr) const { cairo_surface_destroy(ptr); }

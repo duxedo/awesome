@@ -21,8 +21,6 @@
 
 #include "awesome.h"
 
-#include "banning.h"
-#include "common/atoms.h"
 #include "common/backtrace.h"
 #include "common/version.h"
 #include "common/xutil.h"
@@ -30,40 +28,17 @@
 #include "event.h"
 #include "ewmh.h"
 #include "globalconf.h"
-#include "objects/client.h"
 #include "objects/screen.h"
 #include "options.h"
 #include "spawn.h"
 #include "systray.h"
-#include "xcbcpp/xcb.h"
 #include "xkb.h"
 #include "xwindow.h"
 
-#include <algorithm>
-#include <cassert>
-#include <cstddef>
-#include <filesystem>
-#include <getopt.h>
 #include <glib-unix.h>
-#include <iterator>
-#include <locale.h>
 #include <ranges>
-#include <signal.h>
-#include <stdio.h>
 #include <sys/time.h>
-#include <unistd.h>
 #include <uv.h>
-#include <xcb/bigreq.h>
-#include <xcb/randr.h>
-#include <xcb/shape.h>
-#include <xcb/xcb_atom.h>
-#include <xcb/xcb_aux.h>
-#include <xcb/xcb_event.h>
-#include <xcb/xcb_icccm.h>
-#include <xcb/xfixes.h>
-#include <xcb/xinerama.h>
-#include <xcb/xproto.h>
-#include <xcb/xtest.h>
 
 static Globals* gGlobals = nullptr;
 Globals& getGlobals() {
@@ -525,11 +500,6 @@ static gboolean restart_on_signal(gpointer data) {
  * \return EXIT_SUCCESS I hope.
  */
 int main(int argc, char** argv) {
-    std::vector<std::filesystem::path> searchpath;
-    int xfd;
-    xdgHandle xdg;
-    xcb_query_tree_cookie_t tree_c;
-
     /* Make stdout/stderr line buffered. */
     setvbuf(stdout, NULL, _IOLBF, 0);
     setvbuf(stderr, NULL, _IOLBF, 0);
@@ -540,19 +510,14 @@ int main(int argc, char** argv) {
     int default_init_flags =
       Options::INIT_FLAG_NONE | Options::INIT_FLAG_ARGB | Options::INIT_FLAG_AUTO_SCREEN;
 
-    /* clear the globalconf structure */
-    gGlobals = new Globals;
-    getGlobals().api_level = awesome_default_api_level();
-
     /* save argv */
     awesome_argv = argv;
-
-    // char *confpath = options_detect_shebang(argc, argv);
 
     /* if no shebang is detected, check the args. Shebang (#!) args are parsed later */
     auto opts = Options::options_check_args(argc, argv, &default_init_flags);
 
     /* Get XDG basedir data */
+    xdgHandle xdg;
     if (!xdgInitHandle(&xdg)) {
         log_fatal("Function xdgInitHandle() failed, is $HOME unset?");
     }
@@ -562,6 +527,17 @@ int main(int argc, char** argv) {
     for (; *xdgconfigdirs; xdgconfigdirs++) {
         opts.searchPaths.push_back(std::filesystem::path(*xdgconfigdirs) / "awesome");
     }
+
+    /* clear the globalconf structure */
+    gGlobals = new Globals;
+    getGlobals().api_level = opts.api_level ? opts.api_level.value() : awesome_default_api_level();
+    getGlobals().have_searchpaths = opts.have_searchpaths;
+    getGlobals().had_overriden_depth = opts.had_overriden_depth;
+
+    if(opts.no_auto_screen.has_value()) {
+        getGlobals().no_auto_screen = opts.no_auto_screen.value();
+    }
+
 
     /* Check the configfile syntax and exit */
     if (default_init_flags & Options::INIT_FLAG_RUN_TEST) {
@@ -626,6 +602,7 @@ int main(int argc, char** argv) {
     sa.sa_flags = SA_NOCLDSTOP | SA_RESTART;
     sigaction(SIGCHLD, &sa, 0);
 
+
     /* We have no clue where the input focus is right now */
     getGlobals().focus.need_update = true;
 
@@ -634,6 +611,7 @@ int main(int argc, char** argv) {
 
     /* X stuff */
     getGlobals().connection = xcb_connect(NULL, &getGlobals().default_screen);
+
     if (xcb_connection_has_error(getGlobals().connection)) {
         log_fatal("cannot open display (error {})", xcb_connection_has_error(getGlobals().connection));
     }
@@ -660,8 +638,8 @@ int main(int argc, char** argv) {
     }
 
 #ifdef WITH_XCB_ERRORS
-    if (xcb_errors_context_new(globalconf.connection, &globalconf.errors_ctx) < 0) {
-        fatal("Failed to initialize xcb-errors");
+    if (xcb_errors_context_new(getGlobals().connection, &getGlobals().errors_ctx) < 0) {
+        log_fatal("Failed to initialize xcb-errors");
     }
 #endif
 
@@ -698,7 +676,7 @@ int main(int argc, char** argv) {
     a_dbus_init();
 
     /* Get the file descriptor corresponding to the X connection */
-    xfd = xcb_get_file_descriptor(getGlobals().connection);
+    int xfd = xcb_get_file_descriptor(getGlobals().connection);
     g_unix_fd_add(xfd, G_IO_IN, a_xcb_io_cb, NULL);
 
     /* Grab server */
@@ -768,10 +746,12 @@ int main(int argc, char** argv) {
      * The window_no_focus is used for "nothing has the input focus". */
     getGlobals().focus.window_no_focus = getConnection().generate_id();
     getGlobals().gc = getConnection().generate_id();
+
     uint32_t create_window_values[] = {getGlobals().screen->black_pixel,
                                        getGlobals().screen->black_pixel,
                                        1,
                                        getGlobals().default_cmap};
+
     xcb_create_window(getGlobals().connection,
                       getGlobals().default_depth,
                       getGlobals().focus.window_no_focus,
@@ -798,7 +778,7 @@ int main(int argc, char** argv) {
                   create_gc_flags);
 
     /* Get the window tree associated to this screen */
-    tree_c = getConnection().query_tree_unckecked(getGlobals().screen->root);
+    xcb_query_tree_cookie_t tree_c = getConnection().query_tree_unckecked(getGlobals().screen->root);
 
     getConnection().change_attributes(
       getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);

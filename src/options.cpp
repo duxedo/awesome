@@ -20,6 +20,7 @@
  */
 
 #include "options.h"
+#include "config.h"
 
 #include "common/util.h"
 #include "common/version.h"
@@ -40,9 +41,9 @@
 
 namespace Options {
 
-static void set_api_level(char* value) {
+static std::optional<int> check_api_level(char* value) {
     if (!value) {
-        return;
+        return {};
     }
 
     char* ptr;
@@ -51,13 +52,13 @@ static void set_api_level(char* value) {
     /* There is no valid number at all */
     if (value == ptr) {
         fprintf(stderr, "Invalid API level %s\n", value);
-        return;
+        return {};
     }
 
     /* There is a number, but also letters, this is invalid */
     if (ptr[0] != '\0' && ptr[0] != '.') {
         fprintf(stderr, "Invalid API level %s\n", value);
-        return;
+        return {};
     }
 
     /* This API level doesn't exist, fallback to v4 */
@@ -65,7 +66,7 @@ static void set_api_level(char* value) {
         ret = 4;
     }
 
-    getGlobals().api_level = ret;
+    return ret;
 }
 
 static void push_arg(std::vector<char*>& args, char* value, size_t* len) {
@@ -443,21 +444,20 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
                 log_fatal("The possible values of -m/--screen are \"on\" or \"off\"");
             }
 
-            getGlobals().no_auto_screen = ("off"sv == optarg);
+            ret.no_auto_screen = ("off"sv == optarg);
 
             (*init_flags) &= ~INIT_FLAG_AUTO_SCREEN;
 
             break;
         case 's':
-            getGlobals().have_searchpaths = true;
             ret.searchPaths.push_back(optarg);
             break;
         case 'a':
-            getGlobals().had_overriden_depth = true;
+            ret.had_overriden_depth = true;
             (*init_flags) &= ~INIT_FLAG_ARGB;
             break;
         case 'r': (*init_flags) |= INIT_FLAG_REPLACE_WM; break;
-        case 'l': set_api_level(optarg); break;
+        case 'l': ret.api_level = check_api_level(optarg); break;
         case '\1':
             /* Silently ignore --reap and its argument */
             break;
