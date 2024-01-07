@@ -276,10 +276,7 @@ void selection_getter_class_setup(lua_State* L) {
       {    NULL,                      NULL}
     };
 
-    static const struct luaL_Reg selection_getter_metha[] = {
-      LUA_OBJECT_META(selection_getter) LUA_CLASS_META{NULL, NULL}
-    };
-
+    static constexpr auto meta = DefineObjectMethods();
     /* Store a table in the registry that tracks active getters. This code does
      * debug.getregistry(){REGISTRY_GETTER_TABLE_INDEX] = {}
      */
@@ -294,7 +291,7 @@ void selection_getter_class_setup(lua_State* L) {
                                                                  Lua::class_index_miss_property,
                                                                  Lua::class_newindex_miss_property,
                                                                  selection_getter_methods,
-                                                                 selection_getter_metha);
+                                                                 meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

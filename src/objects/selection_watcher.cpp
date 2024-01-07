@@ -176,15 +176,11 @@ struct SelectionWatcherAdapter {
 };
 
 void selection_watcher_class_setup(lua_State* L) {
-    static const struct luaL_Reg selection_watcher_methods[] = {
-      LUA_CLASS_METHODS(selection_watcher_class),
+    static constexpr auto methods = DefineClassMethods<&selection_watcher_class>({
       {"__call", luaA_selection_watcher_new},
-      {    NULL,                       NULL}
-    };
+    });
 
-    static const struct luaL_Reg selection_watcher_meta[] = {
-      LUA_OBJECT_META(selection_watcher) LUA_CLASS_META{NULL, NULL}
-    };
+    static constexpr auto meta = DefineObjectMethods();
 
     /* Reference a table in the registry that tracks active watchers. This code
      * does debug.getregistry()[REGISTRY_WATCHER_TABLE_INDEX] = {}
@@ -200,8 +196,8 @@ void selection_watcher_class_setup(lua_State* L) {
       NULL,
       Lua::class_index_miss_property,
       Lua::class_newindex_miss_property,
-      selection_watcher_methods,
-      selection_watcher_meta);
+      methods.data(),
+      meta.data());
     selection_watcher_class.add_property("active",
                                          (lua_class_propfunc_t)luaA_selection_watcher_set_active,
                                          (lua_class_propfunc_t)luaA_selection_watcher_get_active,

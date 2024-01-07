@@ -24,6 +24,8 @@
 #include "common/lualib.h"
 #include "common/luaobject.h"
 
+#include <string_view>
+
 #define CONNECTED_SUFFIX "::connected"
 
 /** Convert a object to a udata if possible.
@@ -305,6 +307,19 @@ int luaA_usemetatable(lua_State* L, int idxobj, int idxfield) {
     return 0;
 }
 
+static const lua_class_property_t* find_property(lua_class_t* lua_class,
+                                                 std::string_view prop_name) {
+    /* Look for the property in the class; if not found, go in the parent class. */
+    for (; lua_class; lua_class = lua_class->parent) {
+        Properties::iterator it = lua_class->properties.find(prop_name);
+
+        if (it != lua_class->properties.end()) {
+            return &(*it);
+        }
+    }
+    return nullptr;
+}
+
 /** Get a property of a object.
  * \param L The Lua VM state.
  * \param lua_class The Lua class.
@@ -314,18 +329,9 @@ int luaA_usemetatable(lua_State* L, int idxobj, int idxfield) {
 static const lua_class_property_t*
 luaA_class_property_get(lua_State* L, lua_class_t* lua_class, int fieldidx) {
     /* Lookup the property using token */
-    const char* attr = luaL_checkstring(L, fieldidx);
+    const auto attr = Lua::checkstring(L, fieldidx);
 
-    /* Look for the property in the class; if not found, go in the parent class. */
-    for (; lua_class; lua_class = lua_class->parent) {
-        Properties::iterator it = lua_class->properties.find(attr);
-
-        if (it != lua_class->properties.end()) {
-            return &(*it);
-        }
-    }
-
-    return NULL;
+    return attr ? find_property(lua_class, attr.value()) : nullptr;
 }
 
 /** Generic index meta function for objects.
@@ -343,6 +349,7 @@ int luaA_class_index(lua_State* L) {
     /* Is this the special 'valid' property? This is the only property
      * accessible for invalid objects and thus needs special handling. */
     auto attr = Lua::checkstring(L, 2);
+
     if (attr == "valid") {
         void* p = luaA_toudata(L, 1, cls);
         lua_pushboolean(L,
@@ -350,36 +357,37 @@ int luaA_class_index(lua_State* L) {
         return 1;
     }
 
-    auto prop = luaA_class_property_get(L, cls, 2);
+    auto pushdata = [](lua_State* L, lua_class_t* cls) {
+        luaA_checkudata(L, 1, cls);
+        Lua::getuservalue(L, 1);
+        lua_getfield(L, -1, "data");
+        return 1;
+    };
 
     /* This is the table storing the object private variables.
      */
     if (attr == "_private") {
-        luaA_checkudata(L, 1, cls);
-        Lua::getuservalue(L, 1);
-        lua_getfield(L, -1, "data");
-        return 1;
+        return pushdata(L, cls);
     } else if (attr == "data") {
         luaA_deprecate(L, "Use `._private` instead of `.data`");
-        luaA_checkudata(L, 1, cls);
-        Lua::getuservalue(L, 1);
-        lua_getfield(L, -1, "data");
-        return 1;
+        return pushdata(L, cls);
     }
 
     /* Property does exist and has an index callback */
-    if (prop) {
+    if (auto prop = find_property(cls, attr.value())) {
         if (prop->index) {
             return prop->index(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
         }
-    } else {
-        if (cls->index_miss_handler != LUA_REFNIL) {
-            return Lua::call_handler(L, cls->index_miss_handler);
-        }
-        if (cls->index_miss_property) {
-            return cls->index_miss_property(
-              L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
-        }
+        return 0;
+    }
+
+    if (cls->index_miss_handler != LUA_REFNIL) {
+        return Lua::call_handler(L, cls->index_miss_handler);
+    }
+
+    if (cls->index_miss_property) {
+        return cls->index_miss_property(
+          L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
     }
 
     return 0;
@@ -397,21 +405,20 @@ int luaA_class_newindex(lua_State* L) {
 
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
 
-    auto prop = luaA_class_property_get(L, cls, 2);
-
     /* Property does exist and has a newindex callback */
-    if (prop) {
+    if (auto prop = luaA_class_property_get(L, cls, 2)) {
         if (prop->newindex) {
             return prop->newindex(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
         }
-    } else {
-        if (cls->newindex_miss_handler != LUA_REFNIL) {
-            return Lua::call_handler(L, cls->newindex_miss_handler);
-        }
-        if (cls->newindex_miss_property) {
-            return cls->newindex_miss_property(
-              L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
-        }
+        return 0;
+    }
+
+    if (cls->newindex_miss_handler != LUA_REFNIL) {
+        return Lua::call_handler(L, cls->newindex_miss_handler);
+    }
+    if (cls->newindex_miss_property) {
+        return cls->newindex_miss_property(
+          L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
     }
 
     return 0;

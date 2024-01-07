@@ -362,14 +362,13 @@ struct SelectionTransferAdapter {
     static bool checher(selection_transfer_t* obj) { return selection_transfer_checker(obj); }
 };
 void selection_transfer_class_setup(lua_State* L) {
-    static const struct luaL_Reg selection_transfer_methods[] = {
+    static const struct luaL_Reg methods[] = {
       {NULL, NULL}
     };
 
-    static const struct luaL_Reg selection_transfer_meta[] = {
-      LUA_OBJECT_META(selection_transfer) LUA_CLASS_META{"send", luaA_selection_transfer_send},
-      {  NULL,                         NULL}
-    };
+    static constexpr auto meta = DefineObjectMethods({
+      {"send", luaA_selection_transfer_send},
+    });
 
     /* Store a table in the registry that tracks active selection_transfer_t. */
     lua_pushliteral(L, REGISTRY_TRANSFER_TABLE_INDEX);
@@ -383,8 +382,8 @@ void selection_transfer_class_setup(lua_State* L) {
       NULL,
       Lua::class_index_miss_property,
       Lua::class_newindex_miss_property,
-      selection_transfer_methods,
-      selection_transfer_meta);
+      methods,
+      meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

@@ -4254,16 +4254,14 @@ struct ClientAdapter {
 };
 
 void client_class_setup(lua_State* L) {
-    static const struct luaL_Reg client_methods[] = {
-      LUA_CLASS_METHODS(client_class),
+    static constexpr auto methods = DefineClassMethods<&client_class>({
       {       "get",             luaA_client_get},
       {   "__index",    luaA_client_module_index},
-      {"__newindex", luaA_client_module_newindex},
-      {        NULL,                        NULL}
-    };
+      {"__newindex", luaA_client_module_newindex}
+    });
 
-    static const struct luaL_Reg client_meta[] = {
-      LUA_OBJECT_META(client) LUA_CLASS_META{           "_keys",             luaA_client_keys},
+    static constexpr auto meta = DefineObjectMethods({
+      {           "_keys",             luaA_client_keys},
       {       "isvisible",        luaA_client_isvisible},
       {        "geometry",         luaA_client_geometry},
       {"apply_size_hints", luaA_client_apply_size_hints},
@@ -4277,9 +4275,8 @@ void client_class_setup(lua_State* L) {
       {  "titlebar_right",   luaA_client_titlebar_right},
       { "titlebar_bottom",  luaA_client_titlebar_bottom},
       {   "titlebar_left",    luaA_client_titlebar_left},
-      {        "get_icon",    luaA_client_get_some_icon},
-      {              NULL,                         NULL}
-    };
+      {        "get_icon",    luaA_client_get_some_icon}
+    });
 
     luaA_class_setup<client, ClientAdapter>(L,
                                             &client_class,
@@ -4287,8 +4284,8 @@ void client_class_setup(lua_State* L) {
                                             &window_class,
                                             Lua::class_index_miss_property,
                                             Lua::class_newindex_miss_property,
-                                            client_methods,
-                                            client_meta);
+                                            methods.data(),
+                                            meta.data());
     luaA_class_set_tostring(&client_class, (lua_class_propfunc_t)client_tostring);
     client_class.add_property("name",
                               (lua_class_propfunc_t)luaA_client_set_name,
