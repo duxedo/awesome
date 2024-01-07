@@ -171,18 +171,16 @@ void luaA_drawin_systray_kickout(lua_State* L) {
     drawin_systray_kickout((drawin_t*)luaA_checkudata(L, 1, &drawin_class));
 }
 
-static void drawin_wipe(drawin_t* w) {
+drawin_t::~drawin_t(){
     /* The drawin must already be unmapped, else it
      * couldn't be garbage collected -> no unmap needed */
-    w->cursor.clear();
-    if (w->window) {
+    if(window) {
         /* Make sure we don't accidentally kill the systray window */
-        drawin_systray_kickout(w);
-        xcb_destroy_window(getGlobals().connection, w->window);
-        w->window = XCB_NONE;
+        drawin_systray_kickout(this);
+        xcb_destroy_window(getGlobals().connection, window);
     }
     /* No unref needed because we are being garbage collected */
-    w->drawable = NULL;
+    drawable = NULL;
 }
 
 static void drawin_update_drawing(lua_State* L, int widx) {
@@ -712,6 +710,15 @@ static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
     return 0;
 }
 
+struct DrawinAdapter {
+    static drawin_t* allocator(lua_State* state) {
+        return drawin_allocator(state);
+    }
+    static void collector(drawin_t * obj) {
+        obj->~drawin_t();
+    }
+};
+
 void drawin_class_setup(lua_State* L) {
     static const struct luaL_Reg drawin_methods[] = {
       LUA_CLASS_METHODS(drawin_class),
@@ -725,13 +732,10 @@ void drawin_class_setup(lua_State* L) {
       {      NULL,                 NULL},
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<drawin_t, DrawinAdapter>(L,
                      &drawin_class,
                      "drawin",
                      &window_class,
-                     (lua_class_allocator_t)drawin_allocator,
-                     (lua_class_collector_t)drawin_wipe,
-                     NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,
                      drawin_methods,

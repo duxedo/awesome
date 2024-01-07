@@ -141,6 +141,15 @@ static int luaA_button_set_button(lua_State* L, button_t* b) {
     return 0;
 }
 
+struct ButtonAdapter {
+    static button_t* allocator(lua_State* state) {
+        return button_new(state);
+    }
+    static void collector(button_t * obj) {
+        obj->~button_t();
+    }
+};
+
 void button_class_setup(lua_State* L) {
     static const struct luaL_Reg button_methods[] = {
       LUA_CLASS_METHODS(button_class), {"__call", luaA_button_new},
@@ -151,12 +160,9 @@ void button_class_setup(lua_State* L) {
       LUA_OBJECT_META(button) LUA_CLASS_META{NULL, NULL}
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<button_t, ButtonAdapter>(L,
                      &button_class,
                      "button",
-                     NULL,
-                     (lua_class_allocator_t)button_new,
-                     NULL,
                      NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,

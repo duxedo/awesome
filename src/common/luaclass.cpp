@@ -151,10 +151,8 @@ static int luaA_class_gc(lua_State* L) {
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
     cls->instances--;
     /* Call the collector function of the class, and all its parent classes */
-    for (; cls; cls = cls->parent) {
-        if (cls->collector) {
-            cls->collector(item);
-        }
+    if (cls->collector) {
+        cls->collector(item);
     }
     /* Unset its metatable so that e.g. luaA_toudata() will no longer accept
      * this object. This is needed since other __gc methods can still use this.
@@ -184,7 +182,7 @@ static int luaA_class_gc(lua_State* L) {
  * \param methods The methods to set on the class table.
  * \param meta The meta-methods to set on the class objects.
  */
-void luaA_class_setup(lua_State* L,
+void internal::luaA_class_setup(lua_State* L,
                       lua_class_t* cls,
                       const char* name,
                       lua_class_t* parent,

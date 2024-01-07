@@ -309,11 +309,6 @@ void tag_unref_simplified(tag_t* tag) {
     luaA_object_unref(L, tag);
 }
 
-static void tag_wipe(tag_t* tag) {
-    tag->clients.clear();
-    tag->name.clear();
-}
-
 OBJECT_EXPORT_PROPERTY(tag, tag_t, selected)
 OBJECT_EXPORT_PROPERTY(tag, tag_t, name)
 
@@ -561,6 +556,15 @@ static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
     return 0;
 }
 
+struct TagAdapter {
+    static tag_t* allocator(lua_State* state) {
+        return tag_new(state);
+    }
+    static void collector(tag_t * obj) {
+        obj->~tag_t();
+    }
+};
+
 void tag_class_setup(lua_State* L) {
     static const struct luaL_Reg tag_methods[] = {
       LUA_CLASS_METHODS(tag_class), {"__call", luaA_tag_new},
@@ -572,12 +576,9 @@ void tag_class_setup(lua_State* L) {
       {     NULL,             NULL},
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<tag_t, TagAdapter>(L,
                      &tag_class,
                      "tag",
-                     NULL,
-                     (lua_class_allocator_t)tag_new,
-                     (lua_class_collector_t)tag_wipe,
                      NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,

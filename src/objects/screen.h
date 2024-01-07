@@ -31,8 +31,7 @@ typedef enum {
     SCREEN_LIFECYCLE_C = 0x1 << 1,   /*!< Is managed internally by C    */
 } screen_lifecycle_t;
 
-struct screen_t {
-    LUA_OBJECT_HEADER
+struct screen_t : public lua_object_t {
     bool valid;
     /** Who manages the screen lifecycle */
     screen_lifecycle_t lifecycle;
