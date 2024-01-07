@@ -25,7 +25,7 @@
 #include "objects/window.h"
 
 /** Drawin type */
-struct drawin_t : public window_t {
+struct drawin_t: public window_t {
     /** Ontop */
     bool ontop;
     /** Visible */

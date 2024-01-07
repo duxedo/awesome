@@ -74,7 +74,6 @@ static xcb_window_t window_get(window_t* window) {
     return window->window;
 }
 
-
 /** Get or set mouse buttons bindings on a window.
  * \param L The Lua VM state.
  * \return The number of elements pushed on the stack.
@@ -421,7 +420,7 @@ struct WindowAdapter {
         assert(false);
         return nullptr;
     }
-    static void collector(window_t * obj) {
+    static void collector(window_t* obj) {
         assert(false && "windows are only superclass members");
         obj->~window_t();
     }
@@ -441,13 +440,13 @@ void window_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<window_t, WindowAdapter>(L,
-                     &window_class,
-                     "window",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     window_methods,
-                     window_meta);
+                                              &window_class,
+                                              "window",
+                                              NULL,
+                                              Lua::class_index_miss_property,
+                                              Lua::class_newindex_miss_property,
+                                              window_methods,
+                                              window_meta);
 
     window_class.add_property("window", NULL, (lua_class_propfunc_t)luaA_window_get_window, NULL);
     window_class.add_property("_opacity",

@@ -1542,9 +1542,7 @@ client_set_maximized_common(lua_State* L, int cidx, bool s, const char* type, co
  * \return The number of element pushed on stack.
  */
 
-client::~client() {
-    xcb_icccm_get_wm_protocols_reply_wipe(&protocols);
-}
+client::~client() { xcb_icccm_get_wm_protocols_reply_wipe(&protocols); }
 
 /** Change the clients urgency flag.
  * \param L The Lua VM state.
@@ -4250,15 +4248,9 @@ static int luaA_client_module_newindex(lua_State* L) {
 static bool client_checker(client* c) { return c->window != XCB_NONE; }
 
 struct ClientAdapter {
-    static client* allocator(lua_State* state) {
-        return client_new(state);
-    }
-    static void collector(client * obj) {
-        obj->~client();
-    }
-    static bool checker(client * obj) {
-        return client_checker(obj);
-    }
+    static client* allocator(lua_State* state) { return client_new(state); }
+    static void collector(client* obj) { obj->~client(); }
+    static bool checker(client* obj) { return client_checker(obj); }
 };
 
 void client_class_setup(lua_State* L) {
@@ -4290,13 +4282,13 @@ void client_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<client, ClientAdapter>(L,
-                     &client_class,
-                     "client",
-                     &window_class,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     client_methods,
-                     client_meta);
+                                            &client_class,
+                                            "client",
+                                            &window_class,
+                                            Lua::class_index_miss_property,
+                                            Lua::class_newindex_miss_property,
+                                            client_methods,
+                                            client_meta);
     luaA_class_set_tostring(&client_class, (lua_class_propfunc_t)client_tostring);
     client_class.add_property("name",
                               (lua_class_propfunc_t)luaA_client_set_name,

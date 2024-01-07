@@ -142,12 +142,8 @@ static int luaA_button_set_button(lua_State* L, button_t* b) {
 }
 
 struct ButtonAdapter {
-    static button_t* allocator(lua_State* state) {
-        return button_new(state);
-    }
-    static void collector(button_t * obj) {
-        obj->~button_t();
-    }
+    static button_t* allocator(lua_State* state) { return button_new(state); }
+    static void collector(button_t* obj) { obj->~button_t(); }
 };
 
 void button_class_setup(lua_State* L) {
@@ -161,13 +157,13 @@ void button_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<button_t, ButtonAdapter>(L,
-                     &button_class,
-                     "button",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     button_methods,
-                     button_meta);
+                                              &button_class,
+                                              "button",
+                                              NULL,
+                                              Lua::class_index_miss_property,
+                                              Lua::class_newindex_miss_property,
+                                              button_methods,
+                                              button_meta);
     button_class.add_property("button",
                               (lua_class_propfunc_t)luaA_button_set_button,
                               (lua_class_propfunc_t)luaA_button_get_button,

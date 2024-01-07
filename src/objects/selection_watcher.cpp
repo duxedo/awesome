@@ -29,7 +29,7 @@
 
 #define REGISTRY_WATCHER_TABLE_INDEX "awesome_selection_watchers"
 
-struct selection_watcher_t : public lua_object_t {
+struct selection_watcher_t: public lua_object_t {
     /** Is this watcher currently active and watching? Used as reference with luaL_ref */
     int active_ref;
     /** Atom identifying the selection to watch */
@@ -171,12 +171,8 @@ static int luaA_selection_watcher_get_active(lua_State* L, selection_watcher_t* 
 }
 
 struct SelectionWatcherAdapter {
-    static selection_watcher_t* allocator(lua_State* state) {
-        return selection_watcher_new(state);
-    }
-    static void collector(selection_watcher_t * obj) {
-        obj->~selection_watcher_t();
-    }
+    static selection_watcher_t* allocator(lua_State* state) { return selection_watcher_new(state); }
+    static void collector(selection_watcher_t* obj) { obj->~selection_watcher_t(); }
 };
 
 void selection_watcher_class_setup(lua_State* L) {
@@ -197,14 +193,15 @@ void selection_watcher_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_watcher_t, SelectionWatcherAdapter>(L,
-                     &selection_watcher_class,
-                     "selection_watcher",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     selection_watcher_methods,
-                     selection_watcher_meta);
+    luaA_class_setup<selection_watcher_t, SelectionWatcherAdapter>(
+      L,
+      &selection_watcher_class,
+      "selection_watcher",
+      NULL,
+      Lua::class_index_miss_property,
+      Lua::class_newindex_miss_property,
+      selection_watcher_methods,
+      selection_watcher_meta);
     selection_watcher_class.add_property("active",
                                          (lua_class_propfunc_t)luaA_selection_watcher_set_active,
                                          (lua_class_propfunc_t)luaA_selection_watcher_get_active,
