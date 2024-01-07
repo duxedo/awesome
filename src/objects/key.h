@@ -25,7 +25,7 @@
 
 #include <xkbcommon/xkbcommon.h>
 
-struct keyb_t : public lua_object_t {
+struct keyb_t: public lua_object_t {
     /** Key modifier */
     uint16_t modifiers;
     /** Keysym */

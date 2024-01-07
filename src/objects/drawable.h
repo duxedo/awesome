@@ -27,7 +27,7 @@
 typedef void drawable_refresh_callback(void*);
 
 /** drawable type */
-struct drawable_t : public lua_object_t {
+struct drawable_t: public lua_object_t {
     /** The pixmap we are drawing to. */
     xcb_pixmap_t pixmap;
     /** Surface for drawing. */

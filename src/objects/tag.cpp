@@ -557,12 +557,8 @@ static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
 }
 
 struct TagAdapter {
-    static tag_t* allocator(lua_State* state) {
-        return tag_new(state);
-    }
-    static void collector(tag_t * obj) {
-        obj->~tag_t();
-    }
+    static tag_t* allocator(lua_State* state) { return tag_new(state); }
+    static void collector(tag_t* obj) { obj->~tag_t(); }
 };
 
 void tag_class_setup(lua_State* L) {
@@ -577,13 +573,13 @@ void tag_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<tag_t, TagAdapter>(L,
-                     &tag_class,
-                     "tag",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     tag_methods,
-                     tag_meta);
+                                        &tag_class,
+                                        "tag",
+                                        NULL,
+                                        Lua::class_index_miss_property,
+                                        Lua::class_newindex_miss_property,
+                                        tag_methods,
+                                        tag_meta);
     tag_class.add_property("name",
                            (lua_class_propfunc_t)luaA_tag_set_name,
                            (lua_class_propfunc_t)luaA_tag_get_name,
