@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "common/luaclass.h"
 #include "common/lualib.h"
+#include "common/signal.h"
 #include "config.h"
 #include "draw.h"
 #include "lauxlib.h"
@@ -36,6 +36,7 @@
 #include <vector>
 
 using Paths = std::vector<std::filesystem::path>;
+struct lua_object_t;
 
 #define luaA_deprecate(L, repl)                                                                  \
     do {                                                                                         \

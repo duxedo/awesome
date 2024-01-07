@@ -195,21 +195,39 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
         pusher(L, object->field);                                                         \
         return 1;                                                                         \
     }
+
 int luaA_object_tostring(lua_State*);
 
-#define LUA_OBJECT_META(prefix)                                                       \
-    {"__tostring", luaA_object_tostring},                                             \
-      {"connect_signal",                                                              \
-       [](lua_State* L) {                                                             \
-           luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);    \
-           return 0;                                                                  \
-       }},                                                                            \
-      {"disconnect_signal",                                                           \
-       [](lua_State* L) {                                                             \
-           luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3); \
-           return 0;                                                                  \
-       }},                                                                            \
-      {"emit_signal", [](lua_State* L) {                                              \
-           luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);  \
-           return 0;                                                                  \
-       }},
+constexpr auto LuaObjectMeta() {
+    return std::array<luaL_Reg, 4>{
+      luaL_Reg{       "__tostring",luaA_object_tostring},
+      {   "connect_signal",
+               [](lua_State* L) {
+               luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
+               return 0;
+               }     },
+      {"disconnect_signal",
+               [](lua_State* L) {
+               luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
+               return 0;
+               }     },
+      {      "emit_signal",
+               [](lua_State* L) {
+               luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);
+               return 0;
+               }     },
+    };
+}
+template <size_t N>
+constexpr auto DefineObjectMethods(luaL_Reg (&&arr)[N]) {
+    return array::join(array::join(array::join(internal::LuaClassMeta, LuaObjectMeta()), std::move(arr)),
+                       std::array{
+                         luaL_Reg{nullptr, nullptr}
+    });
+}
+constexpr auto DefineObjectMethods() {
+    return array::join(array::join(internal::LuaClassMeta, LuaObjectMeta()),
+                       std::array{
+                         luaL_Reg{nullptr, nullptr}
+    });
+}
