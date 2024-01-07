@@ -22,6 +22,7 @@
 #pragma once
 
 #include "client.h"
+#include "common/luaclass.h"
 
 #include <algorithm>
 #include <memory>
@@ -33,8 +34,7 @@ bool is_client_tagged(client*, tag_t*);
 void tag_unref_simplified(tag_t*);
 
 /** Tag type */
-struct tag_t {
-    LUA_OBJECT_HEADER
+struct tag_t : lua_object_t {
     /** Tag name */
     std::string name;
     /** true if activated */

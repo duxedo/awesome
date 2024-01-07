@@ -21,6 +21,7 @@
 
 #include "objects/selection_watcher.h"
 
+#include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
 
@@ -28,15 +29,14 @@
 
 #define REGISTRY_WATCHER_TABLE_INDEX "awesome_selection_watchers"
 
-typedef struct selection_watcher_t {
-    LUA_OBJECT_HEADER
+struct selection_watcher_t : public lua_object_t {
     /** Is this watcher currently active and watching? Used as reference with luaL_ref */
     int active_ref;
     /** Atom identifying the selection to watch */
     xcb_atom_t selection;
     /** Window used for watching */
     xcb_window_t window;
-} selection_watcher_t;
+};
 
 static lua_class_t selection_watcher_class;
 LUA_OBJECT_FUNCS(selection_watcher_class, selection_watcher_t, selection_watcher)
@@ -170,6 +170,15 @@ static int luaA_selection_watcher_get_active(lua_State* L, selection_watcher_t* 
     return 1;
 }
 
+struct SelectionWatcherAdapter {
+    static selection_watcher_t* allocator(lua_State* state) {
+        return selection_watcher_new(state);
+    }
+    static void collector(selection_watcher_t * obj) {
+        obj->~selection_watcher_t();
+    }
+};
+
 void selection_watcher_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_watcher_methods[] = {
       LUA_CLASS_METHODS(selection_watcher_class),
@@ -188,12 +197,9 @@ void selection_watcher_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(L,
+    luaA_class_setup<selection_watcher_t, SelectionWatcherAdapter>(L,
                      &selection_watcher_class,
                      "selection_watcher",
-                     NULL,
-                     (lua_class_allocator_t)selection_watcher_new,
-                     NULL,
                      NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,

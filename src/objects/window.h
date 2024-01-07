@@ -48,33 +48,30 @@ typedef enum {
     WINDOW_TYPE_DND
 } window_type_t;
 
-#define WINDOW_OBJECT_HEADER                   \
-    LUA_OBJECT_HEADER                          \
-    /** The X window number */                 \
-    xcb_window_t window;                       \
-    /** The frame window, might be XCB_NONE */ \
-    xcb_window_t frame_window;                 \
-    /** Opacity */                             \
-    double opacity;                            \
-    /** Strut */                               \
-    strut_t strut;                             \
-    /** Button bindings */                     \
-    std::vector<button_t*> buttons;            \
-    /** Do we have pending border changes? */  \
-    bool border_need_update;                   \
-    /** Border color */                        \
-    color_t border_color;                      \
-    /** Border width */                        \
-    uint16_t border_width;                     \
-    /** The window type */                     \
-    window_type_t type;                        \
-    /** The border width callback */           \
-    void (*border_width_callback)(void*, uint16_t old, uint16_t new_width);
 
 /** Window structure */
-typedef struct {
-    WINDOW_OBJECT_HEADER
-} window_t;
+struct window_t : lua_object_t {
+    /** The X window number */
+    xcb_window_t window;
+    /** The frame window, might be XCB_NONE */
+    xcb_window_t frame_window;
+    /** Opacity */
+    double opacity;
+    /** Strut */
+    strut_t strut;
+    /** Button bindings */
+    std::vector<button_t*> buttons;
+    /** Do we have pending border changes? */
+    bool border_need_update;
+    /** Border color */
+    color_t border_color;
+    /** Border width */
+    uint16_t border_width;
+    /** The window type */
+    window_type_t type;
+    /** The border width callback */
+    void (*border_width_callback)(void*, uint16_t old, uint16_t new_width);
+};
 
 extern lua_class_t window_class;
 

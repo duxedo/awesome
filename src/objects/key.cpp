@@ -307,6 +307,15 @@ static int luaA_key_set_key(lua_State* L, keyb_t* k) {
     return 0;
 }
 
+struct KeyAdapter {
+    static keyb_t* allocator(lua_State* state) {
+        return key_new(state);
+    }
+    static void collector(keyb_t * obj) {
+        obj->~keyb_t();
+    }
+};
+
 void key_class_setup(lua_State* L) {
     static const struct luaL_Reg key_methods[] = {
       LUA_CLASS_METHODS(key_class), {"__call", luaA_key_new},
@@ -317,12 +326,9 @@ void key_class_setup(lua_State* L) {
       LUA_OBJECT_META(key) LUA_CLASS_META{NULL, NULL},
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<keyb_t, KeyAdapter>(L,
                      &key_class,
                      "key",
-                     NULL,
-                     (lua_class_allocator_t)key_new,
-                     NULL,
                      NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,

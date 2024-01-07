@@ -25,16 +25,27 @@
 #include "lua.h"
 
 #include <cstddef>
+#include <fmt/core.h>
+#include <map>
 #include <string_view>
+#include <type_traits>
+#include <typeinfo>
 #include <unordered_set>
 
-#define LUA_OBJECT_HEADER Signals signals;
+template <class C>
+struct TypeIdentifier {
+    constexpr static int _id{};
+    constexpr static auto id() {
+        return &_id;
+    }
+};
+
 
 /** Generic type for all objects.
  * All Lua objects can be casted to this type.
  */
 typedef struct {
-    LUA_OBJECT_HEADER
+    Signals signals;
 } lua_object_t;
 
 typedef lua_object_t* (*lua_class_allocator_t)(lua_State*);
@@ -134,17 +145,43 @@ const char* luaA_typename(lua_State*, int);
 lua_class_t* luaA_class_get(lua_State*, int);
 
 void luaA_openlib(lua_State*, const char*, const struct luaL_Reg[], const struct luaL_Reg[]);
-void luaA_class_setup(lua_State*,
-                      lua_class_t*,
-                      const char*,
-                      lua_class_t*,
-                      lua_class_allocator_t,
-                      lua_class_collector_t,
-                      lua_class_checker_t,
-                      lua_class_propfunc_t,
-                      lua_class_propfunc_t,
-                      const struct luaL_Reg[],
-                      const struct luaL_Reg[]);
+namespace internal {
+void luaA_class_setup(lua_State* L,
+                      lua_class_t* cls,
+                      const char* name,
+                      lua_class_t* parent,
+                      lua_class_allocator_t allocator,
+                      lua_class_collector_t collector,
+                      lua_class_checker_t checker,
+                      lua_class_propfunc_t index_miss_property,
+                      lua_class_propfunc_t newindex_miss_property,
+                      const struct luaL_Reg methods[],
+                      const struct luaL_Reg meta[]);
+}
+
+template<typename ObjectT, typename ObjectAdapter>
+void luaA_class_setup(lua_State* state, lua_class_t* cls, const char * name, lua_class_t* parent,
+        lua_class_propfunc_t index_miss_property, lua_class_propfunc_t newindex_miss_property,
+                      const struct luaL_Reg methods[],
+                      const struct luaL_Reg meta[]) {
+    lua_class_allocator_t allocator = [](lua_State* state) {
+        return static_cast<lua_object_t*>(ObjectAdapter{}.allocator(state));
+    };
+    lua_class_collector_t collector = [](lua_object_t * obj) {
+        ObjectAdapter{}.collector(static_cast<ObjectT*>(obj));
+    };
+    lua_class_checker_t checker = nullptr;
+    constexpr bool hasChecker = requires(const ObjectAdapter& m) {
+        ObjectAdapter{}.checker(std::declval<ObjectT*>());
+    };
+    if constexpr (hasChecker) {
+        checker = [](lua_object_t * obj) {
+            return ObjectAdapter{}.checker(static_cast<ObjectT*>(obj));
+        };
+    }
+    internal::luaA_class_setup(state, cls, name, parent, allocator, collector, checker, index_miss_property, newindex_miss_property, methods, meta);
+}
+
 
 int luaA_usemetatable(lua_State*, int, int);
 int luaA_class_index(lua_State*);
