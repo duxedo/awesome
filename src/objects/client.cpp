@@ -1541,10 +1541,9 @@ client_set_maximized_common(lua_State* L, int cidx, bool s, const char* type, co
  * \param L The Lua VM state.
  * \return The number of element pushed on stack.
  */
-static void client_wipe(client* c) {
-    c->keys.clear();
-    xcb_icccm_get_wm_protocols_reply_wipe(&c->protocols);
-    c->~client();
+
+client::~client() {
+    xcb_icccm_get_wm_protocols_reply_wipe(&protocols);
 }
 
 /** Change the clients urgency flag.
@@ -4250,6 +4249,18 @@ static int luaA_client_module_newindex(lua_State* L) {
 
 static bool client_checker(client* c) { return c->window != XCB_NONE; }
 
+struct ClientAdapter {
+    static client* allocator(lua_State* state) {
+        return client_new(state);
+    }
+    static void collector(client * obj) {
+        obj->~client();
+    }
+    static bool checker(client * obj) {
+        return client_checker(obj);
+    }
+};
+
 void client_class_setup(lua_State* L) {
     static const struct luaL_Reg client_methods[] = {
       LUA_CLASS_METHODS(client_class),
@@ -4278,13 +4289,10 @@ void client_class_setup(lua_State* L) {
       {              NULL,                         NULL}
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<client, ClientAdapter>(L,
                      &client_class,
                      "client",
                      &window_class,
-                     (lua_class_allocator_t)client_new,
-                     (lua_class_collector_t)client_wipe,
-                     (lua_class_checker_t)client_checker,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,
                      client_methods,

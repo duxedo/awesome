@@ -94,8 +94,7 @@ typedef struct {
 } motif_wm_hints_t;
 
 /** client_t type */
-struct client {
-    WINDOW_OBJECT_HEADER
+struct client : public window_t {
     /** Window we use for input focus and no-input clients */
     xcb_window_t nofocus_window;
     /** Client logical screen */
@@ -120,6 +119,7 @@ struct client {
     std::string instance;
 
   public:
+    ~client();
     const std::string& getCls() const { return cls; }
     const std::string& getInstance() const { return instance; }
 

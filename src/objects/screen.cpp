@@ -555,8 +555,6 @@ static screen_t* screen_add(lua_State* L, std::vector<screen_t*>* screens) {
     return new_screen;
 }
 
-static void screen_wipe(screen_t* c) { c->name.clear(); }
-
 /* Monitors were introduced in RandR 1.5 */
 #ifdef XCB_RANDR_GET_MONITORS
 
@@ -1727,6 +1725,18 @@ static int luaA_screen_swap(lua_State* L) {
     return 0;
 }
 
+struct ScreenAdapter {
+    static screen_t* allocator(lua_State* state) {
+        return screen_new(state);
+    }
+    static void collector(screen_t * obj) {
+        obj->~screen_t();
+    }
+    static bool checker(screen_t * obj) {
+        return screen_checker(obj);
+    }
+};
+
 void screen_class_setup(lua_State* L) {
     static const struct luaL_Reg screen_methods[] = {
       LUA_CLASS_METHODS(screen_class),
@@ -1747,17 +1757,15 @@ void screen_class_setup(lua_State* L) {
       {         NULL,                    NULL},
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<screen_t, ScreenAdapter>(L,
                      &screen_class,
                      "screen",
                      NULL,
-                     (lua_class_allocator_t)screen_new,
-                     (lua_class_collector_t)screen_wipe,
-                     (lua_class_checker_t)screen_checker,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,
                      screen_methods,
                      screen_meta);
+
     screen_class.add_property(
       "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);
     screen_class.add_property("index", NULL, (lua_class_propfunc_t)luaA_screen_get_index, NULL);

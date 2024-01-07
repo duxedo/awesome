@@ -62,6 +62,7 @@
 #include "xwindow.h"
 
 #include <algorithm>
+#include <fmt/core.h>
 #include <span>
 
 lua_class_t window_class;
@@ -73,7 +74,6 @@ static xcb_window_t window_get(window_t* window) {
     return window->window;
 }
 
-static void window_wipe(window_t* window) { window->buttons.clear(); }
 
 /** Get or set mouse buttons bindings on a window.
  * \param L The Lua VM state.
@@ -416,6 +416,17 @@ LUA_OBJECT_EXPORT_PROPERTY(window, window_t, window, lua_pushinteger)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_color, luaA_pushcolor)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_width, lua_pushinteger)
 
+struct WindowAdapter {
+    static window_t* allocator(lua_State* state) {
+        assert(false);
+        return nullptr;
+    }
+    static void collector(window_t * obj) {
+        assert(false && "windows are only superclass members");
+        obj->~window_t();
+    }
+};
+
 void window_class_setup(lua_State* L) {
     static const struct luaL_Reg window_methods[] = {
       {NULL, NULL}
@@ -429,12 +440,9 @@ void window_class_setup(lua_State* L) {
       {           NULL,                      NULL}
     };
 
-    luaA_class_setup(L,
+    luaA_class_setup<window_t, WindowAdapter>(L,
                      &window_class,
                      "window",
-                     NULL,
-                     NULL,
-                     (lua_class_collector_t)window_wipe,
                      NULL,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,

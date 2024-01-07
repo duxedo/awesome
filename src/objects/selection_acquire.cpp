@@ -21,21 +21,21 @@
 
 #include "objects/selection_acquire.h"
 
+#include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
 #include "objects/selection_transfer.h"
 
 #define REGISTRY_ACQUIRE_TABLE_INDEX "awesome_selection_acquires"
 
-typedef struct selection_acquire_t {
-    LUA_OBJECT_HEADER
+struct selection_acquire_t : public lua_object_t{
     /** The selection that is being owned. */
     xcb_atom_t selection;
     /** Window used for owning the selection. */
     xcb_window_t window;
     /** Timestamp used for acquiring the selection. */
     xcb_timestamp_t timestamp;
-} selection_acquire_t;
+};
 
 static lua_class_t selection_acquire_class;
 LUA_OBJECT_FUNCS(selection_acquire_class, selection_acquire_t, selection_acquire)
@@ -206,6 +206,18 @@ static bool selection_acquire_checker(selection_acquire_t* selection) {
     return selection->selection != XCB_NONE;
 }
 
+struct SelectionAcquireAdapter {
+    static selection_acquire_t* allocator(lua_State* state) {
+        return selection_acquire_new(state);
+    }
+    static void collector(selection_acquire_t * obj) {
+        obj->~selection_acquire_t();
+    }
+    static bool checker(selection_acquire_t * obj) {
+        return selection_acquire_checker(obj);
+    }
+};
+
 void selection_acquire_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_acquire_methods[] = {
       {"__call", luaA_selection_acquire_new},
@@ -222,13 +234,10 @@ void selection_acquire_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(L,
+    luaA_class_setup<selection_acquire_t, SelectionAcquireAdapter>(L,
                      &selection_acquire_class,
                      "selection_acquire",
                      NULL,
-                     (lua_class_allocator_t)selection_acquire_new,
-                     NULL,
-                     (lua_class_checker_t)selection_acquire_checker,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,
                      selection_acquire_methods,

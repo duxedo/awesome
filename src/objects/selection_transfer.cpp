@@ -22,6 +22,7 @@
 #include "objects/selection_transfer.h"
 
 #include "common/atoms.h"
+#include "common/luaclass.h"
 #include "common/lualib.h"
 #include "common/luaobject.h"
 #include "common/util.h"
@@ -39,8 +40,7 @@ enum transfer_state {
     TRANSFER_DONE
 };
 
-typedef struct selection_transfer_t {
-    LUA_OBJECT_HEADER
+struct selection_transfer_t : public lua_object_t {
     /** Reference in the special table to this object */
     int ref;
     /* Information from the xcb_selection_request_event_t */
@@ -55,7 +55,7 @@ typedef struct selection_transfer_t {
     size_t offset;
     /* Can there be more data coming from Lua? */
     bool more_data;
-} selection_transfer_t;
+};
 
 static lua_class_t selection_transfer_class;
 LUA_OBJECT_FUNCS(selection_transfer_class, selection_transfer_t, selection_transfer)
@@ -354,6 +354,17 @@ static bool selection_transfer_checker(selection_transfer_t* transfer) {
     return transfer->state != TRANSFER_DONE;
 }
 
+struct SelectionTransferAdapter {
+    static selection_transfer_t* allocator(lua_State* state) {
+        return selection_transfer_new(state);
+    }
+    static void collector(selection_transfer_t * obj) {
+        obj->~selection_transfer_t();
+    }
+    static bool checher(selection_transfer_t* obj) {
+        return selection_transfer_checker(obj);
+    }
+};
 void selection_transfer_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_transfer_methods[] = {
       {NULL, NULL}
@@ -369,13 +380,10 @@ void selection_transfer_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(L,
+    luaA_class_setup<selection_transfer_t, SelectionTransferAdapter>(L,
                      &selection_transfer_class,
                      "selection_transfer",
                      NULL,
-                     (lua_class_allocator_t)selection_transfer_new,
-                     NULL,
-                     (lua_class_checker_t)selection_transfer_checker,
                      Lua::class_index_miss_property,
                      Lua::class_newindex_miss_property,
                      selection_transfer_methods,

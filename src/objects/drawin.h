@@ -25,8 +25,7 @@
 #include "objects/window.h"
 
 /** Drawin type */
-struct drawin_t {
-    WINDOW_OBJECT_HEADER
+struct drawin_t : public window_t {
     /** Ontop */
     bool ontop;
     /** Visible */
@@ -39,6 +38,8 @@ struct drawin_t {
     area_t geometry;
     /** Do we have a pending geometry change that still needs to be applied? */
     bool geometry_dirty;
+
+    ~drawin_t();
 };
 
 drawin_t* drawin_getbywin(xcb_window_t);

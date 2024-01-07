@@ -20,12 +20,12 @@
  */
 #pragma once
 
+#include "common/luaclass.h"
 #include "common/luaobject.h"
 
 #include <xkbcommon/xkbcommon.h>
 
-typedef struct keyb_t {
-    LUA_OBJECT_HEADER
+struct keyb_t : public lua_object_t {
     /** Key modifier */
     uint16_t modifiers;
     /** Keysym */
@@ -38,7 +38,7 @@ typedef struct keyb_t {
     keyb_t& operator=(keyb_t&&) = default;
     keyb_t(const keyb_t&) = delete;
     keyb_t& operator=(const keyb_t&) = delete;
-} keyb_t;
+};
 
 extern lua_class_t key_class;
 LUA_OBJECT_FUNCS(key_class, keyb_t, key)

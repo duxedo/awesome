@@ -27,8 +27,7 @@
 typedef void drawable_refresh_callback(void*);
 
 /** drawable type */
-struct drawable_t {
-    LUA_OBJECT_HEADER
+struct drawable_t : public lua_object_t {
     /** The pixmap we are drawing to. */
     xcb_pixmap_t pixmap;
     /** Surface for drawing. */
@@ -41,8 +40,9 @@ struct drawable_t {
     drawable_refresh_callback* refresh_callback;
     /** Data for refresh callback. */
     void* refresh_data;
+
+    ~drawable_t();
 };
-typedef struct drawable_t drawable_t;
 
 drawable_t* drawable_allocator(lua_State*, drawable_refresh_callback*, void*);
 void drawable_set_geometry(lua_State*, int, area_t);

@@ -47,7 +47,6 @@ using Paths = std::vector<std::filesystem::path>;
         signal_object_emit(L, &Lua::global_signals, "debug::deprecation", 1);                    \
     } while (0)
 
-static inline void free_string(char** c) { p_delete(c); }
 
 namespace Lua {
 
