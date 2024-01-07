@@ -35,6 +35,10 @@
 
 #include "button.h"
 
+#include "common/luaclass.h"
+#include "common/luaobject.h"
+#include "lauxlib.h"
+
 #include <vector>
 
 lua_class_t button_class;
@@ -147,14 +151,11 @@ struct ButtonAdapter {
 };
 
 void button_class_setup(lua_State* L) {
-    static const struct luaL_Reg button_methods[] = {
-      LUA_CLASS_METHODS(button_class), {"__call", luaA_button_new},
-       {    NULL,            NULL}
-    };
+    static constexpr auto button_methods = DefineClassMethods<&button_class>({
+      {"__call", luaA_button_new}
+    });
 
-    static const struct luaL_Reg button_meta[] = {
-      LUA_OBJECT_META(button) LUA_CLASS_META{NULL, NULL}
-    };
+    static constexpr auto button_meta = DefineObjectMethods();
 
     luaA_class_setup<button_t, ButtonAdapter>(L,
                                               &button_class,
@@ -162,8 +163,8 @@ void button_class_setup(lua_State* L) {
                                               NULL,
                                               Lua::class_index_miss_property,
                                               Lua::class_newindex_miss_property,
-                                              button_methods,
-                                              button_meta);
+                                              button_methods.data(),
+                                              button_meta.data());
     button_class.add_property("button",
                               (lua_class_propfunc_t)luaA_button_set_button,
                               (lua_class_propfunc_t)luaA_button_get_button,

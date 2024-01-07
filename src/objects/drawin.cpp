@@ -33,18 +33,22 @@
 #include "drawin.h"
 
 #include "common/atoms.h"
+#include "common/luaclass.h"
 #include "common/lualib.h"
+#include "common/luaobject.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
 #include "event.h"
 #include "ewmh.h"
 #include "globalconf.h"
+#include "lauxlib.h"
 #include "math.h"
 #include "objects/client.h"
 #include "objects/screen.h"
 #include "systray.h"
 #include "xwindow.h"
 
+#include <array>
 #include <cairo-xcb.h>
 #include <xcb/shape.h>
 
@@ -716,17 +720,14 @@ struct DrawinAdapter {
 };
 
 void drawin_class_setup(lua_State* L) {
-    static const struct luaL_Reg drawin_methods[] = {
-      LUA_CLASS_METHODS(drawin_class),
-      {   "get", luaA_drawin_get},
-      {"__call", luaA_drawin_new},
-      {    NULL,            NULL}
-    };
 
-    static const struct luaL_Reg drawin_meta[] = {
-      LUA_OBJECT_META(drawin) LUA_CLASS_META{"geometry", luaA_drawin_geometry},
-      {      NULL,                 NULL},
-    };
+    static constexpr auto methods = DefineClassMethods<&drawin_class>({
+      {   "get", luaA_drawin_get},
+      {"__call", luaA_drawin_new}
+    });
+    static constexpr auto meta = DefineObjectMethods({
+      {"geometry", luaA_drawin_geometry}
+    });
 
     luaA_class_setup<drawin_t, DrawinAdapter>(L,
                                               &drawin_class,
@@ -734,8 +735,8 @@ void drawin_class_setup(lua_State* L) {
                                               &window_class,
                                               Lua::class_index_miss_property,
                                               Lua::class_newindex_miss_property,
-                                              drawin_methods,
-                                              drawin_meta);
+                                              methods.data(),
+                                              meta.data());
     drawin_class.add_property(
       "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",

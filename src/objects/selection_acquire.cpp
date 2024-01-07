@@ -218,10 +218,9 @@ void selection_acquire_class_setup(lua_State* L) {
       {    NULL,                       NULL}
     };
 
-    static const struct luaL_Reg selection_acquire_meta[] = {
-      LUA_OBJECT_META(selection_acquire) LUA_CLASS_META{"release", luaA_selection_acquire_release},
-      {     NULL,                           NULL}
-    };
+    static constexpr auto meta = DefineObjectMethods({
+      {"release", luaA_selection_acquire_release}
+    });
 
     /* Store a table in the registry that tracks active selection_acquire_t. */
     lua_pushliteral(L, REGISTRY_ACQUIRE_TABLE_INDEX);
@@ -236,7 +235,7 @@ void selection_acquire_class_setup(lua_State* L) {
       Lua::class_index_miss_property,
       Lua::class_newindex_miss_property,
       selection_acquire_methods,
-      selection_acquire_meta);
+      meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

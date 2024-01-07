@@ -21,9 +21,13 @@
 #pragma once
 
 #include "common/luahdr.h"
+#include "common/lualib.h"
 #include "common/signal.h"
+#include "lauxlib.h"
 #include "lua.h"
+#include "luaa.h"
 
+#include <array>
 #include <cstddef>
 #include <fmt/core.h>
 #include <map>
@@ -37,13 +41,33 @@ struct TypeIdentifier {
     constexpr static int _id{};
     constexpr static auto id() { return &_id; }
 };
+namespace array {
+template <typename T, std::size_t LL, std::size_t RL>
+constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, std::array<T, RL> lhs) {
+    std::array<T, LL + RL> ar;
+
+    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
+    std::copy(lhs.begin(), lhs.end(), current);
+
+    return ar;
+}
+template <typename T, std::size_t LL, std::size_t RL>
+constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, T (&&lhs)[RL]) {
+    std::array<T, std::size(rhs) + RL> ar;
+
+    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
+    std::copy(std::begin(lhs), std::end(lhs), current);
+
+    return ar;
+}
+}
 
 /** Generic type for all objects.
  * All Lua objects can be casted to this type.
  */
-typedef struct {
+struct lua_object_t {
     Signals signals;
-} lua_object_t;
+};
 
 typedef lua_object_t* (*lua_class_allocator_t)(lua_State*);
 typedef void (*lua_class_collector_t)(lua_object_t*);
@@ -210,33 +234,54 @@ static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls
     }
     return luaA_checkudata(L, udx, cls);
 }
+namespace internal {
+template <lua_class_t* cls>
+inline constexpr auto LuaClassMethods =
+    std::array<luaL_Reg, 6>{
+      luaL_Reg{           "connect_signal",
+               [](lua_State* L) {
+               cls->connect_signal(L, *Lua::checkstring(L, 1), 2);
+               return 0;
+               }                                                                               },
+      {        "disconnect_signal",
+               [](lua_State* L) {
+               cls->disconnect_signal(L, *Lua::checkstring(L, 1), 2);
+               return 0;
+               }                                                                               },
+      {              "emit_signal",
+               [](lua_State* L) {
+               cls->emit_signal(L, *Lua::checkstring(L, 1), lua_gettop(L) - 1);
+               return 0;
+               }                                                                               },
+      {                "instances",
+               [](lua_State* L) {
+               lua_pushinteger(L, cls->instances);
+               return 0;
+               }                                                                               },
+      {   "set_index_miss_handler",
+               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->index_miss_handler); }   },
+      {"set_newindex_miss_handler",
+               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->newindex_miss_handler); }}
+    };
 
-#define LUA_CLASS_METHODS(lua_class)                                                              \
-    {"connect_signal",                                                                            \
-     [](lua_State* L) {                                                                           \
-         lua_class.connect_signal(L, *Lua::checkstring(L, 1), 2);                                 \
-         return 0;                                                                                \
-     }},                                                                                          \
-      {"disconnect_signal",                                                                       \
-       [](lua_State* L) {                                                                         \
-           lua_class.disconnect_signal(L, *Lua::checkstring(L, 1), 2);                            \
-           return 0;                                                                              \
-       }},                                                                                        \
-      {"emit_signal",                                                                             \
-       [](lua_State* L) {                                                                         \
-           lua_class.emit_signal(L, *Lua::checkstring(L, 1), lua_gettop(L) - 1);                  \
-           return 0;                                                                              \
-       }},                                                                                        \
-      {"instances",                                                                               \
-       [](lua_State* L) {                                                                         \
-           lua_pushinteger(L, (lua_class).instances);                                             \
-           return 0;                                                                              \
-       }},                                                                                        \
-      {"set_index_miss_handler",                                                                  \
-       [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).index_miss_handler); }},     \
-    {                                                                                             \
-        "set_newindex_miss_handler",                                                              \
-          [](lua_State* L) { return Lua::registerfct(L, 1, &(lua_class).newindex_miss_handler); } \
-    }
+inline constexpr auto LuaClassMeta =
+    std::array<luaL_Reg, 2>{
+      luaL_Reg{   "__index",    luaA_class_index},
+      {"__newindex", luaA_class_newindex}
+    };
+}
 
-#define LUA_CLASS_META {"__index", luaA_class_index}, {"__newindex", luaA_class_newindex},
+template <lua_class_t* cls, size_t N>
+consteval auto DefineClassMethods(luaL_Reg (&&arr)[N]) {
+    return array::join(array::join(internal::LuaClassMethods<cls>, std::move(arr)),
+                       std::array{
+                         luaL_Reg{nullptr, nullptr}
+    });
+}
+template <lua_class_t* cls>
+consteval auto DefineClassMethods() {
+    return array::join(internal::LuaClassMethods<cls>,
+                       std::array{
+                         luaL_Reg{nullptr, nullptr}
+    });
+}

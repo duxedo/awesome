@@ -29,6 +29,7 @@
 
 #include "drawable.h"
 
+#include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
 
@@ -215,15 +216,12 @@ struct DrawableAdapter {
 };
 
 void drawable_class_setup(lua_State* L) {
-    static const struct luaL_Reg drawable_methods[] = {
-      LUA_CLASS_METHODS(drawable_class), {NULL, NULL}
-    };
+    static constexpr auto methods = DefineClassMethods<&drawable_class>();
 
-    static const struct luaL_Reg drawable_meta[] = {
-      LUA_OBJECT_META(drawable) LUA_CLASS_META{ "refresh",  luaA_drawable_refresh},
+    static constexpr auto meta = DefineObjectMethods({
+      { "refresh",  luaA_drawable_refresh},
       {"geometry", luaA_drawable_geometry},
-      {      NULL,                   NULL},
-    };
+    });
 
     luaA_class_setup<drawable_t, DrawableAdapter>(L,
                                                   &drawable_class,
@@ -231,8 +229,8 @@ void drawable_class_setup(lua_State* L) {
                                                   NULL,
                                                   Lua::class_index_miss_property,
                                                   Lua::class_newindex_miss_property,
-                                                  drawable_methods,
-                                                  drawable_meta);
+                                                  methods.data(),
+                                                  meta.data());
 
     drawable_class.add_property(
       "surface", NULL, (lua_class_propfunc_t)luaA_drawable_get_surface, NULL);

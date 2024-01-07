@@ -200,6 +200,8 @@
 
 #include "banning.h"
 #include "client.h"
+#include "common/luaclass.h"
+#include "common/luaobject.h"
 #include "ewmh.h"
 #include "globalconf.h"
 #include "luaa.h"
@@ -562,15 +564,14 @@ struct TagAdapter {
 };
 
 void tag_class_setup(lua_State* L) {
-    static const struct luaL_Reg tag_methods[] = {
-      LUA_CLASS_METHODS(tag_class), {"__call", luaA_tag_new},
-       {    NULL,         NULL}
-    };
 
-    static const struct luaL_Reg tag_meta[] = {
-      LUA_OBJECT_META(tag) LUA_CLASS_META{"clients", luaA_tag_clients},
-      {     NULL,             NULL},
-    };
+    static constexpr auto methods = DefineClassMethods<&tag_class>({
+      {"__call", luaA_tag_new}
+    });
+
+    static constexpr auto meta = DefineObjectMethods({
+      {"clients", luaA_tag_clients}
+    });
 
     luaA_class_setup<tag_t, TagAdapter>(L,
                                         &tag_class,
@@ -578,8 +579,8 @@ void tag_class_setup(lua_State* L) {
                                         NULL,
                                         Lua::class_index_miss_property,
                                         Lua::class_newindex_miss_property,
-                                        tag_methods,
-                                        tag_meta);
+                                        methods.data(),
+                                        meta.data());
     tag_class.add_property("name",
                            (lua_class_propfunc_t)luaA_tag_set_name,
                            (lua_class_propfunc_t)luaA_tag_get_name,
