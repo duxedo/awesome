@@ -171,10 +171,10 @@ void luaA_drawin_systray_kickout(lua_State* L) {
     drawin_systray_kickout((drawin_t*)luaA_checkudata(L, 1, &drawin_class));
 }
 
-drawin_t::~drawin_t(){
+drawin_t::~drawin_t() {
     /* The drawin must already be unmapped, else it
      * couldn't be garbage collected -> no unmap needed */
-    if(window) {
+    if (window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(this);
         xcb_destroy_window(getGlobals().connection, window);
@@ -711,12 +711,8 @@ static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
 }
 
 struct DrawinAdapter {
-    static drawin_t* allocator(lua_State* state) {
-        return drawin_allocator(state);
-    }
-    static void collector(drawin_t * obj) {
-        obj->~drawin_t();
-    }
+    static drawin_t* allocator(lua_State* state) { return drawin_allocator(state); }
+    static void collector(drawin_t* obj) { obj->~drawin_t(); }
 };
 
 void drawin_class_setup(lua_State* L) {
@@ -733,13 +729,13 @@ void drawin_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<drawin_t, DrawinAdapter>(L,
-                     &drawin_class,
-                     "drawin",
-                     &window_class,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     drawin_methods,
-                     drawin_meta);
+                                              &drawin_class,
+                                              "drawin",
+                                              &window_class,
+                                              Lua::class_index_miss_property,
+                                              Lua::class_newindex_miss_property,
+                                              drawin_methods,
+                                              drawin_meta);
     drawin_class.add_property(
       "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",

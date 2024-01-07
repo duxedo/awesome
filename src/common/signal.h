@@ -58,7 +58,7 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
             it->second.functions.push_back(ref);
             return;
         }
-        if(it->second.functions.capacity() < it->second.functions.size() + 1) {
+        if (it->second.functions.capacity() < it->second.functions.size() + 1) {
             it->second.functions.reserve(it->second.functions.size() + 1);
         }
         it->second.functions.push_back(ref);
@@ -79,7 +79,7 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
             return false;
         }
         it->second.functions.erase(funIt);
-        if(it->second.functions.empty()) {
+        if (it->second.functions.empty()) {
             this->erase(it);
         }
         return true;

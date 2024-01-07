@@ -29,7 +29,7 @@
 #include <xcb/xcb.h>
 
 /** Mouse buttons bindings */
-struct button_t : public lua_object_t {
+struct button_t: public lua_object_t {
     /** Key modifiers */
     uint16_t modifiers;
     /** Mouse button number */
