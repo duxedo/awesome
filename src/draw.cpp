@@ -25,6 +25,7 @@
 #include "globalconf.h"
 
 #include <cairo-xcb.h>
+#include <cstdint>
 #include <ctype.h>
 #include <errno.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
@@ -35,7 +36,7 @@
 
 static cairo_user_data_key_t data_key;
 
-static inline void free_data(void* data) { p_delete(&data); }
+static inline void free_data(void* data) { free(data); }
 
 /** Create a surface object from this image data.
  * \param width The width of the image.
@@ -46,7 +47,7 @@ static inline void free_data(void* data) { p_delete(&data); }
 cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data) {
     unsigned long int len = width * height;
     unsigned long int i;
-    std::vector<uint32_t> buf(len, 0);
+    auto buf = (uint32_t*)malloc(len * sizeof(uint32_t));
     cairo_surface_t* surface;
 
     /* Cairo wants premultiplied alpha, meh :( */
@@ -60,9 +61,9 @@ cairo_surface_t* draw_surface_from_data(int width, int height, uint32_t* data) {
     }
 
     surface = cairo_image_surface_create_for_data(
-      reinterpret_cast<unsigned char*>(buf.data()), CAIRO_FORMAT_ARGB32, width, height, width * 4);
+      reinterpret_cast<unsigned char*>(buf), CAIRO_FORMAT_ARGB32, width, height, width * 4);
     /* This makes sure that buffer will be freed */
-    cairo_surface_set_user_data(surface, &data_key, buf.data(), &free_data);
+    cairo_surface_set_user_data(surface, &data_key, buf, &free_data);
 
     return surface;
 }
