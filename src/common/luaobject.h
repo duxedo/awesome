@@ -197,16 +197,19 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
     }
 int luaA_object_tostring(lua_State*);
 
-#define LUA_OBJECT_META(prefix)                                                                  \
-    {"__tostring", luaA_object_tostring}, {"connect_signal", [](lua_State* L) {\
-    luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);\
-    return 0;\
-}}, \
-      {"disconnect_signal", [](lua_State* L) {\
-    luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);\
-    return 0;\
-}},                               \
-      {"emit_signal", [](lua_State* L) {\
-    luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);\
-    return 0;\
-}},
+#define LUA_OBJECT_META(prefix)                                                       \
+    {"__tostring", luaA_object_tostring},                                             \
+      {"connect_signal",                                                              \
+       [](lua_State* L) {                                                             \
+           luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);    \
+           return 0;                                                                  \
+       }},                                                                            \
+      {"disconnect_signal",                                                           \
+       [](lua_State* L) {                                                             \
+           luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3); \
+           return 0;                                                                  \
+       }},                                                                            \
+      {"emit_signal", [](lua_State* L) {                                              \
+           luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);  \
+           return 0;                                                                  \
+       }},

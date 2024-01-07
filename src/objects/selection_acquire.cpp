@@ -28,7 +28,7 @@
 
 #define REGISTRY_ACQUIRE_TABLE_INDEX "awesome_selection_acquires"
 
-struct selection_acquire_t : public lua_object_t{
+struct selection_acquire_t: public lua_object_t {
     /** The selection that is being owned. */
     xcb_atom_t selection;
     /** Window used for owning the selection. */
@@ -207,15 +207,9 @@ static bool selection_acquire_checker(selection_acquire_t* selection) {
 }
 
 struct SelectionAcquireAdapter {
-    static selection_acquire_t* allocator(lua_State* state) {
-        return selection_acquire_new(state);
-    }
-    static void collector(selection_acquire_t * obj) {
-        obj->~selection_acquire_t();
-    }
-    static bool checker(selection_acquire_t * obj) {
-        return selection_acquire_checker(obj);
-    }
+    static selection_acquire_t* allocator(lua_State* state) { return selection_acquire_new(state); }
+    static void collector(selection_acquire_t* obj) { obj->~selection_acquire_t(); }
+    static bool checker(selection_acquire_t* obj) { return selection_acquire_checker(obj); }
 };
 
 void selection_acquire_class_setup(lua_State* L) {
@@ -234,14 +228,15 @@ void selection_acquire_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_acquire_t, SelectionAcquireAdapter>(L,
-                     &selection_acquire_class,
-                     "selection_acquire",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     selection_acquire_methods,
-                     selection_acquire_meta);
+    luaA_class_setup<selection_acquire_t, SelectionAcquireAdapter>(
+      L,
+      &selection_acquire_class,
+      "selection_acquire",
+      NULL,
+      Lua::class_index_miss_property,
+      Lua::class_newindex_miss_property,
+      selection_acquire_methods,
+      selection_acquire_meta);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

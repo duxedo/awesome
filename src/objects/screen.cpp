@@ -1726,15 +1726,9 @@ static int luaA_screen_swap(lua_State* L) {
 }
 
 struct ScreenAdapter {
-    static screen_t* allocator(lua_State* state) {
-        return screen_new(state);
-    }
-    static void collector(screen_t * obj) {
-        obj->~screen_t();
-    }
-    static bool checker(screen_t * obj) {
-        return screen_checker(obj);
-    }
+    static screen_t* allocator(lua_State* state) { return screen_new(state); }
+    static void collector(screen_t* obj) { obj->~screen_t(); }
+    static bool checker(screen_t* obj) { return screen_checker(obj); }
 };
 
 void screen_class_setup(lua_State* L) {
@@ -1758,13 +1752,13 @@ void screen_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<screen_t, ScreenAdapter>(L,
-                     &screen_class,
-                     "screen",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     screen_methods,
-                     screen_meta);
+                                              &screen_class,
+                                              "screen",
+                                              NULL,
+                                              Lua::class_index_miss_property,
+                                              Lua::class_newindex_miss_property,
+                                              screen_methods,
+                                              screen_meta);
 
     screen_class.add_property(
       "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);

@@ -126,9 +126,7 @@ static void drawable_unset_surface(drawable_t* d) {
     d->pixmap = XCB_NONE;
 }
 
-drawable_t::~drawable_t() {
-    drawable_unset_surface(this);
-}
+drawable_t::~drawable_t() { drawable_unset_surface(this); }
 
 void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     auto d = (drawable_t*)luaA_checkudata(L, didx, &drawable_class);
@@ -209,10 +207,8 @@ static int luaA_drawable_geometry(lua_State* L) {
 }
 
 struct DrawableAdapter {
-    static drawable_t* allocator(lua_State* state) {
-        return drawable_new(state);
-    }
-    static void collector(drawable_t * obj) {
+    static drawable_t* allocator(lua_State* state) { return drawable_new(state); }
+    static void collector(drawable_t* obj) {
         drawable_unset_surface(obj);
         obj->~drawable_t();
     }
@@ -230,13 +226,13 @@ void drawable_class_setup(lua_State* L) {
     };
 
     luaA_class_setup<drawable_t, DrawableAdapter>(L,
-                     &drawable_class,
-                     "drawable",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     drawable_methods,
-                     drawable_meta);
+                                                  &drawable_class,
+                                                  "drawable",
+                                                  NULL,
+                                                  Lua::class_index_miss_property,
+                                                  Lua::class_newindex_miss_property,
+                                                  drawable_methods,
+                                                  drawable_meta);
 
     drawable_class.add_property(
       "surface", NULL, (lua_class_propfunc_t)luaA_drawable_get_surface, NULL);

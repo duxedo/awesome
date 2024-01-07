@@ -47,7 +47,6 @@ using Paths = std::vector<std::filesystem::path>;
         signal_object_emit(L, &Lua::global_signals, "debug::deprecation", 1);                    \
     } while (0)
 
-
 namespace Lua {
 
 /** Print a warning about some Lua code.

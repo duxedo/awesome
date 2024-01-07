@@ -40,7 +40,7 @@ enum transfer_state {
     TRANSFER_DONE
 };
 
-struct selection_transfer_t : public lua_object_t {
+struct selection_transfer_t: public lua_object_t {
     /** Reference in the special table to this object */
     int ref;
     /* Information from the xcb_selection_request_event_t */
@@ -358,12 +358,8 @@ struct SelectionTransferAdapter {
     static selection_transfer_t* allocator(lua_State* state) {
         return selection_transfer_new(state);
     }
-    static void collector(selection_transfer_t * obj) {
-        obj->~selection_transfer_t();
-    }
-    static bool checher(selection_transfer_t* obj) {
-        return selection_transfer_checker(obj);
-    }
+    static void collector(selection_transfer_t* obj) { obj->~selection_transfer_t(); }
+    static bool checher(selection_transfer_t* obj) { return selection_transfer_checker(obj); }
 };
 void selection_transfer_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_transfer_methods[] = {
@@ -380,14 +376,15 @@ void selection_transfer_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_transfer_t, SelectionTransferAdapter>(L,
-                     &selection_transfer_class,
-                     "selection_transfer",
-                     NULL,
-                     Lua::class_index_miss_property,
-                     Lua::class_newindex_miss_property,
-                     selection_transfer_methods,
-                     selection_transfer_meta);
+    luaA_class_setup<selection_transfer_t, SelectionTransferAdapter>(
+      L,
+      &selection_transfer_class,
+      "selection_transfer",
+      NULL,
+      Lua::class_index_miss_property,
+      Lua::class_newindex_miss_property,
+      selection_transfer_methods,
+      selection_transfer_meta);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

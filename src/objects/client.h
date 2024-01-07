@@ -94,7 +94,7 @@ typedef struct {
 } motif_wm_hints_t;
 
 /** client_t type */
-struct client : public window_t {
+struct client: public window_t {
     /** Window we use for input focus and no-input clients */
     xcb_window_t nofocus_window;
     /** Client logical screen */

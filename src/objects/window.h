@@ -48,9 +48,8 @@ typedef enum {
     WINDOW_TYPE_DND
 } window_type_t;
 
-
 /** Window structure */
-struct window_t : lua_object_t {
+struct window_t: lua_object_t {
     /** The X window number */
     xcb_window_t window;
     /** The frame window, might be XCB_NONE */

@@ -183,16 +183,16 @@ static int luaA_class_gc(lua_State* L) {
  * \param meta The meta-methods to set on the class objects.
  */
 void internal::luaA_class_setup(lua_State* L,
-                      lua_class_t* cls,
-                      const char* name,
-                      lua_class_t* parent,
-                      lua_class_allocator_t allocator,
-                      lua_class_collector_t collector,
-                      lua_class_checker_t checker,
-                      lua_class_propfunc_t index_miss_property,
-                      lua_class_propfunc_t newindex_miss_property,
-                      const struct luaL_Reg methods[],
-                      const struct luaL_Reg meta[]) {
+                                lua_class_t* cls,
+                                const char* name,
+                                lua_class_t* parent,
+                                lua_class_allocator_t allocator,
+                                lua_class_collector_t collector,
+                                lua_class_checker_t checker,
+                                lua_class_propfunc_t index_miss_property,
+                                lua_class_propfunc_t newindex_miss_property,
+                                const struct luaL_Reg methods[],
+                                const struct luaL_Reg meta[]) {
     /* Create the object metatable */
     lua_newtable(L);
     /* Register it with class pointer as key in the registry
