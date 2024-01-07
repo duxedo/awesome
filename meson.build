@@ -77,6 +77,10 @@ srcs = [
     'src/objects/selection_getter.cpp',
     'src/objects/window.cpp'
 ]
+add_project_arguments('-Werror', language : 'c')
+add_project_arguments('-Wunused', language : 'c')
+add_project_arguments('-Werror', language : 'cpp')
+add_project_arguments('-Wunused', language : 'cpp')
 
 include_dir = [
     'src',
