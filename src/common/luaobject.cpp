@@ -290,21 +290,6 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
     luaA_class_get(L, -nargs - 1)->emit_signal(L, name, nargs + 1);
 }
 
-int luaA_object_connect_signal_simple(lua_State* L) {
-    luaA_object_connect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
-    return 0;
-}
-
-int luaA_object_disconnect_signal_simple(lua_State* L) {
-    luaA_object_disconnect_signal_from_stack(L, 1, luaL_checkstring(L, 2), 3);
-    return 0;
-}
-
-int luaA_object_emit_signal_simple(lua_State* L) {
-    luaA_object_emit_signal(L, 1, luaL_checkstring(L, 2), lua_gettop(L) - 2);
-    return 0;
-}
-
 int luaA_object_tostring(lua_State* L) {
     lua_class_t* lua_class = luaA_class_get(L, 1);
     lua_object_t* object = reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, lua_class));
