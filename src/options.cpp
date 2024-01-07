@@ -237,84 +237,33 @@ bool options_init_config(
                 break;
             case ' ':
             case '\t':
+            case ':': push_arg(argv, key_buf, &pos); state = MODELINE_STATE_KEY_DELIM;
+            }
+            break;
+        case MODELINE_STATE_VALUE_DELIM:
+            switch (c) {
+            case ' ':
+            case '\t': break;
+            case '\n':
+            case '\r': state = MODELINE_STATE_ERROR; break;
+            case ':': state = MODELINE_STATE_KEY_DELIM; break;
+            default: state = MODELINE_STATE_VALUE; key_buf[pos++] = c;
+            }
+            break;
+        case MODELINE_STATE_VALUE:
+            switch (c) {
+            case ',':
+            case ' ':
             case ':':
+            case '\t':
                 push_arg(argv, key_buf, &pos);
                 state = MODELINE_STATE_KEY_DELIM;
                 break;
-            case MODELINE_STATE_KEY_DELIM:
-                switch (c) {
-                    case ' ': case '\t': case ':': case '=':
-                        break;
-                    case '\n': case '\r':
-                        state = MODELINE_STATE_ERROR;
-                        break;
-                    default:
-                        /* In modeline mode, assume all keys are the long name */
-                        switch(mode) {
-                            case MODELINE_MODE_LINE:
-                                strcpy(key_buf, "--");
-                                pos = 2;
-                                break;
-                            case MODELINE_MODE_SHEBANG:
-                            case MODELINE_MODE_NONE:
-                                break;
-                        };
-                        state = MODELINE_STATE_KEY;
-                        key_buf[pos++] = c;
-                }
-                break;
-            case MODELINE_STATE_KEY:
-                switch (c) {
-                    case '=':
-                        push_arg(argv, key_buf, &pos);
-                        state = MODELINE_STATE_VALUE_DELIM;
-                        break;
-                    case ' ': case '\t': case ':':
-                        push_arg(argv, key_buf, &pos);
-                        state = MODELINE_STATE_KEY_DELIM;
-                        break;
-                    default:
-                        key_buf[pos++] = c;
-                }
-                break;
-            case MODELINE_STATE_VALUE_DELIM:
-                switch (c) {
-                    case ' ': case '\t':
-                        break;
-                    case '\n': case '\r':
-                        state = MODELINE_STATE_ERROR;
-                        break;
-                    case ':':
-                        state = MODELINE_STATE_KEY_DELIM;
-                        break;
-                    default:
-                        state = MODELINE_STATE_VALUE;
-                        key_buf[pos++] = c;
-                }
-                break;
-            case MODELINE_STATE_VALUE:
-                switch(c) {
-                    case ',': case ' ': case ':': case '\t':
-                        push_arg(argv, key_buf, &pos);
-                        state = MODELINE_STATE_KEY_DELIM;
-                        break;
-                    case '\n': case '\r':
-                        push_arg(&argv, key_buf, &pos);
-                        state = MODELINE_STATE_COMPLETE;
-                        break;
-                    default:
-                        key_buf[pos++] = c;
-                }
-                break;
-            case MODELINE_STATE_INVALID:
-                /* This cannot happen, the `if` below should prevent it */
-                state = MODELINE_STATE_ERROR;
-                break;
-            case MODELINE_STATE_COMPLETE:
-            case MODELINE_STATE_ERROR:
-                break;
             case '\n':
-            case '\r': state = MODELINE_STATE_COMPLETE; break;
+            case '\r':
+                push_arg(argv, key_buf, &pos);
+                state = MODELINE_STATE_COMPLETE;
+                break;
             default: key_buf[pos++] = c;
             }
             break;
