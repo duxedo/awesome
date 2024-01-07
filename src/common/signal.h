@@ -40,7 +40,7 @@ struct SignalEq {
     using is_transparent = void;
     size_t operator()(const std::string& s, const std::string& r) const { return s == r; }
     size_t operator()(const std::string_view& s, const std::string& r) const { return s == r; }
-    size_t operator()(const char* s, const std::string& r) const { return r == s; }
+    size_t operator()(const char* s, const std::string& r) const { return r == (s ? s : ""); }
 };
 
 struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, SignalEq> {
@@ -57,6 +57,9 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
             auto [it, done] = this->try_emplace(nm, signal_t{});
             it->second.functions.push_back(ref);
             return;
+        }
+        if(it->second.functions.capacity() < it->second.functions.size() + 1) {
+            it->second.functions.reserve(it->second.functions.size() + 1);
         }
         it->second.functions.push_back(ref);
     }
@@ -76,6 +79,9 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
             return false;
         }
         it->second.functions.erase(funIt);
+        if(it->second.functions.empty()) {
+            this->erase(it);
+        }
         return true;
     }
 };
