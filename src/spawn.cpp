@@ -226,6 +226,7 @@ void spawn_start_notify(client* c, const char* startup_id) {
             found = true;
         } else {
             const char* seqclass = sn_startup_sequence_get_wmclass(seq);
+            seqclass = seqclass ? seqclass : "";
             if (c->getCls() == seqclass || c->getInstance() == seqclass) {
                 found = true;
             } else {
