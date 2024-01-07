@@ -48,6 +48,7 @@
 
 #include "banning.h"
 #include "common/lualib.h"
+#include "common/luaobject.h"
 #include "event.h"
 #include "globalconf.h"
 #include "lua.h"
@@ -1732,24 +1733,21 @@ struct ScreenAdapter {
 };
 
 void screen_class_setup(lua_State* L) {
-    static const struct luaL_Reg screen_methods[] = {
-      LUA_CLASS_METHODS(screen_class),
+    static constexpr auto methods = DefineClassMethods<&screen_class>({
       {      "count",           luaA_screen_count},
       { "_viewports",              luaA_viewports},
       {"_scan_quiet",             luaA_scan_quiet},
       {    "__index",    luaA_screen_module_index},
       { "__newindex", luaA_screen_module_newindex},
       {     "__call",     luaA_screen_module_call},
-      {   "fake_add",        luaA_screen_fake_add},
-      {         NULL,                        NULL}
-    };
+      {   "fake_add",        luaA_screen_fake_add}
+    });
 
-    static const struct luaL_Reg screen_meta[] = {
-      LUA_OBJECT_META(screen) LUA_CLASS_META{"fake_remove", luaA_screen_fake_remove},
+    static constexpr auto meta = DefineObjectMethods({
+      {"fake_remove", luaA_screen_fake_remove},
       {"fake_resize", luaA_screen_fake_resize},
       {       "swap",        luaA_screen_swap},
-      {         NULL,                    NULL},
-    };
+    });
 
     luaA_class_setup<screen_t, ScreenAdapter>(L,
                                               &screen_class,
@@ -1757,8 +1755,8 @@ void screen_class_setup(lua_State* L) {
                                               NULL,
                                               Lua::class_index_miss_property,
                                               Lua::class_newindex_miss_property,
-                                              screen_methods,
-                                              screen_meta);
+                                              methods.data(),
+                                              meta.data());
 
     screen_class.add_property(
       "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);

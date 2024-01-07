@@ -36,7 +36,9 @@
 
 #include "objects/key.h"
 
+#include "common/luaclass.h"
 #include "common/lualib.h"
+#include "common/luaobject.h"
 #include "common/xutil.h"
 #include "xkb.h"
 
@@ -313,14 +315,11 @@ struct KeyAdapter {
 };
 
 void key_class_setup(lua_State* L) {
-    static const struct luaL_Reg key_methods[] = {
-      LUA_CLASS_METHODS(key_class), {"__call", luaA_key_new},
-       {    NULL,         NULL}
-    };
+    static constexpr auto methods = DefineClassMethods<&key_class>({
+      {"__call", luaA_key_new}
+    });
 
-    static const struct luaL_Reg key_meta[] = {
-      LUA_OBJECT_META(key) LUA_CLASS_META{NULL, NULL},
-    };
+    static constexpr auto meta = DefineObjectMethods();
 
     luaA_class_setup<keyb_t, KeyAdapter>(L,
                                          &key_class,
@@ -328,8 +327,8 @@ void key_class_setup(lua_State* L) {
                                          NULL,
                                          Lua::class_index_miss_property,
                                          Lua::class_newindex_miss_property,
-                                         key_methods,
-                                         key_meta);
+                                         methods.data(),
+                                         meta.data());
     key_class.add_property("key",
                            (lua_class_propfunc_t)luaA_key_set_key,
                            (lua_class_propfunc_t)luaA_key_get_key,
