@@ -41,7 +41,14 @@
 
 #include <vector>
 
-lua_class_t button_class;
+lua_class_t button_class{
+  "button",
+  NULL,
+  {[](auto* state) { return static_cast<lua_object_t*>(button_new(state)); },
+    destroyObject<button_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property}
+};
 
 /** Button object.
  *
@@ -88,7 +95,7 @@ lua_class_t button_class;
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int luaA_button_new(lua_State* L) { return luaA_class_new(L, &button_class); }
+static int luaA_button_new(lua_State* L) { return button_class.new_object(L); }
 
 /** Set a button array with a Lua table.
  * \param L The Lua VM state.
@@ -152,17 +159,7 @@ void button_class_setup(lua_State* L) {
 
     static constexpr auto button_meta = DefineObjectMethods();
 
-    luaA_class_setup(L,
-                     &button_class,
-                     "button",
-                     NULL,
-                     {[](auto* state) { return static_cast<lua_object_t*>(button_new(state)); },
-                      destroyObject<button_t>,
-                      nullptr,
-                      Lua::class_index_miss_property,
-                      Lua::class_newindex_miss_property},
-                     button_methods.data(),
-                     button_meta.data());
+    button_class.setup(L, button_methods.data(), button_meta.data());
 
     button_class.add_property(
       {"button", button_set_button, luaA_button_get_button, button_set_button});

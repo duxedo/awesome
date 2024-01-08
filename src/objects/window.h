@@ -72,8 +72,6 @@ struct window_t: lua_object_t {
     void (*border_width_callback)(void*, uint16_t old, uint16_t new_width);
 };
 
-extern lua_class_t window_class;
-
 void window_class_setup(lua_State*);
 
 void window_set_opacity(lua_State*, int, double);

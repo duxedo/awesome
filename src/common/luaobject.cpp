@@ -255,7 +255,7 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
     if (!obj) {
         Lua::warn(L, "Trying to emit signal '%s' on non-object", name);
         return;
-    } else if (lua_class->checker && !lua_class->checker(obj)) {
+    } else if (!lua_class->check(obj)) {
         Lua::warn(L, "Trying to emit signal '%s' on invalid object", name);
         return;
     }
@@ -295,15 +295,15 @@ int luaA_object_tostring(lua_State* L) {
     lua_object_t* object = reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, lua_class));
     int offset = 0;
 
-    for (; lua_class; lua_class = lua_class->parent) {
+    for (; lua_class; lua_class = lua_class->parent()) {
         if (offset) {
             lua_pushliteral(L, "/");
             lua_insert(L, -++offset);
         }
-        Lua::pushstring(L, lua_class->name);
+        Lua::pushstring(L, lua_class->name());
         lua_insert(L, -++offset);
 
-        if (lua_class->tostring) {
+        if (lua_class->has_tostring()) {
             int k, n;
 
             lua_pushliteral(L, "(");

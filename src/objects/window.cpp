@@ -66,7 +66,18 @@
 #include <fmt/core.h>
 #include <span>
 
-lua_class_t window_class;
+lua_class_t window_class{
+  "window",
+  nullptr,
+  {
+    [](auto* state) -> lua_object_t* {
+    assert(false);
+    return nullptr;
+    }, [](auto* obj) { assert(false); },
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property,
+    }
+};
 
 static xcb_window_t window_get(window_t* window) {
     if (window->frame_window != XCB_NONE) {
@@ -429,22 +440,7 @@ void window_class_setup(lua_State* L) {
       {           NULL,                      NULL}
     };
 
-    luaA_class_setup(L,
-                     &window_class,
-                     "window",
-                     NULL,
-                     {
-                       [](auto* state) -> lua_object_t* {
-                           assert(false);
-                           return nullptr;
-                       },
-                       [](auto* obj) { assert(false); },
-                       nullptr,
-                       Lua::class_index_miss_property,
-                       Lua::class_newindex_miss_property,
-                     },
-                     window_methods,
-                     window_meta);
+    window_class.setup(L, window_methods, window_meta);
 
     window_class.add_property("window", NULL, (lua_class_propfunc_t)luaA_window_get_window, NULL);
     window_class.add_property("_opacity",

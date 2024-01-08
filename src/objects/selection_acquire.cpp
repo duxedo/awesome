@@ -24,6 +24,7 @@
 #include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
+#include "lua.h"
 #include "objects/selection_transfer.h"
 
 #define REGISTRY_ACQUIRE_TABLE_INDEX "awesome_selection_acquires"
@@ -37,7 +38,24 @@ struct selection_acquire_t: public lua_object_t {
     xcb_timestamp_t timestamp;
 };
 
-static lua_class_t selection_acquire_class;
+static bool selection_acquire_checker(selection_acquire_t* selection) {
+    return selection->selection != XCB_NONE;
+}
+
+static inline selection_acquire_t* selection_acquire_new(lua_State*);
+
+static lua_class_t selection_acquire_class{
+  "selection_acquire",
+  NULL,
+  {
+    [](auto* state) { return static_cast<lua_object_t*>(selection_acquire_new(state)); },
+    destroyObject<selection_acquire_t>,
+    [](auto* obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
+    Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property,
+    }
+};
+
 LUA_OBJECT_FUNCS(selection_acquire_class, selection_acquire_t, selection_acquire)
 
 static void luaA_pushatom(lua_State* L, xcb_atom_t atom) { lua_pushnumber(L, atom); }
@@ -141,7 +159,7 @@ static int luaA_selection_acquire_new(lua_State* L) {
     p_delete(&reply);
 
     /* Create a selection object */
-    selection = (selection_acquire_t*)selection_acquire_class.allocator(L);
+    selection = (selection_acquire_t*)selection_acquire_class.alloc_object(L);
     selection->selection = name_atom;
     selection->timestamp = getGlobals().get_timestamp();
     selection->window = getConnection().generate_id();
@@ -202,10 +220,6 @@ static int luaA_selection_acquire_release(lua_State* L) {
     return 0;
 }
 
-static bool selection_acquire_checker(selection_acquire_t* selection) {
-    return selection->selection != XCB_NONE;
-}
-
 void selection_acquire_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_acquire_methods[] = {
       {"__call", luaA_selection_acquire_new},
@@ -221,20 +235,7 @@ void selection_acquire_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(
-      L,
-      &selection_acquire_class,
-      "selection_acquire",
-      NULL,
-      {
-      [](auto * state) { return static_cast<lua_object_t*>(selection_acquire_new(state)); },
-      destroyObject<selection_acquire_t>,
-      [](auto * obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
-      Lua::class_index_miss_property,
-      Lua::class_newindex_miss_property,
-      },
-      selection_acquire_methods,
-      meta.data());
+    selection_acquire_class.setup(L, selection_acquire_methods, meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
