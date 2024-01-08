@@ -151,7 +151,7 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
     static inline type* prefix##_new(lua_State* L) {  \
         void* mem = lua_newuserdata(L, sizeof(type)); \
         auto p = new (mem) type{};                    \
-        (lua_class).instances++;                      \
+        (lua_class).ref();                            \
         luaA_settype(L, &(lua_class));                \
         lua_newtable(L);                              \
         lua_newtable(L);                              \

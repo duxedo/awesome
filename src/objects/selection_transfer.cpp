@@ -27,6 +27,7 @@
 #include "common/luaobject.h"
 #include "common/util.h"
 #include "globalconf.h"
+#include "lua.h"
 
 #include <cstdint>
 
@@ -57,7 +58,24 @@ struct selection_transfer_t: public lua_object_t {
     bool more_data;
 };
 
-static lua_class_t selection_transfer_class;
+static inline selection_transfer_t* selection_transfer_new(lua_State*);
+
+static bool selection_transfer_checker(selection_transfer_t* transfer) {
+    return transfer->state != TRANSFER_DONE;
+}
+
+static lua_class_t selection_transfer_class{
+  "selection_transfer",
+  NULL,
+  {
+    [](auto* state) { return static_cast<lua_object_t*>(selection_transfer_new(state)); },
+    destroyObject<selection_transfer_t>,
+    [](auto* obj) { return selection_transfer_checker(static_cast<selection_transfer_t*>(obj)); },
+    Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property,
+    }
+};
+
 LUA_OBJECT_FUNCS(selection_transfer_class, selection_transfer_t, selection_transfer)
 
 static size_t max_property_length(void) {
@@ -155,7 +173,7 @@ void selection_transfer_begin(lua_State* L,
     ud = Lua::absindex(L, ud);
 
     /* Allocate a transfer object */
-    auto transfer = (selection_transfer_t*)selection_transfer_class.allocator(L);
+    auto transfer = (selection_transfer_t*)selection_transfer_class.alloc_object(L);
     transfer->requestor = requestor;
     transfer->selection = selection;
     transfer->target = target;
@@ -350,10 +368,6 @@ void selection_transfer_handle_propertynotify(xcb_property_notify_event_t* ev) {
     lua_pop(L, 1);
 }
 
-static bool selection_transfer_checker(selection_transfer_t* transfer) {
-    return transfer->state != TRANSFER_DONE;
-}
-
 void selection_transfer_class_setup(lua_State* L) {
     static const struct luaL_Reg methods[] = {
       {NULL, NULL}
@@ -368,22 +382,7 @@ void selection_transfer_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(
-      L,
-      &selection_transfer_class,
-      "selection_transfer",
-      NULL,
-      {
-        [](auto* state) { return static_cast<lua_object_t*>(selection_transfer_new(state)); },
-        destroyObject<selection_transfer_t>,
-        [](auto* obj) {
-            return selection_transfer_checker(static_cast<selection_transfer_t*>(obj));
-        },
-        Lua::class_index_miss_property,
-        Lua::class_newindex_miss_property,
-      },
-      methods,
-      meta.data());
+    selection_transfer_class.setup(L, methods, meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
