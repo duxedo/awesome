@@ -42,6 +42,7 @@
 #include "ewmh.h"
 #include "globalconf.h"
 #include "lauxlib.h"
+#include "lua.h"
 #include "math.h"
 #include "objects/client.h"
 #include "objects/screen.h"
@@ -714,11 +715,6 @@ static int luaA_drawin_set_shape_input(lua_State* L, drawin_t* drawin) {
     return 0;
 }
 
-struct DrawinAdapter {
-    static drawin_t* allocator(lua_State* state) { return drawin_allocator(state); }
-    static void collector(drawin_t* obj) { obj->~drawin_t(); }
-};
-
 void drawin_class_setup(lua_State* L) {
 
     static constexpr auto methods = DefineClassMethods<&drawin_class>({
@@ -729,14 +725,19 @@ void drawin_class_setup(lua_State* L) {
       {"geometry", luaA_drawin_geometry}
     });
 
-    luaA_class_setup<drawin_t, DrawinAdapter>(L,
-                                              &drawin_class,
-                                              "drawin",
-                                              &window_class,
-                                              Lua::class_index_miss_property,
-                                              Lua::class_newindex_miss_property,
-                                              methods.data(),
-                                              meta.data());
+    luaA_class_setup(L,
+                     &drawin_class,
+                     "drawin",
+                     &window_class,
+                     {
+                       [](lua_State* s) { return static_cast<lua_object_t*>(drawin_allocator(s)); },
+                       destroyObject<drawin_t>,
+                       nullptr,
+                       Lua::class_index_miss_property,
+                       Lua::class_newindex_miss_property,
+                     },
+                     methods.data(),
+                     meta.data());
     drawin_class.add_property(
       "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",
