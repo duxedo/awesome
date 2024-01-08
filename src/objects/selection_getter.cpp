@@ -265,11 +265,6 @@ void event_handle_selectionnotify(xcb_selection_notify_event_t* ev) {
     lua_pop(L, 1);
 }
 
-struct SelectionGetterAdapter {
-    static selection_getter_t* allocator(lua_State* state) { return selection_getter_new(state); }
-    static void collector(selection_getter_t* obj) { obj->~selection_getter_t(); }
-};
-
 void selection_getter_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_getter_methods[] = {
       {"__call", luaA_selection_getter_new},
@@ -284,14 +279,18 @@ void selection_getter_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_getter_t, SelectionGetterAdapter>(L,
-                                                                 &selection_getter_class,
-                                                                 "selection_getter",
-                                                                 NULL,
-                                                                 Lua::class_index_miss_property,
-                                                                 Lua::class_newindex_miss_property,
-                                                                 selection_getter_methods,
-                                                                 meta.data());
+    luaA_class_setup(
+      L,
+      &selection_getter_class,
+      "selection_getter",
+      NULL,
+      {[](auto* state) { return static_cast<lua_object_t*>(selection_getter_new(state)); },
+       destroyObject<selection_getter_t>,
+       nullptr,
+       Lua::class_index_miss_property,
+       Lua::class_newindex_miss_property},
+      selection_getter_methods,
+      meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

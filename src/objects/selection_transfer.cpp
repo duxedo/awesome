@@ -354,13 +354,6 @@ static bool selection_transfer_checker(selection_transfer_t* transfer) {
     return transfer->state != TRANSFER_DONE;
 }
 
-struct SelectionTransferAdapter {
-    static selection_transfer_t* allocator(lua_State* state) {
-        return selection_transfer_new(state);
-    }
-    static void collector(selection_transfer_t* obj) { obj->~selection_transfer_t(); }
-    static bool checher(selection_transfer_t* obj) { return selection_transfer_checker(obj); }
-};
 void selection_transfer_class_setup(lua_State* L) {
     static const struct luaL_Reg methods[] = {
       {NULL, NULL}
@@ -375,13 +368,20 @@ void selection_transfer_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_transfer_t, SelectionTransferAdapter>(
+    luaA_class_setup(
       L,
       &selection_transfer_class,
       "selection_transfer",
       NULL,
-      Lua::class_index_miss_property,
-      Lua::class_newindex_miss_property,
+      {
+        [](auto* state) { return static_cast<lua_object_t*>(selection_transfer_new(state)); },
+        destroyObject<selection_transfer_t>,
+        [](auto* obj) {
+            return selection_transfer_checker(static_cast<selection_transfer_t*>(obj));
+        },
+        Lua::class_index_miss_property,
+        Lua::class_newindex_miss_property,
+      },
       methods,
       meta.data());
 }

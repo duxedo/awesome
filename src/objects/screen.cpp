@@ -47,11 +47,13 @@
 #include "objects/screen.h"
 
 #include "banning.h"
+#include "common/luaclass.h"
 #include "common/lualib.h"
 #include "common/luaobject.h"
 #include "event.h"
 #include "globalconf.h"
 #include "lua.h"
+#include "luaa.h"
 #include "luaconf.h"
 #include "objects/client.h"
 #include "objects/drawin.h"
@@ -1726,12 +1728,6 @@ static int luaA_screen_swap(lua_State* L) {
     return 0;
 }
 
-struct ScreenAdapter {
-    static screen_t* allocator(lua_State* state) { return screen_new(state); }
-    static void collector(screen_t* obj) { obj->~screen_t(); }
-    static bool checker(screen_t* obj) { return screen_checker(obj); }
-};
-
 void screen_class_setup(lua_State* L) {
     static constexpr auto methods = DefineClassMethods<&screen_class>({
       {      "count",           luaA_screen_count},
@@ -1749,14 +1745,17 @@ void screen_class_setup(lua_State* L) {
       {       "swap",        luaA_screen_swap},
     });
 
-    luaA_class_setup<screen_t, ScreenAdapter>(L,
-                                              &screen_class,
-                                              "screen",
-                                              NULL,
-                                              Lua::class_index_miss_property,
-                                              Lua::class_newindex_miss_property,
-                                              methods.data(),
-                                              meta.data());
+    luaA_class_setup(L,
+                     &screen_class,
+                     "screen",
+                     NULL,
+                     {[](auto* state) -> lua_object_t* { return screen_new(state); },
+                      destroyObject<screen_t>,
+                      [](auto* obj) { return screen_checker(static_cast<screen_t*>(obj)); },
+                      Lua::class_index_miss_property,
+                      Lua::class_newindex_miss_property},
+                     methods.data(),
+                     meta.data());
 
     screen_class.add_property(
       "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);

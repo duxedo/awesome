@@ -558,11 +558,6 @@ static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
     return 0;
 }
 
-struct TagAdapter {
-    static tag_t* allocator(lua_State* state) { return tag_new(state); }
-    static void collector(tag_t* obj) { obj->~tag_t(); }
-};
-
 void tag_class_setup(lua_State* L) {
 
     static constexpr auto methods = DefineClassMethods<&tag_class>({
@@ -573,14 +568,17 @@ void tag_class_setup(lua_State* L) {
       {"clients", luaA_tag_clients}
     });
 
-    luaA_class_setup<tag_t, TagAdapter>(L,
-                                        &tag_class,
-                                        "tag",
-                                        NULL,
-                                        Lua::class_index_miss_property,
-                                        Lua::class_newindex_miss_property,
-                                        methods.data(),
-                                        meta.data());
+    luaA_class_setup(L,
+                     &tag_class,
+                     "tag",
+                     NULL,
+                     {[](auto* state) -> lua_object_t* { return tag_new(state); },
+                      destroyObject<tag_t>,
+                      nullptr,
+                      Lua::class_index_miss_property,
+                      Lua::class_newindex_miss_property},
+                     methods.data(),
+                     meta.data());
     tag_class.add_property("name",
                            (lua_class_propfunc_t)luaA_tag_set_name,
                            (lua_class_propfunc_t)luaA_tag_get_name,

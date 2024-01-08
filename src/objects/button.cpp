@@ -133,22 +133,17 @@ int luaA_button_array_get(lua_State* L, int oidx, const std::vector<button_t*>& 
 LUA_OBJECT_EXPORT_PROPERTY(button, button_t, button, lua_pushinteger);
 LUA_OBJECT_EXPORT_PROPERTY(button, button_t, modifiers, luaA_pushmodifiers);
 
-static int luaA_button_set_modifiers(lua_State* L, button_t* b) {
+static int button_set_modifiers(lua_State* L, button_t* b) {
     b->modifiers = luaA_tomodifiers(L, -1);
     luaA_object_emit_signal(L, -3, "property::modifiers", 0);
     return 0;
 }
 
-static int luaA_button_set_button(lua_State* L, button_t* b) {
+static int button_set_button(lua_State* L, button_t* b) {
     b->button = luaL_checkinteger(L, -1);
     luaA_object_emit_signal(L, -3, "property::button", 0);
     return 0;
 }
-
-struct ButtonAdapter {
-    static button_t* allocator(lua_State* state) { return button_new(state); }
-    static void collector(button_t* obj) { obj->~button_t(); }
-};
 
 void button_class_setup(lua_State* L) {
     static constexpr auto button_methods = DefineClassMethods<&button_class>({
@@ -157,22 +152,22 @@ void button_class_setup(lua_State* L) {
 
     static constexpr auto button_meta = DefineObjectMethods();
 
-    luaA_class_setup<button_t, ButtonAdapter>(L,
-                                              &button_class,
-                                              "button",
-                                              NULL,
-                                              Lua::class_index_miss_property,
-                                              Lua::class_newindex_miss_property,
-                                              button_methods.data(),
-                                              button_meta.data());
-    button_class.add_property("button",
-                              (lua_class_propfunc_t)luaA_button_set_button,
-                              (lua_class_propfunc_t)luaA_button_get_button,
-                              (lua_class_propfunc_t)luaA_button_set_button);
-    button_class.add_property("modifiers",
-                              (lua_class_propfunc_t)luaA_button_set_modifiers,
-                              (lua_class_propfunc_t)luaA_button_get_modifiers,
-                              (lua_class_propfunc_t)luaA_button_set_modifiers);
+    luaA_class_setup(L,
+                     &button_class,
+                     "button",
+                     NULL,
+                     {[](auto* state) { return static_cast<lua_object_t*>(button_new(state)); },
+                      destroyObject<button_t>,
+                      nullptr,
+                      Lua::class_index_miss_property,
+                      Lua::class_newindex_miss_property},
+                     button_methods.data(),
+                     button_meta.data());
+
+    button_class.add_property(
+      {"button", button_set_button, luaA_button_get_button, button_set_button});
+    button_class.add_property(
+      {"modifiers", button_set_modifiers, luaA_button_get_modifiers, button_set_modifiers});
 }
 
 /* @DOC_cobject_COMMON@ */

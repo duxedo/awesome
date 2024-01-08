@@ -206,12 +206,6 @@ static bool selection_acquire_checker(selection_acquire_t* selection) {
     return selection->selection != XCB_NONE;
 }
 
-struct SelectionAcquireAdapter {
-    static selection_acquire_t* allocator(lua_State* state) { return selection_acquire_new(state); }
-    static void collector(selection_acquire_t* obj) { obj->~selection_acquire_t(); }
-    static bool checker(selection_acquire_t* obj) { return selection_acquire_checker(obj); }
-};
-
 void selection_acquire_class_setup(lua_State* L) {
     static const struct luaL_Reg selection_acquire_methods[] = {
       {"__call", luaA_selection_acquire_new},
@@ -227,13 +221,18 @@ void selection_acquire_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_acquire_t, SelectionAcquireAdapter>(
+    luaA_class_setup(
       L,
       &selection_acquire_class,
       "selection_acquire",
       NULL,
+      {
+      [](auto * state) { return static_cast<lua_object_t*>(selection_acquire_new(state)); },
+      destroyObject<selection_acquire_t>,
+      [](auto * obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
       Lua::class_index_miss_property,
       Lua::class_newindex_miss_property,
+      },
       selection_acquire_methods,
       meta.data());
 }

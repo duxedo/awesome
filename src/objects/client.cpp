@@ -89,6 +89,7 @@
 #include "objects/client.h"
 
 #include "common/atoms.h"
+#include "common/luaclass.h"
 #include "common/xutil.h"
 #include "draw.h"
 #include "event.h"
@@ -4247,12 +4248,6 @@ static int luaA_client_module_newindex(lua_State* L) {
 
 static bool client_checker(client* c) { return c->window != XCB_NONE; }
 
-struct ClientAdapter {
-    static client* allocator(lua_State* state) { return client_new(state); }
-    static void collector(client* obj) { obj->~client(); }
-    static bool checker(client* obj) { return client_checker(obj); }
-};
-
 void client_class_setup(lua_State* L) {
     static constexpr auto methods = DefineClassMethods<&client_class>({
       {       "get",             luaA_client_get},
@@ -4278,14 +4273,17 @@ void client_class_setup(lua_State* L) {
       {        "get_icon",    luaA_client_get_some_icon}
     });
 
-    luaA_class_setup<client, ClientAdapter>(L,
-                                            &client_class,
-                                            "client",
-                                            &window_class,
-                                            Lua::class_index_miss_property,
-                                            Lua::class_newindex_miss_property,
-                                            methods.data(),
-                                            meta.data());
+    luaA_class_setup(L,
+                     &client_class,
+                     "client",
+                     &window_class,
+                     {[](auto* state) -> lua_object_t* { return client_new(state); },
+                      destroyObject<client>,
+                      [](auto* obj) { return client_checker(static_cast<client*>(obj)); },
+                      Lua::class_index_miss_property,
+                      Lua::class_newindex_miss_property},
+                     methods.data(),
+                     meta.data());
     luaA_class_set_tostring(&client_class, (lua_class_propfunc_t)client_tostring);
     client_class.add_property("name",
                               (lua_class_propfunc_t)luaA_client_set_name,

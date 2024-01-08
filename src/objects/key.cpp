@@ -309,11 +309,6 @@ static int luaA_key_set_key(lua_State* L, keyb_t* k) {
     return 0;
 }
 
-struct KeyAdapter {
-    static keyb_t* allocator(lua_State* state) { return key_new(state); }
-    static void collector(keyb_t* obj) { obj->~keyb_t(); }
-};
-
 void key_class_setup(lua_State* L) {
     static constexpr auto methods = DefineClassMethods<&key_class>({
       {"__call", luaA_key_new}
@@ -321,14 +316,18 @@ void key_class_setup(lua_State* L) {
 
     static constexpr auto meta = DefineObjectMethods();
 
-    luaA_class_setup<keyb_t, KeyAdapter>(L,
-                                         &key_class,
-                                         "key",
-                                         NULL,
-                                         Lua::class_index_miss_property,
-                                         Lua::class_newindex_miss_property,
-                                         methods.data(),
-                                         meta.data());
+    luaA_class_setup(L,
+                     &key_class,
+                     "key",
+                     NULL,
+                     {[](auto* state) { return static_cast<lua_object_t*>(key_new(state)); },
+                      destroyObject<keyb_t>,
+                      nullptr,
+                      Lua::class_index_miss_property,
+                      Lua::class_newindex_miss_property},
+                     methods.data(),
+                     meta.data());
+
     key_class.add_property("key",
                            (lua_class_propfunc_t)luaA_key_set_key,
                            (lua_class_propfunc_t)luaA_key_get_key,

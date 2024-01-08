@@ -170,11 +170,6 @@ static int luaA_selection_watcher_get_active(lua_State* L, selection_watcher_t* 
     return 1;
 }
 
-struct SelectionWatcherAdapter {
-    static selection_watcher_t* allocator(lua_State* state) { return selection_watcher_new(state); }
-    static void collector(selection_watcher_t* obj) { obj->~selection_watcher_t(); }
-};
-
 void selection_watcher_class_setup(lua_State* L) {
     static constexpr auto methods = DefineClassMethods<&selection_watcher_class>({
       {"__call", luaA_selection_watcher_new},
@@ -189,13 +184,16 @@ void selection_watcher_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup<selection_watcher_t, SelectionWatcherAdapter>(
+    luaA_class_setup(
       L,
       &selection_watcher_class,
       "selection_watcher",
       NULL,
-      Lua::class_index_miss_property,
-      Lua::class_newindex_miss_property,
+      {[](auto* state) { return static_cast<lua_object_t*>(selection_watcher_new(state)); },
+       destroyObject<selection_watcher_t>,
+       nullptr,
+       Lua::class_index_miss_property,
+       Lua::class_newindex_miss_property},
       methods.data(),
       meta.data());
     selection_watcher_class.add_property("active",
