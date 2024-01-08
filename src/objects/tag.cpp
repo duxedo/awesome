@@ -327,7 +327,7 @@ OBJECT_EXPORT_PROPERTY(tag, tag_t, name)
  * \param view Set selected or not.
  */
 static void tag_view(lua_State* L, int udx, bool view) {
-    tag_t* tag = (tag_t*)luaA_checkudata(L, udx, &tag_class);
+    auto tag = tag_class.checkudata<tag_t>(L, udx);
     if (tag->selected != view) {
         tag->selected = view;
         banning_need_update();
@@ -450,7 +450,7 @@ static int luaA_tag_new(lua_State* L) { return tag_class.new_object(L); }
  * @method clients
  */
 static int luaA_tag_clients(lua_State* L) {
-    tag_t* tag = (tag_t*)luaA_checkudata(L, 1, &tag_class);
+    auto tag = tag_class.checkudata<tag_t>(L, 1);
     auto& clients = tag->clients;
     size_t i;
 
@@ -463,7 +463,7 @@ static int luaA_tag_clients(lua_State* L) {
             bool found = false;
             lua_pushnil(L);
             while (lua_next(L, 2)) {
-                auto tc = (client*)luaA_checkudata(L, -1, &client_class);
+                auto tc = client_class.checkudata<client>(L, -1);
                 /* Pop the value from lua_next */
                 lua_pop(L, 1);
                 if (tc != c) {
@@ -482,7 +482,7 @@ static int luaA_tag_clients(lua_State* L) {
         }
         lua_pushnil(L);
         while (lua_next(L, 2)) {
-            auto c = (client*)luaA_checkudata(L, -1, &client_class);
+            auto c = client_class.checkudata<client>(L, -1);
             /* push tag on top of the stack */
             lua_pushvalue(L, 1);
             tag_client(L, c);

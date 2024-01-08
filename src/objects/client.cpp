@@ -95,6 +95,7 @@
 #include "event.h"
 #include "ewmh.h"
 #include "globalconf.h"
+#include "lua.h"
 #include "math.h"
 #include "objects/drawable.h"
 #include "objects/screen.h"
@@ -1563,7 +1564,7 @@ client::~client() { xcb_icccm_get_wm_protocols_reply_wipe(&protocols); }
  * \param urgent The new flag state.
  */
 void client_set_urgent(lua_State* L, int cidx, bool urgent) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->urgent != urgent) {
         c->urgent = urgent;
@@ -1574,7 +1575,7 @@ void client_set_urgent(lua_State* L, int cidx, bool urgent) {
 
 #define DO_CLIENT_SET_PROPERTY(prop)                                                              \
     void client_set_##prop(lua_State* L, int cidx, decltype(std::declval<client>().prop) value) { \
-        auto c = (client*)luaA_checkudata(L, cidx, &client_class);                                \
+        auto c = client_class.checkudata<client>(L, cidx);                                        \
         if (c->prop != value) {                                                                   \
             c->prop = value;                                                                      \
             luaA_object_emit_signal(L, cidx, "property::" #prop, 0);                              \
@@ -1589,7 +1590,7 @@ DO_CLIENT_SET_PROPERTY(skip_taskbar)
 
 #define DO_CLIENT_SET_STRING_PROPERTY2(prop, signal)               \
     void client_set_##prop(lua_State* L, int cidx, char* value) {  \
-        auto c = (client*)luaA_checkudata(L, cidx, &client_class); \
+        auto c = client_class.checkudata<client>(L, cidx);         \
         if (A_STREQ(c->prop, value)) {                             \
             p_delete(&value);                                      \
             return;                                                \
@@ -1600,7 +1601,7 @@ DO_CLIENT_SET_PROPERTY(skip_taskbar)
     }
 #define DO_CLIENT_SET_STRING_PROPERTY3(prop, getter, setter, signal)           \
     void client_set_##prop(lua_State* L, int cidx, const std::string& value) { \
-        auto c = (client*)luaA_checkudata(L, cidx, &client_class);             \
+        auto c = client_class.checkudata<client>(L, cidx);                     \
         if (c->getter() == value) {                                            \
             return;                                                            \
         }                                                                      \
@@ -1630,7 +1631,7 @@ void client_emit_scanning(void) {
 }
 
 void client_set_motif_wm_hints(lua_State* L, int cidx, motif_wm_hints_t hints) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
     if (memcmp(&c->motif_wm_hints, &hints, sizeof(c->motif_wm_hints)) == 0) {
         return;
     }
@@ -1670,7 +1671,7 @@ void client_set_ClassInstance(lua_State* L,
                               int cidx,
                               const std::string& cls,
                               const std::string& instance) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
     c->setCls(cls);
     luaA_object_emit_signal(L, cidx, "property::class", 0);
     c->setInstance(instance);
@@ -2541,41 +2542,41 @@ bool client_resize(client* c, area_t geometry, bool honor_hints) {
  * \param s Set or not the client minimized.
  */
 void client_set_minimized(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
-    if (c->minimized != s) {
-        c->minimized = s;
-        banning_need_update();
-        if (s) {
-            /* ICCCM: To transition from ICONIC to NORMAL state, the client
-             * should just map the window. Thus, iconic clients need to be
-             * unmapped, else the MapWindow request doesn't have any effect.
-             */
-            xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_ICONIC);
-
-            const uint32_t client_select_input_val[] = {CLIENT_SELECT_INPUT_EVENT_MASK};
-            const uint32_t frame_select_input_val[] = {FRAME_SELECT_INPUT_EVENT_MASK};
-            xcb_grab_server(getGlobals().connection);
-            getConnection().clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
-            getConnection().clear_attributes(c->frame_window, XCB_CW_EVENT_MASK);
-            getConnection().clear_attributes(c->window, XCB_CW_EVENT_MASK);
-            xcb_unmap_window(getGlobals().connection, c->window);
-            getConnection().change_attributes(
-              getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
-            getConnection().change_attributes(
-              c->frame_window, XCB_CW_EVENT_MASK, frame_select_input_val);
-            getConnection().change_attributes(
-              c->window, XCB_CW_EVENT_MASK, client_select_input_val);
-            xutil_ungrab_server(getGlobals().connection);
-        } else {
-            xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_NORMAL);
-            xcb_map_window(getGlobals().connection, c->window);
-        }
-        if (strut_has_value(&c->strut)) {
-            screen_update_workarea(c->screen);
-        }
-        luaA_object_emit_signal(L, cidx, "property::minimized", 0);
+    if (c->minimized == s) {
+        return;
     }
+    c->minimized = s;
+    banning_need_update();
+    if (s) {
+        /* ICCCM: To transition from ICONIC to NORMAL state, the client
+         * should just map the window. Thus, iconic clients need to be
+         * unmapped, else the MapWindow request doesn't have any effect.
+         */
+        xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_ICONIC);
+
+        const uint32_t client_select_input_val[] = {CLIENT_SELECT_INPUT_EVENT_MASK};
+        const uint32_t frame_select_input_val[] = {FRAME_SELECT_INPUT_EVENT_MASK};
+        xcb_grab_server(getGlobals().connection);
+        getConnection().clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
+        getConnection().clear_attributes(c->frame_window, XCB_CW_EVENT_MASK);
+        getConnection().clear_attributes(c->window, XCB_CW_EVENT_MASK);
+        xcb_unmap_window(getGlobals().connection, c->window);
+        getConnection().change_attributes(
+          getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
+        getConnection().change_attributes(
+          c->frame_window, XCB_CW_EVENT_MASK, frame_select_input_val);
+        getConnection().change_attributes(c->window, XCB_CW_EVENT_MASK, client_select_input_val);
+        xutil_ungrab_server(getGlobals().connection);
+    } else {
+        xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_NORMAL);
+        xcb_map_window(getGlobals().connection, c->window);
+    }
+    if (strut_has_value(&c->strut)) {
+        screen_update_workarea(c->screen);
+    }
+    luaA_object_emit_signal(L, cidx, "property::minimized", 0);
 }
 
 /** Set a client hidden, or not.
@@ -2584,7 +2585,7 @@ void client_set_minimized(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client hidden.
  */
 static void client_set_hidden(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->hidden != s) {
         c->hidden = s;
@@ -2602,7 +2603,7 @@ static void client_set_hidden(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client sticky.
  */
 void client_set_sticky(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->sticky != s) {
         c->sticky = s;
@@ -2621,7 +2622,7 @@ void client_set_sticky(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client's focusable property.
  */
 static void client_set_focusable(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->focusable != s || !c->focusable_set) {
         c->focusable = s;
@@ -2635,7 +2636,7 @@ static void client_set_focusable(lua_State* L, int cidx, bool s) {
  * \param cidx The client index.
  */
 static void client_unset_focusable(lua_State* L, int cidx) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->focusable_set) {
         c->focusable_set = false;
@@ -2649,7 +2650,7 @@ static void client_unset_focusable(lua_State* L, int cidx) {
  * \param s Set or not the client fullscreen.
  */
 void client_set_fullscreen(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->fullscreen != s) {
         /* become fullscreen! */
@@ -2676,7 +2677,7 @@ void client_set_fullscreen(lua_State* L, int cidx, bool s) {
  * \param s The maximized status.
  */
 void client_set_maximized_common(lua_State* L, int cidx, bool s, const char* type, const int val) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     /* Store the current and next state on 2 bit */
     const client_maximized_t current =
@@ -2738,7 +2739,7 @@ void client_set_maximized_vertical(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client above.
  */
 void client_set_above(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->above != s) {
         /* You can only be part of one of the special layers. */
@@ -2759,7 +2760,7 @@ void client_set_above(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client below.
  */
 void client_set_below(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->below != s) {
         /* You can only be part of one of the special layers. */
@@ -2780,7 +2781,7 @@ void client_set_below(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client modal attribute.
  */
 void client_set_modal(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->modal != s) {
         c->modal = s;
@@ -2795,7 +2796,7 @@ void client_set_modal(lua_State* L, int cidx, bool s) {
  * \param s Set or not the client ontop attribute.
  */
 void client_set_ontop(lua_State* L, int cidx, bool s) {
-    auto c = (client*)luaA_checkudata(L, cidx, &client_class);
+    auto c = client_class.checkudata<client>(L, cidx);
 
     if (c->ontop != s) {
         /* You can only be part of one of the special layers. */
@@ -3020,7 +3021,7 @@ static int luaA_client_get(lua_State* L) {
  * @method isvisible
  */
 static int luaA_client_isvisible(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     lua_pushboolean(L, client_isvisible(c));
     return 1;
 }
@@ -3145,7 +3146,7 @@ out:
  * @see awesome.kill
  */
 static int luaA_client_kill(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     client_kill(c);
     return 0;
 }
@@ -3170,8 +3171,8 @@ static int luaA_client_kill(lua_State* L) {
  * @see awful.client.cycle
  */
 static int luaA_client_swap(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
-    auto swap = (client*)luaA_checkudata(L, 2, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
+    auto swap = client_class.checkudata<client>(L, 2);
 
     if (c != swap) {
         client **ref_c = NULL, **ref_swap = NULL;
@@ -3219,7 +3220,7 @@ static int luaA_client_swap(lua_State* L) {
  * @see toggle_tag
  */
 static int luaA_client_tags(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     int j = 0;
 
     if (lua_gettop(L) == 2) {
@@ -3290,7 +3291,7 @@ static int luaA_client_get_first_tag(lua_State* L, client* c) {
  * @see lower
  */
 static int luaA_client_raise(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
 
     /* Avoid sending the signal if nothing was done */
     if (c->transient_for == NULL && getGlobals().getStack().size() &&
@@ -3314,7 +3315,7 @@ static int luaA_client_raise(lua_State* L) {
  * @see raise
  */
 static int luaA_client_lower(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
 
     /* Avoid sending the signal if nothing was done */
     if (getGlobals().getStack().size() && getGlobals().getStack().front() == c) {
@@ -3342,7 +3343,7 @@ static int luaA_client_lower(lua_State* L) {
  * @noreturn
  */
 static int luaA_client_unmanage(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     client_unmanage(c, CLIENT_UNMANAGE_USER);
     return 0;
 }
@@ -3538,7 +3539,7 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
 
 #define HANDLE_TITLEBAR(name, index)                                                    \
     static int luaA_client_titlebar_##name(lua_State* L) {                              \
-        auto c = (client*)luaA_checkudata(L, 1, &client_class);                         \
+        auto c = client_class.checkudata<client>(L, 1);                                 \
                                                                                         \
         if (lua_gettop(L) == 2) {                                                       \
             if (lua_isnil(L, 2))                                                        \
@@ -3575,7 +3576,7 @@ HANDLE_TITLEBAR(left, CLIENT_TITLEBAR_LEFT)
  * @see height
  */
 static int luaA_client_geometry(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
 
     if (lua_gettop(L) == 2 && !lua_isnil(L, 2)) {
         area_t geometry;
@@ -3618,7 +3619,7 @@ static int luaA_client_geometry(lua_State* L) {
  * @see size_hints_honor
  */
 static int luaA_client_apply_size_hints(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     area_t geometry = c->geometry;
     if (!client_isfixed(c)) {
         geometry.width = ceil(Lua::checknumber_range(L, 2, MIN_X11_SIZE, MAX_X11_SIZE));
@@ -4149,7 +4150,7 @@ static int luaA_client_set_shape_input(lua_State* L, client* c) {
  * @see request::default_keybindings
  */
 static int luaA_client_keys(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     auto& keys = c->keys;
 
     if (lua_gettop(L) == 2) {
@@ -4206,7 +4207,7 @@ static int luaA_client_get_icon_sizes(lua_State* L, client* c) {
  * @see awful.widget.clienticon
  */
 static int luaA_client_get_some_icon(lua_State* L) {
-    auto c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     int index = luaL_checkinteger(L, 2);
     luaL_argcheck(L, (index >= 1 && index <= (int)c->icons.size()), 2, "invalid icon index");
     lua_pushlightuserdata(L, cairo_surface_reference(c->icons[index - 1].get()));
@@ -4243,18 +4244,14 @@ static int luaA_client_module_index(lua_State* L) {
  * \return The number of pushed elements.
  */
 static int luaA_client_module_newindex(lua_State* L) {
-    auto buf = Lua::checkstring(L, 2);
-    client* c;
-
-    if (buf == "focus") {
-        c = (client*)luaA_checkudataornil(L, 3, &client_class);
+    if (Lua::checkstring(L, 2) == "focus") {
+        auto c = !lua_isnil(L, 3) ? client_class.checkudata<client>(L, 3) : nullptr;
         if (c) {
             client_focus(c);
         } else if (getGlobals().focus.client) {
             client_unfocus(getGlobals().focus.client);
         }
     }
-
     return 0;
 }
 

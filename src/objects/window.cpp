@@ -91,7 +91,7 @@ static xcb_window_t window_get(window_t* window) {
  * \return The number of elements pushed on the stack.
  */
 static int luaA_window_buttons(lua_State* L) {
-    auto window = (window_t*)luaA_checkudata(L, 1, &window_class);
+    auto window = window_class.checkudata<window_t>(L, 1);
 
     if (lua_gettop(L) == 2) {
         luaA_button_array_set(L, 1, 2, &window->buttons);
@@ -107,7 +107,7 @@ static int luaA_window_buttons(lua_State* L) {
  * \return The number of elements pushed on stack.
  */
 static int luaA_window_struts(lua_State* L) {
-    auto window = (window_t*)luaA_checkudata(L, 1, &window_class);
+    auto window = window_class.checkudata<window_t>(L, 1);
 
     if (lua_gettop(L) == 2) {
         luaA_tostrut(L, 2, &window->strut);
@@ -128,7 +128,7 @@ static int luaA_window_struts(lua_State* L) {
  * \param opacity The opacity value.
  */
 void window_set_opacity(lua_State* L, int idx, double opacity) {
-    auto window = (window_t*)luaA_checkudata(L, idx, &window_class);
+    auto window = window_class.checkudata<window_t>(L, idx);
 
     if (window->opacity != opacity) {
         window->opacity = opacity;
@@ -205,7 +205,7 @@ static int luaA_window_set_border_color(lua_State* L, window_t* window) {
  * \param width The border width.
  */
 void window_set_border_width(lua_State* L, int idx, int width) {
-    auto window = (window_t*)luaA_checkudata(L, idx, &window_class);
+    auto window = window_class.checkudata<window_t>(L, idx);
     uint16_t old_width = window->border_width;
 
     if (width == window->border_width || width < 0) {
@@ -380,7 +380,7 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
  * @function set_xproperty
  */
 static int luaA_window_set_xproperty(lua_State* L) {
-    auto w = (window_t*)luaA_checkudata(L, 1, &window_class);
+    auto w = window_class.checkudata<window_t>(L, 1);
     return window_set_xproperty(L, w->window, 2, 3);
 }
 
@@ -390,7 +390,7 @@ static int luaA_window_set_xproperty(lua_State* L) {
  * @function get_xproperty
  */
 static int luaA_window_get_xproperty(lua_State* L) {
-    auto w = (window_t*)luaA_checkudata(L, 1, &window_class);
+    auto w = window_class.checkudata<window_t>(L, 1);
     return window_get_xproperty(L, w->window, 2);
 }
 
