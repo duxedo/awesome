@@ -53,7 +53,20 @@
 #include <cairo-xcb.h>
 #include <xcb/shape.h>
 
-lua_class_t drawin_class;
+extern lua_class_t window_class;
+
+static drawin_t* drawin_allocator(lua_State* L);
+
+lua_class_t drawin_class{
+  "drawin",
+  &window_class,
+  {
+                [](lua_State* s) { return static_cast<lua_object_t*>(drawin_allocator(s)); },
+                destroyObject<drawin_t>,
+                nullptr, Lua::class_index_miss_property,
+                Lua::class_newindex_miss_property,
+                },
+};
 
 /** Drawin object.
  *
@@ -389,7 +402,7 @@ static void drawin_set_visible(lua_State* L, int udx, bool v) {
     }
 }
 
-static drawin_t* drawin_allocator(lua_State* L) {
+drawin_t* drawin_allocator(lua_State* L) {
     xcb_screen_t* s = getGlobals().screen;
     drawin_t* w = drawin_new(L);
 
@@ -445,11 +458,7 @@ static drawin_t* drawin_allocator(lua_State* L) {
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int luaA_drawin_new(lua_State* L) {
-    luaA_class_new(L, &drawin_class);
-
-    return 1;
-}
+static int luaA_drawin_new(lua_State* L) { return drawin_class.new_object(L); }
 
 /** Get or set drawin geometry. That's the same as accessing or setting the x,
  * y, width or height properties of a drawin.
@@ -725,19 +734,7 @@ void drawin_class_setup(lua_State* L) {
       {"geometry", luaA_drawin_geometry}
     });
 
-    luaA_class_setup(L,
-                     &drawin_class,
-                     "drawin",
-                     &window_class,
-                     {
-                       [](lua_State* s) { return static_cast<lua_object_t*>(drawin_allocator(s)); },
-                       destroyObject<drawin_t>,
-                       nullptr,
-                       Lua::class_index_miss_property,
-                       Lua::class_newindex_miss_property,
-                     },
-                     methods.data(),
-                     meta.data());
+    drawin_class.setup(L, methods.data(), meta.data());
     drawin_class.add_property(
       "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",

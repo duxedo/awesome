@@ -47,7 +47,14 @@
 #include <glib.h>
 #include <xkbcommon/xkbcommon.h>
 
-lua_class_t key_class;
+lua_class_t key_class{
+  "key",
+  NULL,
+  {[](auto* state) { return static_cast<lua_object_t*>(key_new(state)); },
+    destroyObject<keyb_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property}
+};
 
 /** Key object.
  *
@@ -171,7 +178,7 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int luaA_key_new(lua_State* L) { return luaA_class_new(L, &key_class); }
+static int luaA_key_new(lua_State* L) { return key_class.new_object(L); }
 
 /** Set a key array with a Lua table.
  * \param L The Lua VM state.
@@ -316,17 +323,7 @@ void key_class_setup(lua_State* L) {
 
     static constexpr auto meta = DefineObjectMethods();
 
-    luaA_class_setup(L,
-                     &key_class,
-                     "key",
-                     NULL,
-                     {[](auto* state) { return static_cast<lua_object_t*>(key_new(state)); },
-                      destroyObject<keyb_t>,
-                      nullptr,
-                      Lua::class_index_miss_property,
-                      Lua::class_newindex_miss_property},
-                     methods.data(),
-                     meta.data());
+    key_class.setup(L, methods.data(), meta.data());
 
     key_class.add_property("key",
                            (lua_class_propfunc_t)luaA_key_set_key,
