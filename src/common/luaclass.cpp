@@ -34,7 +34,7 @@
  * \param class The wanted class.
  * \return A pointer to the object, NULL otherwise.
  */
-void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
+lua_object_t* lua_class_t::toudata(lua_State* L, int ud) {
     if (void* p = lua_touserdata(L, ud);
         p && lua_getmetatable(L, ud)) /* does it have a metatable? */
     {
@@ -48,8 +48,8 @@ void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
         /* Now, check that the class given in argument is the same as the
          * metatable's object, or one of its parent (inheritance) */
         for (; metatable_class; metatable_class = metatable_class->parent()) {
-            if (metatable_class == cls) {
-                return p;
+            if (metatable_class == this) {
+                return reinterpret_cast<lua_object_t*>(p);
             }
         }
     }
@@ -61,11 +61,11 @@ void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls) {
  * \param ud The object index on the stack.
  * \param class The wanted class.
  */
-void* luaA_checkudata(lua_State* L, int ud, lua_class_t* cls) {
-    lua_object_t* p = reinterpret_cast<lua_object_t*>(luaA_toudata(L, ud, cls));
+lua_object_t* lua_class_t::checkudata(lua_State* L, int ud) {
+    auto p = toudata(L, ud);
     if (!p) {
-        Lua::typerror(L, ud, cls->name().c_str());
-    } else if (!cls->check(p)) {
+        Lua::typerror(L, ud, name().c_str());
+    } else if (!check(p)) {
         luaL_error(L, "invalid object");
     }
     return p;
@@ -125,7 +125,7 @@ void luaA_openlib(lua_State* L,
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int luaA_class_newindex_invalid(lua_State* L) {
+static int newindex_invalid(lua_State* L) {
     return luaL_error(L, "attempt to index an object that was already garbage collected");
 }
 
@@ -133,13 +133,13 @@ static int luaA_class_newindex_invalid(lua_State* L) {
  * \param L The Lua VM state.
  * \return The number of elements pushed on stack.
  */
-static int luaA_class_index_invalid(lua_State* L) {
+static int index_invalid(lua_State* L) {
     auto attr = Lua::checkstring(L, 2);
     if (attr == "valid") {
         lua_pushboolean(L, false);
         return 1;
     }
-    return luaA_class_newindex_invalid(L);
+    return newindex_invalid(L);
 }
 
 /** Garbage collect a Lua object.
@@ -162,9 +162,9 @@ int lua_class_t::lua_gc(lua_State* L) {
      * We also make sure that `item.valid == false`.
      */
     lua_newtable(L);
-    lua_pushcfunction(L, luaA_class_index_invalid);
+    lua_pushcfunction(L, index_invalid);
     lua_setfield(L, -2, "__index");
-    lua_pushcfunction(L, luaA_class_newindex_invalid);
+    lua_pushcfunction(L, newindex_invalid);
     lua_setfield(L, -2, "__newindex");
     lua_setmetatable(L, 1);
     return 0;
@@ -186,8 +186,8 @@ int lua_class_t::lua_gc(lua_State* L) {
  * \param meta The meta-methods to set on the class objects.
  */
 void lua_class_t::setup(lua_State* L,
-                            const struct luaL_Reg methods[],
-                            const struct luaL_Reg meta[]) {
+                        const struct luaL_Reg methods[],
+                        const struct luaL_Reg meta[]) {
     /* Create the object metatable */
     lua_newtable(L);
     /* Register it with class pointer as key in the registry
@@ -210,10 +210,10 @@ void lua_class_t::setup(lua_State* L,
 
     lua_setfield(L, -2, "__index"); /* metatable.__index = metatable      1 */
 
-    Lua::setfuncs(L, meta);             /* 1 */
+    Lua::setfuncs(L, meta);                      /* 1 */
     Lua::registerlib(L, _name.c_str(), methods); /* 2 */
-    lua_pushvalue(L, -1);               /* dup self as metatable              3 */
-    lua_setmetatable(L, -2);            /* set self as metatable              2 */
+    lua_pushvalue(L, -1);                        /* dup self as metatable              3 */
+    lua_setmetatable(L, -2);                     /* set self as metatable              2 */
     lua_pop(L, 2);
 }
 
@@ -328,14 +328,13 @@ int luaA_class_index(lua_State* L) {
     auto attr = Lua::checkstring(L, 2);
 
     if (attr == "valid") {
-        void* p = luaA_toudata(L, 1, cls);
-        lua_pushboolean(L,
-                        p && (cls->check(reinterpret_cast<lua_object_t*>(p))));
+        auto p = cls->toudata<lua_object_t>(L, 1);
+        lua_pushboolean(L, p && (cls->check(p)));
         return 1;
     }
 
     auto pushdata = [](lua_State* L, lua_class_t* cls) {
-        luaA_checkudata(L, 1, cls);
+        cls->checkudata(L, 1);
         Lua::getuservalue(L, 1);
         lua_getfield(L, -1, "data");
         return 1;
@@ -353,7 +352,7 @@ int luaA_class_index(lua_State* L) {
     /* Property does exist and has an index callback */
     if (auto prop = cls->find_property(attr.value())) {
         if (prop->index) {
-            return prop->index(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+            return prop->index(L, cls->checkudata<lua_object_t>(L, 1));
         }
         return 0;
     }
@@ -363,8 +362,7 @@ int luaA_class_index(lua_State* L) {
     }
 
     if (cls->index_miss_property()) {
-        return cls->index_miss_property()(
-          L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+        return cls->index_miss_property()(L, cls->checkudata<lua_object_t>(L, 1));
     }
 
     return 0;
@@ -385,7 +383,7 @@ int luaA_class_newindex(lua_State* L) {
     /* Property does exist and has a newindex callback */
     if (auto prop = luaA_class_property_get(L, cls, 2)) {
         if (prop->newindex) {
-            return prop->newindex(L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+            return prop->newindex(L, cls->checkudata<lua_object_t>(L, 1));
         }
         return 0;
     }
@@ -395,7 +393,7 @@ int luaA_class_newindex(lua_State* L) {
     }
     if (cls->newindex_miss_property()) {
         return cls->newindex_miss_property()(
-          L, reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, cls)));
+          L, cls->checkudata<lua_object_t>(L, 1));
     }
 
     return 0;

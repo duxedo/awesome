@@ -114,7 +114,7 @@ void luaA_button_array_set(lua_State* L, int oidx, int idx, std::vector<button_t
 
     lua_pushnil(L);
     while (lua_next(L, idx)) {
-        if (luaA_toudata(L, -1, &button_class)) {
+        if (button_class.toudata(L, -1)) {
             buttons->push_back((button_t*)luaA_object_ref_item(L, oidx, -1));
         } else {
             lua_pop(L, 1);

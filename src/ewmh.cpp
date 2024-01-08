@@ -43,7 +43,7 @@
  * \param L The Lua VM state.
  */
 static int ewmh_client_update_hints(lua_State* L) {
-    client* c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     xcb_atom_t state[10]; /* number of defined state atoms */
     size_t i = 0;
 
@@ -112,7 +112,7 @@ static int ewmh_update_net_client_list(lua_State* L) {
 }
 
 static int ewmh_client_update_frame_extents(lua_State* L) {
-    client* c = (client*)luaA_checkudata(L, 1, &client_class);
+    auto c = client_class.checkudata<client>(L, 1);
     uint32_t extents[4];
 
     extents[0] = c->border_width + c->titlebar[CLIENT_TITLEBAR_LEFT].size;

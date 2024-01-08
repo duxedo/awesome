@@ -105,7 +105,7 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
         return;
     }
 
-    keyb_t* key = reinterpret_cast<keyb_t*>(luaA_checkudata(L, ud, &key_class));
+    auto key = key_class.checkudata<keyb_t>(L, ud);
 
     if (len == 1) {
         key->keycode = 0;
@@ -197,7 +197,7 @@ void luaA_key_array_set(lua_State* L, int oidx, int idx, std::vector<keyb_t*>* k
 
     lua_pushnil(L);
     while (lua_next(L, idx)) {
-        if (luaA_toudata(L, -1, &key_class)) {
+        if (key_class.toudata(L, -1)) {
             keys->push_back(reinterpret_cast<keyb_t*>(luaA_object_ref_item(L, oidx, -1)));
         } else {
             lua_pop(L, 1);

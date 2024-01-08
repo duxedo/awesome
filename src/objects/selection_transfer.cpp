@@ -122,8 +122,7 @@ static void transfer_done(lua_State* L, selection_transfer_t* transfer) {
 static void transfer_continue_incremental(lua_State* L, int ud) {
     const char* data;
     size_t data_length;
-    selection_transfer_t* transfer =
-      reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, ud, &selection_transfer_class));
+    auto transfer = selection_transfer_class.checkudata<selection_transfer_t>(L, ud);
 
     ud = Lua::absindex(L, ud);
 
@@ -217,8 +216,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
     bool incr = false;
     uint32_t incr_size = 0;
 
-    selection_transfer_t* transfer =
-      reinterpret_cast<selection_transfer_t*>(luaA_checkudata(L, 1, &selection_transfer_class));
+    auto transfer = selection_transfer_class.checkudata<selection_transfer_t>(L, 1);
     if (transfer->state != TRANSFER_WAIT_FOR_DATA && transfer->state != TRANSFER_INCREMENTAL_DONE) {
         luaL_error(L, "Transfer object is not ready for more data to be sent");
     }

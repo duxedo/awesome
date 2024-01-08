@@ -186,7 +186,7 @@ static void drawin_systray_kickout(drawin_t* w) {
 }
 
 void luaA_drawin_systray_kickout(lua_State* L) {
-    drawin_systray_kickout((drawin_t*)luaA_checkudata(L, 1, &drawin_class));
+    drawin_systray_kickout(drawin_class.checkudata<drawin_t>(L, 1));
 }
 
 drawin_t::~drawin_t() {
@@ -202,7 +202,7 @@ drawin_t::~drawin_t() {
 }
 
 static void drawin_update_drawing(lua_State* L, int widx) {
-    drawin_t* w = (drawin_t*)luaA_checkudata(L, widx, &drawin_class);
+    auto w = drawin_class.checkudata<drawin_t>(L, widx);
     luaA_object_push_item(L, widx, w->drawable);
     drawable_set_geometry(L, -1, w->geometry);
     lua_pop(L, 1);
@@ -263,7 +263,7 @@ static int luaA_drawin_get(lua_State* L) {
  * \param geometry The new geometry.
  */
 static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
-    auto w = (drawin_t*)luaA_checkudata(L, udx, &drawin_class);
+    auto w = drawin_class.checkudata<drawin_t>(L, udx);
     area_t old_geometry = w->geometry;
 
     w->geometry = geometry;
@@ -331,7 +331,7 @@ void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint1
 }
 
 static void drawin_map(lua_State* L, int widx) {
-    auto drawin = (drawin_t*)luaA_checkudata(L, widx, &drawin_class);
+    auto drawin = drawin_class.checkudata<drawin_t>(L, widx);
     /* Apply any pending changes */
     drawin_apply_moveresize(drawin);
     /* Activate BMA */
@@ -374,7 +374,7 @@ drawin_t* drawin_getbywin(xcb_window_t win) {
  * \param v The visible value.
  */
 static void drawin_set_visible(lua_State* L, int udx, bool v) {
-    auto drawin = (drawin_t*)luaA_checkudata(L, udx, &drawin_class);
+    auto drawin = drawin_class.checkudata<drawin_t>(L, udx);
     if (v != drawin->visible) {
         drawin->visible = v;
 
@@ -468,7 +468,7 @@ static int luaA_drawin_new(lua_State* L) { return drawin_class.new_object(L); }
  * @function geometry
  */
 static int luaA_drawin_geometry(lua_State* L) {
-    auto drawin = (drawin_t*)luaA_checkudata(L, 1, &drawin_class);
+    auto drawin = drawin_class.checkudata<drawin_t>(L, 1);
 
     if (lua_gettop(L) == 2) {
         area_t wingeom;

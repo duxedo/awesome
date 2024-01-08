@@ -30,6 +30,7 @@
 #include "common/luaobject.h"
 
 #include "common/backtrace.h"
+#include "common/luaclass.h"
 
 #include <fmt/format.h>
 
@@ -251,7 +252,7 @@ void signal_object_emit(lua_State* L, Signals* arr, const std::string_view& name
 void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs) {
     int oud_abs = Lua::absindex(L, oud);
     lua_class_t* lua_class = luaA_class_get(L, oud);
-    lua_object_t* obj = reinterpret_cast<lua_object_t*>(luaA_toudata(L, oud, lua_class));
+    auto obj = lua_class->toudata<lua_object_t>(L, oud);
     if (!obj) {
         Lua::warn(L, "Trying to emit signal '%s' on non-object", name);
         return;
@@ -292,7 +293,7 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
 
 int luaA_object_tostring(lua_State* L) {
     lua_class_t* lua_class = luaA_class_get(L, 1);
-    lua_object_t* object = reinterpret_cast<lua_object_t*>(luaA_checkudata(L, 1, lua_class));
+    auto object = lua_class->checkudata<lua_object_t>(L, 1);
     int offset = 0;
 
     for (; lua_class; lua_class = lua_class->parent()) {

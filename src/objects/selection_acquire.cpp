@@ -86,8 +86,7 @@ static int selection_acquire_find_by_window(lua_State* L, xcb_window_t window) {
 }
 
 static void selection_release(lua_State* L, int ud) {
-    selection_acquire_t* selection =
-      reinterpret_cast<selection_acquire_t*>(luaA_checkudata(L, ud, &selection_acquire_class));
+    auto selection = selection_acquire_class.checkudata<selection_acquire_t>(L, ud);
 
     luaA_object_emit_signal(L, ud, "release", 0);
 
@@ -214,9 +213,8 @@ static int luaA_selection_acquire_new(lua_State* L) {
 }
 
 static int luaA_selection_acquire_release(lua_State* L) {
-    luaA_checkudata(L, 1, &selection_acquire_class);
+    selection_acquire_class.checkudata(L, 1);
     selection_release(L, 1);
-
     return 0;
 }
 
