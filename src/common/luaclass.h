@@ -148,56 +148,6 @@ struct PropertyEqual {
 using Properties =
   std::unordered_set<lua_class_property_t, Detail::PropertyHash, Detail::PropertyEqual>;
 
-struct lua_class_t {
-    /** Class name */
-    std::string name;
-    /** Class signals */
-    Signals signals;
-    /** Parent class */
-    lua_class_t* parent;
-    /** Allocator for creating new objects of that class */
-    lua_class_allocator_t allocator;
-    /** Garbage collection function */
-    lua_class_collector_t collector;
-    /** Class properties */
-    Properties properties;
-    /** Function to call when a indexing an unknown property */
-    lua_class_propfunc_t index_miss_property;
-    /** Function to call when a indexing an unknown property */
-    lua_class_propfunc_t newindex_miss_property;
-    /** Function to call to check if an object is valid */
-    lua_class_checker_t checker;
-    /** Number of instances of this class in lua */
-    unsigned int instances;
-    /** Class tostring method */
-    lua_class_propfunc_t tostring;
-    /** Function to call on index misses */
-    int index_miss_handler;
-    /** Function to call on newindex misses */
-    int newindex_miss_handler;
-
-    template <std::size_t N>
-    void add_property(const char (&name)[N],
-                      lua_class_propfunc_t cb_new,
-                      lua_class_propfunc_t cb_index,
-                      lua_class_propfunc_t cb_newindex) {
-        properties.insert( {name, cb_new, cb_index, cb_newindex});
-    }
-    void add_property(lua_class_property_t prop) {
-        properties.insert(prop);
-    }
-    static lua_class_t* get(lua_State* state, int idx);
-    void connect_signal(lua_State* state, const std::string_view& name, lua_CFunction sigfun);
-    void connect_signal(lua_State* state, const std::string_view& name, int stackIdx);
-    void disconnect_signal(lua_State* state, const std::string_view& name, int stackIdx);
-    void emit_signal(lua_State*, const std::string_view& name, int nargs);
-};
-
-const char* luaA_typename(lua_State*, int);
-lua_class_t* luaA_class_get(lua_State*, int);
-
-void luaA_openlib(lua_State*, const char*, const struct luaL_Reg[], const struct luaL_Reg[]);
-
 struct ClassInterface {
   lua_class_allocator_t allocator;
   lua_class_collector_t collector;
@@ -205,6 +155,111 @@ struct ClassInterface {
   lua_class_propfunc_t index_miss_property;
   lua_class_propfunc_t newindex_miss_property;
 };
+
+class lua_class_t {
+    /** Class name */
+    std::string _name;
+    /** Class signals */
+    Signals _signals;
+    /** Parent class */
+    lua_class_t* _parent = nullptr;
+    /** Allocator for creating new objects of that class */
+    lua_class_allocator_t _allocator = nullptr;
+    /** Garbage collection function */
+    lua_class_collector_t _collector = nullptr;
+    /** Class properties */
+    Properties _properties;
+    /** Function to call when a indexing an unknown property */
+    lua_class_propfunc_t _index_miss_property = nullptr;
+    /** Function to call when a indexing an unknown property */
+    lua_class_propfunc_t _newindex_miss_property = nullptr;
+    /** Function to call to check if an object is valid */
+    lua_class_checker_t _checker = nullptr;
+    /** Number of instances of this class in lua */
+    unsigned int _instances = 0;
+    /** Class tostring method */
+    lua_class_propfunc_t _tostring = nullptr;
+    /** Function to call on index misses */
+    int _index_miss_handler = LUA_REFNIL;
+    /** Function to call on newindex misses */
+    int _newindex_miss_handler = LUA_REFNIL;
+public:
+    lua_class_t(std::string name, lua_class_t* parent, ClassInterface iface)
+    : _name(std::move(name))
+    , _parent(parent)
+    , _allocator(iface.allocator)
+    , _collector(iface.collector)
+    , _index_miss_property(iface.index_miss_property)
+    , _newindex_miss_property(iface.newindex_miss_property)
+    {}
+
+    void setup(lua_State* L, const struct luaL_Reg methods[],
+                            const struct luaL_Reg meta[]);
+
+    template <std::size_t N>
+    void add_property(const char (&name)[N],
+                      lua_class_propfunc_t cb_new,
+                      lua_class_propfunc_t cb_index,
+                      lua_class_propfunc_t cb_newindex) {
+        _properties.insert( {name, cb_new, cb_index, cb_newindex});
+    }
+    void add_property(lua_class_property_t prop) {
+        _properties.insert(prop);
+    }
+    static lua_class_t* get(lua_State* state, int idx);
+    void connect_signal(lua_State* state, const std::string_view& name, lua_CFunction sigfun);
+    void connect_signal(lua_State* state, const std::string_view& name, int stackIdx);
+    void disconnect_signal(lua_State* state, const std::string_view& name, int stackIdx);
+    void emit_signal(lua_State*, const std::string_view& name, int nargs);
+
+    int numRefs() const { return _instances; }
+    void ref() { ++_instances; }
+    void deref() { --_instances; }
+
+    int& index_miss_handler() { return _index_miss_handler; }
+    int& newindex_miss_handler() { return _newindex_miss_handler; }
+
+    bool check(lua_object_t * obj) {
+        if(_checker) {
+            return _checker(obj);
+        }
+        return true;
+    }
+
+    void set_tostring(lua_class_propfunc_t cbk) {
+        _tostring = cbk;
+    }
+
+    bool has_tostring() const {
+        return _tostring;
+    }
+
+    int tostring(lua_State* s, lua_object_t *o) const {
+        return _tostring(s, o);
+    }
+
+    lua_class_t* parent() const { return _parent; }
+    const std::string& name() const { return _name; }
+
+    const lua_class_property_t* find_property(std::string_view name) const;
+
+    auto index_miss_property() const { return _index_miss_property; }
+    auto newindex_miss_property() const { return _newindex_miss_property; }
+
+    int new_object(lua_State* L);
+
+    lua_object_t* alloc_object(lua_State* L) {
+        return _allocator(L);
+    }
+private:
+    static int lua_gc(lua_State* L);
+    friend void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls);
+};
+
+const char* luaA_typename(lua_State*, int);
+lua_class_t* luaA_class_get(lua_State*, int);
+
+void luaA_openlib(lua_State*, const char*, const struct luaL_Reg[], const struct luaL_Reg[]);
 
 void luaA_class_setup(lua_State* L,
                       lua_class_t* cls,
@@ -222,14 +277,9 @@ void destroyObject(lua_object_t * t) {
 int luaA_usemetatable(lua_State*, int, int);
 int luaA_class_index(lua_State*);
 int luaA_class_newindex(lua_State*);
-int luaA_class_new(lua_State*, lua_class_t*);
 
 void* luaA_checkudata(lua_State*, int, lua_class_t*);
 void* luaA_toudata(lua_State* L, int ud, lua_class_t*);
-
-static inline void luaA_class_set_tostring(lua_class_t* cls, lua_class_propfunc_t callback) {
-    cls->tostring = callback;
-}
 
 static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls) {
     if (lua_isnil(L, udx)) {
@@ -258,13 +308,13 @@ inline constexpr auto LuaClassMethods =
                }                                                                               },
       {                "instances",
                [](lua_State* L) {
-               lua_pushinteger(L, cls->instances);
+               lua_pushinteger(L, cls->numRefs());
                return 0;
                }                                                                               },
       {   "set_index_miss_handler",
-               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->index_miss_handler); }   },
+               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->index_miss_handler()); }   },
       {"set_newindex_miss_handler",
-               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->newindex_miss_handler); }}
+               [](lua_State* L) { return Lua::registerfct(L, 1, &cls->newindex_miss_handler()); }}
     };
 
 inline constexpr auto LuaClassMeta =

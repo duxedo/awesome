@@ -25,6 +25,7 @@
 #include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
+#include "lua.h"
 
 #define REGISTRY_GETTER_TABLE_INDEX "awesome_selection_getters"
 
@@ -36,8 +37,17 @@ struct selection_getter_t: public lua_object_t {
 
     ~selection_getter_t() { xcb_destroy_window(getGlobals().connection, window); }
 };
+static inline selection_getter_t* selection_getter_new(lua_State*);
 
-static lua_class_t selection_getter_class;
+static lua_class_t selection_getter_class{
+  "selection_getter",
+  NULL,
+  {[](auto* state) { return static_cast<lua_object_t*>(selection_getter_new(state)); },
+    destroyObject<selection_getter_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property}
+};
+
 LUA_OBJECT_FUNCS(selection_getter_class, selection_getter_t, selection_getter)
 
 static int luaA_selection_getter_new(lua_State* L) {
@@ -58,7 +68,7 @@ static int luaA_selection_getter_new(lua_State* L) {
     target = luaL_checklstring(L, -1, &target_length);
 
     /* Create a selection object */
-    selection = reinterpret_cast<selection_getter_t*>(selection_getter_class.allocator(L));
+    selection = reinterpret_cast<selection_getter_t*>(selection_getter_class.alloc_object(L));
     selection->window = getConnection().generate_id();
     xcb_create_window(getGlobals().connection,
                       getGlobals().screen->root_depth,
@@ -279,18 +289,7 @@ void selection_getter_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(
-      L,
-      &selection_getter_class,
-      "selection_getter",
-      NULL,
-      {[](auto* state) { return static_cast<lua_object_t*>(selection_getter_new(state)); },
-       destroyObject<selection_getter_t>,
-       nullptr,
-       Lua::class_index_miss_property,
-       Lua::class_newindex_miss_property},
-      selection_getter_methods,
-      meta.data());
+    selection_getter_class.setup(L, selection_getter_methods, meta.data());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

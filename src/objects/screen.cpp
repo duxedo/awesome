@@ -273,11 +273,22 @@ struct screen_output_t {
     std::vector<xcb_randr_output_t> outputs;
 };
 
-static lua_class_t screen_class;
-LUA_OBJECT_FUNCS(screen_class, screen_t, screen)
-
 /** Check if a screen is valid */
 static bool screen_checker(screen_t* s) { return s->valid; }
+
+static inline screen_t* screen_new(lua_State*);
+
+static lua_class_t screen_class{
+  "screen",
+  NULL,
+  {[](auto* state) -> lua_object_t* { return screen_new(state); },
+    destroyObject<screen_t>,
+    [](auto* obj) { return screen_checker(static_cast<screen_t*>(obj)); },
+    Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property},
+};
+
+LUA_OBJECT_FUNCS(screen_class, screen_t, screen)
 
 /** Get a screen argument from the lua stack */
 screen_t* luaA_checkscreen(lua_State* L, int sidx) {
@@ -1745,17 +1756,7 @@ void screen_class_setup(lua_State* L) {
       {       "swap",        luaA_screen_swap},
     });
 
-    luaA_class_setup(L,
-                     &screen_class,
-                     "screen",
-                     NULL,
-                     {[](auto* state) -> lua_object_t* { return screen_new(state); },
-                      destroyObject<screen_t>,
-                      [](auto* obj) { return screen_checker(static_cast<screen_t*>(obj)); },
-                      Lua::class_index_miss_property,
-                      Lua::class_newindex_miss_property},
-                     methods.data(),
-                     meta.data());
+    screen_class.setup(L, methods.data(), meta.data());
 
     screen_class.add_property(
       "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);

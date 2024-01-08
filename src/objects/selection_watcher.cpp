@@ -24,6 +24,7 @@
 #include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
+#include "lua.h"
 
 #include <xcb/xfixes.h>
 
@@ -38,7 +39,17 @@ struct selection_watcher_t: public lua_object_t {
     xcb_window_t window;
 };
 
-static lua_class_t selection_watcher_class;
+static inline selection_watcher_t* selection_watcher_new(lua_State*);
+
+static lua_class_t selection_watcher_class{
+  "selection_watcher",
+  NULL,
+  {[](auto* state) { return static_cast<lua_object_t*>(selection_watcher_new(state)); },
+    destroyObject<selection_watcher_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property},
+};
+
 LUA_OBJECT_FUNCS(selection_watcher_class, selection_watcher_t, selection_watcher)
 
 void event_handle_xfixes_selection_notify(xcb_generic_event_t* ev) {
@@ -77,7 +88,7 @@ static int luaA_selection_watcher_new(lua_State* L) {
     selection_watcher_t* selection;
 
     name = luaL_checklstring(L, 2, &name_length);
-    selection = reinterpret_cast<selection_watcher_t*>(selection_watcher_class.allocator(L));
+    selection = reinterpret_cast<selection_watcher_t*>(selection_watcher_class.alloc_object(L));
     selection->active_ref = LUA_NOREF;
     selection->window = XCB_NONE;
 
@@ -184,18 +195,7 @@ void selection_watcher_class_setup(lua_State* L) {
     lua_newtable(L);
     lua_rawset(L, LUA_REGISTRYINDEX);
 
-    luaA_class_setup(
-      L,
-      &selection_watcher_class,
-      "selection_watcher",
-      NULL,
-      {[](auto* state) { return static_cast<lua_object_t*>(selection_watcher_new(state)); },
-       destroyObject<selection_watcher_t>,
-       nullptr,
-       Lua::class_index_miss_property,
-       Lua::class_newindex_miss_property},
-      methods.data(),
-      meta.data());
+    selection_watcher_class.setup(L, methods.data(), meta.data());
     selection_watcher_class.add_property("active",
                                          (lua_class_propfunc_t)luaA_selection_watcher_set_active,
                                          (lua_class_propfunc_t)luaA_selection_watcher_get_active,

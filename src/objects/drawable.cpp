@@ -32,6 +32,7 @@
 #include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "globalconf.h"
+#include "lua.h"
 
 #include <cairo-xcb.h>
 
@@ -101,8 +102,18 @@
  * @tparam function cb The meta-method
  * @staticfct set_newindex_miss_handler
  */
+static inline drawable_t* drawable_new(lua_State*);
 
-static lua_class_t drawable_class;
+static lua_class_t drawable_class{
+  "drawable",
+  NULL,
+  {
+    [](auto* state) { return static_cast<lua_object_t*>(drawable_new(state)); },
+    destroyObject<drawable_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property,
+    },
+};
 
 LUA_OBJECT_FUNCS(drawable_class, drawable_t, drawable)
 
@@ -217,19 +228,7 @@ void drawable_class_setup(lua_State* L) {
       {"geometry", luaA_drawable_geometry},
     });
 
-    luaA_class_setup(L,
-                     &drawable_class,
-                     "drawable",
-                     NULL,
-                     {
-                       [](auto* state) { return static_cast<lua_object_t*>(drawable_new(state)); },
-                       destroyObject<drawable_t>,
-                       nullptr,
-                       Lua::class_index_miss_property,
-                       Lua::class_newindex_miss_property,
-                     },
-                     methods.data(),
-                     meta.data());
+    drawable_class.setup(L, methods.data(), meta.data());
 
     drawable_class.add_property(
       "surface", NULL, (lua_class_propfunc_t)luaA_drawable_get_surface, NULL);

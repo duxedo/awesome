@@ -209,7 +209,14 @@
 
 #include <algorithm>
 
-lua_class_t tag_class;
+lua_class_t tag_class{
+  "tag",
+  NULL,
+  {[](auto* state) -> lua_object_t* { return tag_new(state); },
+    destroyObject<tag_t>,
+    nullptr, Lua::class_index_miss_property,
+    Lua::class_newindex_miss_property},
+};
 
 /** Emitted when a tag requests to be selected.
  * @signal request::select
@@ -433,7 +440,7 @@ int tags_get_current_or_first_selected_index(void) {
  * \lparam A name.
  * \lreturn A new tag object.
  */
-static int luaA_tag_new(lua_State* L) { return luaA_class_new(L, &tag_class); }
+static int luaA_tag_new(lua_State* L) { return tag_class.new_object(L); }
 
 /** Get or set the clients attached to this tag.
  *
@@ -568,17 +575,7 @@ void tag_class_setup(lua_State* L) {
       {"clients", luaA_tag_clients}
     });
 
-    luaA_class_setup(L,
-                     &tag_class,
-                     "tag",
-                     NULL,
-                     {[](auto* state) -> lua_object_t* { return tag_new(state); },
-                      destroyObject<tag_t>,
-                      nullptr,
-                      Lua::class_index_miss_property,
-                      Lua::class_newindex_miss_property},
-                     methods.data(),
-                     meta.data());
+    tag_class.setup(L, methods.data(), meta.data());
     tag_class.add_property("name",
                            (lua_class_propfunc_t)luaA_tag_set_name,
                            (lua_class_propfunc_t)luaA_tag_get_name,
