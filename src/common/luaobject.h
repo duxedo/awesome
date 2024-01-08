@@ -106,7 +106,7 @@ static inline void* luaA_object_ref(lua_State* L, int oud) {
  * \return The object reference, or NULL if not referenceable.
  */
 static inline void* luaA_object_ref_class(lua_State* L, int oud, lua_class_t* cls) {
-    luaA_checkudata(L, oud, cls);
+    cls->checkudata(L, oud);
     return luaA_object_ref(L, oud);
 }
 
