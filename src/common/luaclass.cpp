@@ -152,7 +152,8 @@ static int luaA_class_gc(lua_State* L) {
     /* Get the object class */
     lua_class_t* cls = reinterpret_cast<lua_class_t*>(luaA_class_get(L, 1));
     cls->instances--;
-    /* Call the collector function of the class, and all its parent classes */
+    /* Call the collector function of the class (class is responsible for
+     * collecting parent classes */
     if (cls->collector) {
         cls->collector(item);
     }
@@ -184,15 +185,11 @@ static int luaA_class_gc(lua_State* L) {
  * \param methods The methods to set on the class table.
  * \param meta The meta-methods to set on the class objects.
  */
-void internal::luaA_class_setup(lua_State* L,
+void luaA_class_setup(lua_State* L,
                                 lua_class_t* cls,
                                 const char* name,
                                 lua_class_t* parent,
-                                lua_class_allocator_t allocator,
-                                lua_class_collector_t collector,
-                                lua_class_checker_t checker,
-                                lua_class_propfunc_t index_miss_property,
-                                lua_class_propfunc_t newindex_miss_property,
+                                ClassInterface iface,
                                 const struct luaL_Reg methods[],
                                 const struct luaL_Reg meta[]) {
     /* Create the object metatable */
@@ -223,12 +220,12 @@ void internal::luaA_class_setup(lua_State* L,
     lua_setmetatable(L, -2);            /* set self as metatable              2 */
     lua_pop(L, 2);
 
-    cls->collector = collector;
-    cls->allocator = allocator;
+    cls->collector = iface.collector;
+    cls->allocator = iface.allocator;
     cls->name = name;
-    cls->index_miss_property = index_miss_property;
-    cls->newindex_miss_property = newindex_miss_property;
-    cls->checker = checker;
+    cls->index_miss_property = iface.index_miss_property;
+    cls->newindex_miss_property = iface.newindex_miss_property;
+    cls->checker = iface.checker;
     cls->parent = parent;
     cls->tostring = NULL;
     cls->instances = 0;
