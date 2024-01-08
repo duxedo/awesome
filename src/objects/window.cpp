@@ -54,6 +54,7 @@
 #include "objects/window.h"
 
 #include "common/atoms.h"
+#include "common/luaclass.h"
 #include "common/xutil.h"
 #include "ewmh.h"
 #include "globalconf.h"
@@ -415,17 +416,6 @@ LUA_OBJECT_EXPORT_PROPERTY(window, window_t, window, lua_pushinteger)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_color, luaA_pushcolor)
 LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_width, lua_pushinteger)
 
-struct WindowAdapter {
-    static window_t* allocator(lua_State* state) {
-        assert(false);
-        return nullptr;
-    }
-    static void collector(window_t* obj) {
-        assert(false && "windows are only superclass members");
-        obj->~window_t();
-    }
-};
-
 void window_class_setup(lua_State* L) {
     static const struct luaL_Reg window_methods[] = {
       {NULL, NULL}
@@ -439,14 +429,22 @@ void window_class_setup(lua_State* L) {
       {           NULL,                      NULL}
     };
 
-    luaA_class_setup<window_t, WindowAdapter>(L,
-                                              &window_class,
-                                              "window",
-                                              NULL,
-                                              Lua::class_index_miss_property,
-                                              Lua::class_newindex_miss_property,
-                                              window_methods,
-                                              window_meta);
+    luaA_class_setup(L,
+                     &window_class,
+                     "window",
+                     NULL,
+                     {
+                       [](auto* state) -> lua_object_t* {
+                           assert(false);
+                           return nullptr;
+                       },
+                       [](auto* obj) { assert(false); },
+                       nullptr,
+                       Lua::class_index_miss_property,
+                       Lua::class_newindex_miss_property,
+                     },
+                     window_methods,
+                     window_meta);
 
     window_class.add_property("window", NULL, (lua_class_propfunc_t)luaA_window_get_window, NULL);
     window_class.add_property("_opacity",

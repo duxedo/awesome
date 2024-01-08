@@ -117,8 +117,10 @@ drawable_t* drawable_allocator(lua_State* L, drawable_refresh_callback* callback
 }
 
 static void drawable_unset_surface(drawable_t* d) {
-    cairo_surface_finish(d->surface);
-    cairo_surface_destroy(d->surface);
+    if (d->surface) {
+        cairo_surface_finish(d->surface);
+        cairo_surface_destroy(d->surface);
+    }
     if (d->pixmap) {
         xcb_free_pixmap(getGlobals().connection, d->pixmap);
     }
@@ -207,14 +209,6 @@ static int luaA_drawable_geometry(lua_State* L) {
     return Lua::pusharea(L, d->geometry);
 }
 
-struct DrawableAdapter {
-    static drawable_t* allocator(lua_State* state) { return drawable_new(state); }
-    static void collector(drawable_t* obj) {
-        drawable_unset_surface(obj);
-        obj->~drawable_t();
-    }
-};
-
 void drawable_class_setup(lua_State* L) {
     static constexpr auto methods = DefineClassMethods<&drawable_class>();
 
@@ -223,14 +217,19 @@ void drawable_class_setup(lua_State* L) {
       {"geometry", luaA_drawable_geometry},
     });
 
-    luaA_class_setup<drawable_t, DrawableAdapter>(L,
-                                                  &drawable_class,
-                                                  "drawable",
-                                                  NULL,
-                                                  Lua::class_index_miss_property,
-                                                  Lua::class_newindex_miss_property,
-                                                  methods.data(),
-                                                  meta.data());
+    luaA_class_setup(L,
+                     &drawable_class,
+                     "drawable",
+                     NULL,
+                     {
+                       [](auto* state) { return static_cast<lua_object_t*>(drawable_new(state)); },
+                       destroyObject<drawable_t>,
+                       nullptr,
+                       Lua::class_index_miss_property,
+                       Lua::class_newindex_miss_property,
+                     },
+                     methods.data(),
+                     meta.data());
 
     drawable_class.add_property(
       "surface", NULL, (lua_class_propfunc_t)luaA_drawable_get_surface, NULL);
