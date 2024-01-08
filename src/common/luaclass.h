@@ -251,9 +251,20 @@ public:
     lua_object_t* alloc_object(lua_State* L) {
         return _allocator(L);
     }
+
+    lua_object_t* checkudata(lua_State*, int ud);
+    lua_object_t* toudata(lua_State* L, int ud);
+
+    template <typename T>
+    T* toudata(lua_State* L, int ud) {
+        return static_cast<T*>(toudata(L, ud));
+    }
+    template <typename T>
+    T* checkudata(lua_State* L, int ud) {
+        return static_cast<T*>(checkudata(L, ud));
+    }
 private:
     static int lua_gc(lua_State* L);
-    friend void* luaA_toudata(lua_State* L, int ud, lua_class_t* cls);
 };
 
 const char* luaA_typename(lua_State*, int);
@@ -278,15 +289,7 @@ int luaA_usemetatable(lua_State*, int, int);
 int luaA_class_index(lua_State*);
 int luaA_class_newindex(lua_State*);
 
-void* luaA_checkudata(lua_State*, int, lua_class_t*);
-void* luaA_toudata(lua_State* L, int ud, lua_class_t*);
 
-static inline void* luaA_checkudataornil(lua_State* L, int udx, lua_class_t* cls) {
-    if (lua_isnil(L, udx)) {
-        return NULL;
-    }
-    return luaA_checkudata(L, udx, cls);
-}
 namespace internal {
 template <lua_class_t* cls>
 inline constexpr auto LuaClassMethods =
@@ -317,7 +320,7 @@ inline constexpr auto LuaClassMethods =
                [](lua_State* L) { return Lua::registerfct(L, 1, &cls->newindex_miss_handler()); }}
     };
 
-inline constexpr auto LuaClassMeta =
+inline constexpr std::array<luaL_Reg, 2> LuaClassMeta =
     std::array<luaL_Reg, 2>{
       luaL_Reg{   "__index",    luaA_class_index},
       {"__newindex", luaA_class_newindex}

@@ -304,7 +304,7 @@ screen_t* luaA_checkscreen(lua_State* L, int sidx) {
         }
         return getGlobals().screens[screen - 1];
     } else {
-        return (screen_t*)luaA_checkudata(L, sidx, &screen_class);
+        return screen_class.checkudata<screen_t>(L, sidx);
     }
 }
 
@@ -951,7 +951,7 @@ static int luaA_scan_quiet(lua_State* L) {
 
 /* Called when a screen is removed, removes references to the old screen */
 static void screen_removed(lua_State* L, int sidx) {
-    auto screen = (screen_t*)luaA_checkudata(L, sidx, &screen_class);
+    auto screen = screen_class.checkudata<screen_t>(L, sidx);
 
     luaA_object_emit_signal(L, sidx, "removed", 0);
 
@@ -1626,7 +1626,7 @@ static int luaA_screen_fake_add(lua_State* L) {
  * @noreturn
  */
 static int luaA_screen_fake_remove(lua_State* L) {
-    auto s = (screen_t*)luaA_checkudata(L, 1, &screen_class);
+    auto s = screen_class.checkudata<screen_t>(L, 1);
     int idx = screen_get_index(s) - 1;
     if (idx < 0) {
         /* WTF? */
@@ -1667,7 +1667,7 @@ static int luaA_screen_fake_remove(lua_State* L) {
  * @see geometry
  */
 static int luaA_screen_fake_resize(lua_State* L) {
-    auto screen = (screen_t*)luaA_checkudata(L, 1, &screen_class);
+    auto screen = screen_class.checkudata<screen_t>(L, 1);
     int x = luaL_checkinteger(L, 2);
     int y = luaL_checkinteger(L, 3);
     int width = luaL_checkinteger(L, 4);
@@ -1701,8 +1701,8 @@ static int luaA_screen_fake_resize(lua_State* L) {
  * @noreturn
  */
 static int luaA_screen_swap(lua_State* L) {
-    auto s = (screen_t*)luaA_checkudata(L, 1, &screen_class);
-    auto swap = (screen_t*)luaA_checkudata(L, 2, &screen_class);
+    auto s = screen_class.checkudata<screen_t>(L, 1);
+    auto swap = screen_class.checkudata<screen_t>(L, 2);
 
     if (s != swap) {
         screen_t **ref_s = NULL, **ref_swap = NULL;

@@ -143,7 +143,7 @@ static void drawable_unset_surface(drawable_t* d) {
 drawable_t::~drawable_t() { drawable_unset_surface(this); }
 
 void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
-    auto d = (drawable_t*)luaA_checkudata(L, didx, &drawable_class);
+    auto d = drawable_class.checkudata<drawable_t>(L, didx);
     area_t old = d->geometry;
     d->geometry = geom;
 
@@ -203,7 +203,7 @@ static int luaA_drawable_get_surface(lua_State* L, drawable_t* drawable) {
  * @noreturn
  */
 static int luaA_drawable_refresh(lua_State* L) {
-    drawable_t* drawable = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
+    auto drawable = drawable_class.checkudata<drawable_t>(L, 1);
     drawable->refreshed = true;
     (*drawable->refresh_callback)(drawable->refresh_data);
 
@@ -216,7 +216,7 @@ static int luaA_drawable_refresh(lua_State* L) {
  * @method geometry
  */
 static int luaA_drawable_geometry(lua_State* L) {
-    drawable_t* d = reinterpret_cast<drawable_t*>(luaA_checkudata(L, 1, &drawable_class));
+    auto d = drawable_class.checkudata<drawable_t>(L, 1);
     return Lua::pusharea(L, d->geometry);
 }
 
