@@ -31,19 +31,46 @@
 /* Forward definition */
 typedef struct _GdkPixbuf GdkPixbuf;
 
+struct point {
+    int x,y;
+
+    point& operator-=(const point & rhs) {
+        x -= rhs.x;
+        y -= rhs.y;
+        return *this;
+    }
+    point& operator+=(const point & rhs) {
+        x += rhs.x;
+        y += rhs.y;
+        return *this;
+    }
+    point operator-(const point & rhs) const {
+        return {x - rhs.x, y - rhs.y};
+    }
+    point operator+(const point & rhs) const {
+        return {x + rhs.x, y + rhs.y};
+    }
+    bool operator<=>(const point&) const = default;
+};
+
 struct area_t {
     /** Co-ords of upper left corner */
-    int16_t x;
-    int16_t y;
+    point top_left;
     uint16_t width;
     uint16_t height;
 
     bool operator<=>(const area_t&) const = default;
 
-    auto left() { return x; }
-    auto top() { return y; }
-    auto bottom() { return y + height; }
-    auto right() { return x + width; }
+    auto left() const { return top_left.x; }
+    auto top() const { return top_left.y; }
+    auto bottom() const { return top_left.y + height; }
+    auto right() const { return top_left.x + width; }
+
+    point bottom_right() const { return { top_left.x + width, top_left.y + height }; }
+
+    bool inside(point p) const {
+        return (left() > p.x || right() <= p.x) && (top() > p.y || bottom() <= p.y);
+    }
 };
 
 struct CairoDeleter {

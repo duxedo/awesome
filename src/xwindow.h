@@ -24,6 +24,7 @@
 #include "color.h"
 #include "globalconf.h"
 
+#include <cstdint>
 #include <xcb/shape.h>
 
 void xwindow_set_state(xcb_window_t, uint32_t);
@@ -42,7 +43,7 @@ void xwindow_set_border_color(xcb_window_t, color_t*);
 cairo_surface_t* xwindow_get_shape(xcb_window_t, xcb_shape_sk_t);
 void xwindow_set_shape(xcb_window_t, int, int, xcb_shape_sk_t, cairo_surface_t*, int);
 void xwindow_translate_for_gravity(
-  xcb_gravity_t, int16_t, int16_t, int16_t, int16_t, int16_t*, int16_t*);
+  xcb_gravity_t, int16_t, int16_t, int16_t, int16_t, int*, int*);
 
 #define xwindow_set_name_static(win, name) \
     xcb_icccm_set_wm_name(getGlobals().connection, win, XCB_ATOM_STRING, 8, sizeof(name) - 1, name)

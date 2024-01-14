@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include "draw.h"
 #include "objects/key.h"
 #include "objects/window.h"
 #include "stack.h"
@@ -285,8 +286,8 @@ void client_send_configure(client*);
 void client_find_transient_for(client*);
 void client_emit_scanned(void);
 void client_emit_scanning(void);
-drawable_t* client_get_drawable(client*, int, int);
-drawable_t* client_get_drawable_offset(client*, int*, int*);
+drawable_t* client_get_drawable(client*, point);
+drawable_t* client_get_drawable_offset(client*, point*);
 area_t client_get_undecorated_geometry(client*);
 
 /** Put client on top of the stack.
