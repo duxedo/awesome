@@ -50,6 +50,7 @@
 #include "common/luaclass.h"
 #include "common/lualib.h"
 #include "common/luaobject.h"
+#include "common/util.h"
 #include "event.h"
 #include "globalconf.h"
 #include "lua.h"
@@ -679,88 +680,6 @@ static void screen_get_randr_crtcs_outputs(lua_State* L,
     }
 }
 
-static void screen_scan_randr_crtcs(lua_State* L, std::vector<screen_t*>* screens) {
-    /* A quick XRandR recall:
-     * You have CRTC that manages a part of a SCREEN.
-     * Each CRTC can draw stuff on one or more OUTPUT. */
-    xcb_randr_get_screen_resources_cookie_t screen_res_c =
-      xcb_randr_get_screen_resources(getGlobals().connection, getGlobals().screen->root);
-    xcb_randr_get_screen_resources_reply_t* screen_res_r =
-      xcb_randr_get_screen_resources_reply(getGlobals().connection, screen_res_c, NULL);
-
-    if (screen_res_r == NULL) {
-        log_warn("RANDR GetScreenResources failed; this should not be possible");
-        return;
-    }
-
-    /* We go through CRTC, and build a screen for each one. */
-    xcb_randr_crtc_t* randr_crtcs = xcb_randr_get_screen_resources_crtcs(screen_res_r);
-
-    for (int i = 0; i < screen_res_r->num_crtcs; i++) {
-        /* Get info on the output crtc */
-        xcb_randr_get_crtc_info_cookie_t crtc_info_c =
-          xcb_randr_get_crtc_info(getGlobals().connection, randr_crtcs[i], XCB_CURRENT_TIME);
-        xcb_randr_get_crtc_info_reply_t* crtc_info_r =
-          xcb_randr_get_crtc_info_reply(getGlobals().connection, crtc_info_c, NULL);
-
-        if (!crtc_info_r) {
-            log_warn("RANDR GetCRTCInfo failed; this should not be possible");
-            continue;
-        }
-
-        /* If CRTC has no OUTPUT, ignore it */
-        if (!xcb_randr_get_crtc_info_outputs_length(crtc_info_r)) {
-            continue;
-        }
-
-        viewport_t* viewport = viewport_add(
-          L, area_t{crtc_info_r->x, crtc_info_r->y, crtc_info_r->width, crtc_info_r->height});
-
-        screen_get_randr_crtcs_outputs(L, crtc_info_r, &viewport->outputs);
-
-        if (getGlobals().ignore_screens) {
-            p_delete(&crtc_info_r);
-            continue;
-        }
-
-        /* Prepare the new screen */
-        screen_t* new_screen = screen_add(L, screens);
-        new_screen->lifecycle = (screen_lifecycle_t)(new_screen->lifecycle | SCREEN_LIFECYCLE_C);
-        viewport->screen = new_screen;
-        new_screen->viewport = viewport;
-        new_screen->geometry.x = crtc_info_r->x;
-        new_screen->geometry.y = crtc_info_r->y;
-        new_screen->geometry.width = crtc_info_r->width;
-        new_screen->geometry.height = crtc_info_r->height;
-        new_screen->xid = randr_crtcs[i];
-
-        /* Detect the older NVIDIA blobs */
-        for (auto& output : new_screen->viewport->outputs) {
-            if (output.name == "default") {
-                /* non RandR 1.2+ X driver don't return any usable multihead
-                 * data. I'm looking at you, nvidia binary blob!
-                 */
-                log_warn("Ignoring RandR, only a compatibility layer is present.");
-
-                /* Get rid of the screens that we already created */
-                for (auto* screen : *screens) {
-                    luaA_object_unref(L, screen);
-                }
-
-                screens->clear();
-
-                p_delete(&screen_res_r);
-
-                return;
-            }
-        }
-
-        p_delete(&crtc_info_r);
-    }
-
-    p_delete(&screen_res_r);
-}
-
 static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
     const xcb_query_extension_reply_t* extension_reply;
     xcb_randr_query_version_reply_t* version_reply;
@@ -788,28 +707,16 @@ static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
         return;
     }
 
-    getGlobals().have_randr_13 = minor_version >= 3;
-#if XCB_RANDR_MAJOR_VERSION > 1 || XCB_RANDR_MINOR_VERSION >= 5
-    getGlobals().have_randr_15 = minor_version >= 5;
-#else
-    globalconf.have_randr_15 = false;
-#endif
-
     /* We want to know when something changes */
     xcb_randr_select_input(
       getGlobals().connection, getGlobals().screen->root, XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
 
-    if (getGlobals().have_randr_15) {
-        screen_scan_randr_monitors(L, screens);
-    } else {
-        screen_scan_randr_crtcs(L, screens);
-    }
+    screen_scan_randr_monitors(L, screens);
 
     if (screens->size() == 0 && !getGlobals().ignore_screens) {
         /* Scanning failed, disable randr again */
         xcb_randr_select_input(getGlobals().connection, getGlobals().screen->root, 0);
-        getGlobals().have_randr_13 = false;
-        getGlobals().have_randr_15 = false;
+        log_fatal("screen scan failed (found 0 screens)");
     }
 }
 
@@ -1029,11 +936,7 @@ static gboolean screen_refresh(gpointer unused) {
     lua_State* L = globalconf_get_lua_State();
     bool list_changed = false;
 
-    if (getGlobals().have_randr_15) {
-        screen_scan_randr_monitors(L, &new_screens);
-    } else {
-        screen_scan_randr_crtcs(L, &new_screens);
-    }
+    screen_scan_randr_monitors(L, &new_screens);
 
     viewport_purge();
 
@@ -1113,7 +1016,7 @@ static gboolean screen_refresh(gpointer unused) {
 }
 
 void screen_schedule_refresh(void) {
-    if (getGlobals().screen_refresh_pending || !getGlobals().have_randr_13) {
+    if (getGlobals().screen_refresh_pending) {
         return;
     }
 
@@ -1364,10 +1267,6 @@ int screen_get_index(screen_t* s) {
 }
 
 void screen_update_primary(void) {
-    if (!getGlobals().have_randr_13) {
-        return;
-    }
-
     screen_t* primary_screen = NULL;
     xcb_randr_get_output_primary_reply_t* primary = xcb_randr_get_output_primary_reply(
       getGlobals().connection,
