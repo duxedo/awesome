@@ -96,10 +96,6 @@ class Globals {
     xcb_atom_t selection_atom = 0;
     /** Window owning the WM_Sn selection */
     xcb_window_t selection_owner_window = 0;
-    /** Do we have RandR 1.3 or newer? */
-    bool have_randr_13 = false;
-    /** Do we have RandR 1.5 or newer? */
-    bool have_randr_15 = false;
     /** Do we have a RandR screen update pending? */
     bool screen_refresh_pending = false;
     /** Should screens be created before rc.lua is loaded? */
