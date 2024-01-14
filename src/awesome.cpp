@@ -35,6 +35,7 @@
 #include "xkb.h"
 #include "xwindow.h"
 
+#include <algorithm>
 #include <glib-unix.h>
 #include <ranges>
 #include <sys/time.h>
@@ -106,13 +107,10 @@ void awesome_atexit(bool restart) {
 
     /* Save the client order.  This is useful also for "hard" restarts. */
     xcb_window_t* wins = p_alloca(xcb_window_t, getGlobals().clients.size());
-    size_t n = 0;
-    for (auto* client : getGlobals().clients) {
-        wins[n++] = client->window;
-    }
+    std::ranges::transform(getGlobals().clients, wins, [](auto & cli) { return cli->window; });
 
     getConnection().replace_property(
-      getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, n});
+      getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, getGlobals().clients.size()});
 
     a_dbus_cleanup();
 
@@ -787,7 +785,7 @@ int main(int argc, char** argv) {
 
     /* Get the window tree associated to this screen */
     xcb_query_tree_cookie_t tree_c =
-      getConnection().query_tree_unckecked(getGlobals().screen->root);
+      getConnection().query_tree_unchecked(getGlobals().screen->root);
 
     getConnection().change_attributes(
       getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);

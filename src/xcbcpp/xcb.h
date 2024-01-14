@@ -123,7 +123,7 @@ class Connection {
         return configure_window(window, value_mask, std::array<uint32_t, 1>{val});
     }
 
-    xcb_query_tree_cookie_t query_tree_unckecked(xcb_window_t window) {
+    xcb_query_tree_cookie_t query_tree_unchecked(xcb_window_t window) {
         return xcb_query_tree_unchecked(connection, window);
     }
 
