@@ -107,9 +107,8 @@ atoms_int = custom_target(
 #install data -> ${INSTALL_PREFIX}/share/pellicle
 #install xsessions -> ${INSTALL_PREFIX}/share/xsessions
 #install man -> ${INSTALL_PREFIX}/share/man
-
 confdata = configuration_data()
-data_path = '/usr/share/awesome'
+data_path = get_option('data_path')
 confdata.set('AWESOME_LUA_LIB_PATH', data_path / 'lib')
 confdata.set('XDG_CONFIG_DIR', '/etc/xdg')
 
@@ -136,4 +135,5 @@ executable(
     include_directories : include_dir,
     c_args: ['-Wno-unused-function'],
     cpp_args: ['-Wno-unused-function'],
+    link_args: ['-Wl,--export-dynamic-symbol=*_ffi']
 )
