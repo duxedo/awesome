@@ -196,8 +196,8 @@ static void event_handle_button(xcb_button_press_event_t* ev) {
         /* If the drawin is child, then x,y are
          * relative to root window */
         if (drawin->window == ev->child) {
-            ev->event_x -= drawin->geometry.x + drawin->border_width;
-            ev->event_y -= drawin->geometry.y + drawin->border_width;
+            ev->event_x -= drawin->geometry.top_left.x + drawin->border_width;
+            ev->event_y -= drawin->geometry.top_left.y + drawin->border_width;
         }
 
         /* Push the drawable */
@@ -235,13 +235,13 @@ static void event_handle_button(xcb_button_press_event_t* ev) {
             event_emit_button(L, ev);
             /* then check if a titlebar was "hit" */
             if (c->frame_window == ev->event) {
-                int x = ev->event_x, y = ev->event_y;
-                drawable_t* d = client_get_drawable_offset(c, &x, &y);
+                point p = {ev->event_x, ev->event_y};
+                drawable_t* d = client_get_drawable_offset(c, &p);
                 if (d) {
                     /* Copy the event so that we can fake x/y */
                     xcb_button_press_event_t event = *ev;
-                    event.event_x = x;
-                    event.event_y = y;
+                    event.event_x = p.x;
+                    event.event_y = p.y;
                     luaA_object_push_item(L, -1, d);
                     event_emit_button(L, &event);
                     lua_pop(L, 1);
@@ -342,23 +342,23 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
                                           0,
                                           diff_w,
                                           diff_h,
-                                          &geometry.x,
-                                          &geometry.y);
+                                          &geometry.top_left.x,
+                                          &geometry.top_left.y);
         }
         if (ev->value_mask & XCB_CONFIG_WINDOW_X) {
-            geometry.x = ev->x;
+            geometry.top_left.x = ev->x;
             if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY) {
                 xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity,
                                               deco_left,
                                               0,
                                               deco_right,
                                               0,
-                                              &geometry.x,
+                                              &geometry.top_left.x,
                                               NULL);
             }
         }
         if (ev->value_mask & XCB_CONFIG_WINDOW_Y) {
-            geometry.y = ev->y;
+            geometry.top_left.y = ev->y;
             if (c->size_hints.flags & XCB_ICCCM_SIZE_HINT_P_WIN_GRAVITY) {
                 xwindow_translate_for_gravity((xcb_gravity_t)c->size_hints.win_gravity,
                                               0,
@@ -366,7 +366,7 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
                                               0,
                                               deco_bottom,
                                               NULL,
-                                              &geometry.y);
+                                              &geometry.top_left.y);
             }
         }
 
@@ -381,11 +381,11 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
            the "protocol"
          */
         lua_pushstring(L, "x");
-        lua_pushinteger(L, geometry.x);
+        lua_pushinteger(L, geometry.top_left.x);
         lua_rawset(L, -3);
 
         lua_pushstring(L, "y");
-        lua_pushinteger(L, geometry.y);
+        lua_pushinteger(L, geometry.top_left.y);
         lua_rawset(L, -3);
 
         lua_pushstring(L, "width");
@@ -419,10 +419,10 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
 
         if (geom && coords) {
             xwindow_configure(ev->window,
-                              (area_t){.x = coords->dst_x,
-                                       .y = coords->dst_y,
-                                       .width = geom->width,
-                                       .height = geom->height},
+                              (area_t){{ coords->dst_x,
+                                        coords->dst_y},
+                                        geom->width,
+                                        geom->height},
                               0);
         }
         p_delete(&geom);
@@ -517,13 +517,13 @@ static void event_handle_motionnotify(xcb_motion_notify_event_t* ev) {
         luaA_object_emit_signal(L, -3, "mouse::move", 2);
 
         /* now check if a titlebar was "hit" */
-        int x = ev->event_x, y = ev->event_y;
-        drawable_t* d = client_get_drawable_offset(c, &x, &y);
+        point pt {ev->event_x, ev->event_y};
+        drawable_t* d = client_get_drawable_offset(c, &pt);
         if (d) {
             luaA_object_push_item(L, -1, d);
             event_drawable_under_mouse(L, -1);
-            lua_pushinteger(L, x);
-            lua_pushinteger(L, y);
+            lua_pushinteger(L, pt.x);
+            lua_pushinteger(L, pt.y);
             luaA_object_emit_signal(L, -3, "mouse::move", 2);
             lua_pop(L, 1);
         }
@@ -633,7 +633,7 @@ static void event_handle_enternotify(xcb_enter_notify_event_t* ev) {
             luaA_object_emit_signal(L, -1, "mouse::enter", 0);
         }
 
-        drawable_t* d = client_get_drawable(c, ev->event_x, ev->event_y);
+        drawable_t* d = client_get_drawable(c, {ev->event_x, ev->event_y});
         if (d) {
             luaA_object_push_item(L, -1, d);
         } else {

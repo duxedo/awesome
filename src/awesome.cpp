@@ -103,15 +103,17 @@ void awesome_atexit(bool restart) {
     for (auto* c : getGlobals().getStack()) {
         area_t geometry = client_get_undecorated_geometry(c);
         getConnection().reparent_window(
-          c->window, getGlobals().screen->root, geometry.x, geometry.y);
+          c->window, getGlobals().screen->root, geometry.left(), geometry.top());
     }
 
     /* Save the client order.  This is useful also for "hard" restarts. */
     xcb_window_t* wins = p_alloca(xcb_window_t, getGlobals().clients.size());
-    std::ranges::transform(getGlobals().clients, wins, [](auto & cli) { return cli->window; });
+    std::ranges::transform(getGlobals().clients, wins, [](auto& cli) { return cli->window; });
 
-    getConnection().replace_property(
-      getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, std::span{wins, getGlobals().clients.size()});
+    getConnection().replace_property(getGlobals().screen->root,
+                                     AWESOME_CLIENT_ORDER,
+                                     XCB_ATOM_WINDOW,
+                                     std::span{wins, getGlobals().clients.size()});
 
     a_dbus_cleanup();
 

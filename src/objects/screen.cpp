@@ -325,8 +325,7 @@ static void screen_deduplicate(lua_State* L, std::vector<screen_t*>* screens) {
                 continue;
             }
 
-            if (first_screen->geometry.x == second_screen->geometry.x &&
-                first_screen->geometry.y == second_screen->geometry.y) {
+            if (first_screen->geometry.top_left == second_screen->geometry.top_left) {
                 /* Found a duplicate */
                 first_screen->geometry.width =
                   MAX(first_screen->geometry.width, second_screen->geometry.width);
@@ -623,10 +622,11 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         screen_output_t output = screen_get_randr_output(L, &monitor_iter);
 
         viewport_t* viewport = viewport_add(L,
-                                            area_t{monitor_iter.data->x,
-                                                   monitor_iter.data->y,
-                                                   monitor_iter.data->width,
-                                                   monitor_iter.data->height});
+                                            area_t{
+                                              {monitor_iter.data->x, monitor_iter.data->y},
+                                              monitor_iter.data->width,
+                                              monitor_iter.data->height
+        });
 
         viewport->outputs.push_back(output);
 
@@ -638,8 +638,7 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         new_screen->lifecycle = (screen_lifecycle_t)(new_screen->lifecycle | SCREEN_LIFECYCLE_C);
         viewport->screen = new_screen;
         new_screen->viewport = viewport;
-        new_screen->geometry.x = monitor_iter.data->x;
-        new_screen->geometry.y = monitor_iter.data->y;
+        new_screen->geometry.top_left = {monitor_iter.data->x, monitor_iter.data->y};
         new_screen->geometry.width = monitor_iter.data->width;
         new_screen->geometry.height = monitor_iter.data->height;
         new_screen->xid = monitor_iter.data->name;
@@ -755,7 +754,11 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
 
     for (int screen = 0; screen < xinerama_screen_number; screen++) {
         viewport_t* viewport = viewport_add(
-          L, area_t{xsi[screen].x_org, xsi[screen].y_org, xsi[screen].width, xsi[screen].height});
+          L,
+          area_t{
+            {xsi[screen].x_org, xsi[screen].y_org},
+            xsi[screen].width, xsi[screen].height
+        });
 
         if (getGlobals().ignore_screens) {
             continue;
@@ -765,8 +768,7 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
         viewport->screen = s;
         s->viewport = viewport;
         s->lifecycle = (screen_lifecycle_t)(s->lifecycle | SCREEN_LIFECYCLE_C);
-        s->geometry.x = xsi[screen].x_org;
-        s->geometry.y = xsi[screen].y_org;
+        s->geometry.top_left = {xsi[screen].x_org, xsi[screen].y_org};
         s->geometry.width = xsi[screen].width;
         s->geometry.height = xsi[screen].height;
     }
@@ -778,7 +780,7 @@ static void screen_scan_x11(lua_State* L, std::vector<screen_t*>* screens) {
     xcb_screen_t* xcb_screen = getGlobals().screen;
 
     viewport_t* viewport =
-      viewport_add(L, area_t{0, 0, xcb_screen->width_in_pixels, xcb_screen->height_in_pixels});
+      viewport_add(L, area_t{{0, 0}, xcb_screen->width_in_pixels, xcb_screen->height_in_pixels});
 
     if (getGlobals().ignore_screens) {
         return;
@@ -788,8 +790,7 @@ static void screen_scan_x11(lua_State* L, std::vector<screen_t*>* screens) {
     viewport->screen = s;
     s->lifecycle = (screen_lifecycle_t)(s->lifecycle | SCREEN_LIFECYCLE_C);
     s->viewport = viewport;
-    s->geometry.x = 0;
-    s->geometry.y = 0;
+    s->geometry.top_left = {0, 0};
     s->geometry.width = xcb_screen->width_in_pixels;
     s->geometry.height = xcb_screen->height_in_pixels;
 }
@@ -868,7 +869,7 @@ static void screen_removed(lua_State* L, int sidx) {
 
     for (auto* c : getGlobals().clients) {
         if (c->screen == screen) {
-            screen_client_moveto(c, screen_getbycoord(c->geometry.x, c->geometry.y), false);
+            screen_client_moveto(c, screen_getbycoord(c->geometry.top_left), false);
         }
     }
 }
@@ -1031,7 +1032,7 @@ void screen_schedule_refresh(void) {
  * \return Squared distance of the point to the screen.
  */
 static unsigned int screen_get_distance_squared(screen_t* s, int x, int y) {
-    int sx = s->geometry.x, sy = s->geometry.y;
+    auto [sx, sy] = s->geometry.top_left;
     int sheight = s->geometry.height, swidth = s->geometry.width;
     unsigned int dist_x, dist_y;
 
@@ -1061,9 +1062,9 @@ static unsigned int screen_get_distance_squared(screen_t* s, int x, int y) {
  * \param y Y coordinate
  * \return Screen pointer or screen param if no match or no multi-head.
  */
-screen_t* screen_getbycoord(int x, int y) {
+screen_t* screen_getbycoord(point p) {
     for (auto* s : getGlobals().screens) {
-        if (screen_coord_in_screen(s, x, y)) {
+        if (s->geometry.inside(p)) {
             return s;
         }
     }
@@ -1072,7 +1073,7 @@ screen_t* screen_getbycoord(int x, int y) {
     screen_t* nearest_screen = NULL;
     unsigned int nearest_dist = UINT_MAX;
     for (auto* s : getGlobals().screens) {
-        unsigned int dist_sq = screen_get_distance_squared(s, x, y);
+        unsigned int dist_sq = screen_get_distance_squared(s, p.x, p.y);
         if (dist_sq < nearest_dist) {
             nearest_dist = dist_sq;
             nearest_screen = s;
@@ -1081,25 +1082,14 @@ screen_t* screen_getbycoord(int x, int y) {
     return nearest_screen;
 }
 
-/** Are the given coordinates in a given screen?
- * \param screen The logical screen number.
- * \param x X coordinate
- * \param y Y coordinate
- * \return True if the X/Y coordinates are in the given screen.
- */
-bool screen_coord_in_screen(screen_t* s, int x, int y) {
-    return (x >= s->geometry.x && x < s->geometry.x + s->geometry.width) &&
-           (y >= s->geometry.y && y < s->geometry.y + s->geometry.height);
-}
-
 /** Is there any overlap between the given geometry and a given screen?
  * \param screen The logical screen number.
  * \param geom The geometry
  * \return True if there is any overlap between the geometry and a given screen.
  */
 bool screen_area_in_screen(screen_t* s, area_t geom) {
-    return (geom.x < s->geometry.x + s->geometry.width) && (geom.x + geom.width > s->geometry.x) &&
-           (geom.y < s->geometry.y + s->geometry.height) && (geom.y + geom.height > s->geometry.y);
+    return (geom.top_left.x < s->geometry.top_left.x + s->geometry.width) && (geom.top_left.x + geom.width > s->geometry.top_left.x) &&
+           (geom.top_left.y < s->geometry.top_left.y + s->geometry.height) && (geom.top_left.y + geom.height > s->geometry.top_left.y);
 }
 
 void screen_update_workarea(screen_t* screen) {
@@ -1112,25 +1102,25 @@ void screen_update_workarea(screen_t* screen) {
             if ((o)->strut.top)                                                          \
                 top = MAX(top, (o)->strut.top);                                          \
             else                                                                         \
-                top = MAX(top, ((o)->geometry.y - area.y) + (o)->geometry.height);       \
+                top = MAX(top, ((o)->geometry.top_left.y - area.top_left.y) + (o)->geometry.height);       \
         }                                                                                \
         if ((o)->strut.bottom_start_x || (o)->strut.bottom_end_x || (o)->strut.bottom) { \
             if ((o)->strut.bottom)                                                       \
                 bottom = MAX(bottom, (o)->strut.bottom);                                 \
             else                                                                         \
-                bottom = MAX(bottom, (area.y + area.height) - (o)->geometry.y);          \
+                bottom = MAX(bottom, (area.top_left.y + area.height) - (o)->geometry.top_left.y);          \
         }                                                                                \
         if ((o)->strut.left_start_y || (o)->strut.left_end_y || (o)->strut.left) {       \
             if ((o)->strut.left)                                                         \
                 left = MAX(left, (o)->strut.left);                                       \
             else                                                                         \
-                left = MAX(left, ((o)->geometry.x - area.x) + (o)->geometry.width);      \
+                left = MAX(left, ((o)->geometry.top_left.x - area.top_left.x) + (o)->geometry.width);      \
         }                                                                                \
         if ((o)->strut.right_start_y || (o)->strut.right_end_y || (o)->strut.right) {    \
             if ((o)->strut.right)                                                        \
                 right = MAX(right, (o)->strut.right);                                    \
             else                                                                         \
-                right = MAX(right, (area.x + area.width) - (o)->geometry.x);             \
+                right = MAX(right, (area.top_left.x + area.width) - (o)->geometry.top_left.x);             \
         }                                                                                \
     }
 
@@ -1142,7 +1132,7 @@ void screen_update_workarea(screen_t* screen) {
 
     for (auto* drawin : getGlobals().drawins) {
         if (drawin->visible) {
-            screen_t* d_screen = screen_getbycoord(drawin->geometry.x, drawin->geometry.y);
+            screen_t* d_screen = screen_getbycoord(drawin->geometry.top_left);
             if (d_screen == screen) {
                 COMPUTE_STRUT(drawin)
             }
@@ -1151,8 +1141,7 @@ void screen_update_workarea(screen_t* screen) {
 
 #undef COMPUTE_STRUT
 
-    area.x += left;
-    area.y += top;
+    area.top_left += {left, top};
     area.width -= MIN(area.width, left + right);
     area.height -= MIN(area.height, top + bottom);
 
@@ -1211,8 +1200,7 @@ void screen_client_moveto(client* c, screen_t* new_screen, bool doresize) {
 
     area_t new_geometry = c->geometry;
 
-    new_geometry.x = to.x + new_geometry.x - from.x;
-    new_geometry.y = to.y + new_geometry.y - from.y;
+    new_geometry.top_left = to.top_left + new_geometry.top_left - from.top_left;
 
     /* resize the client if it doesn't fit the new screen */
     if (new_geometry.width > to.width) {
@@ -1223,16 +1211,15 @@ void screen_client_moveto(client* c, screen_t* new_screen, bool doresize) {
     }
 
     /* make sure the client is still on the screen */
-    if (new_geometry.x + new_geometry.width > to.x + to.width) {
-        new_geometry.x = to.x + to.width - new_geometry.width;
+    if (new_geometry.right() > to.right()) {
+        new_geometry.top_left.x = to.right() - new_geometry.width;
     }
-    if (new_geometry.y + new_geometry.height > to.y + to.height) {
-        new_geometry.y = to.y + to.height - new_geometry.height;
+    if (new_geometry.bottom() > to.bottom()) {
+        new_geometry.top_left.y = to.bottom() - new_geometry.height;
     }
     if (!screen_area_in_screen(new_screen, new_geometry)) {
         /* If all else fails, force the client to end up on screen. */
-        new_geometry.x = to.x;
-        new_geometry.y = to.y;
+        new_geometry.top_left = to.top_left;
     }
 
     /* move / resize the client */
@@ -1500,8 +1487,7 @@ static int luaA_screen_fake_add(lua_State* L) {
     s = screen_add(L, &getGlobals().screens);
     s->lifecycle =
       (screen_lifecycle_t)(s->lifecycle | (managed ? SCREEN_LIFECYCLE_LUA : SCREEN_LIFECYCLE_USER));
-    s->geometry.x = x;
-    s->geometry.y = y;
+    s->geometry.top_left = {x, y};
     s->geometry.width = width;
     s->geometry.height = height;
     s->xid = FAKE_SCREEN_XID;
@@ -1511,7 +1497,7 @@ static int luaA_screen_fake_add(lua_State* L) {
     luaA_object_push(L, s);
 
     for (auto* c : getGlobals().clients) {
-        screen_client_moveto(c, screen_getbycoord((c)->geometry.x, (c)->geometry.y), false);
+        screen_client_moveto(c, screen_getbycoord((c)->geometry.top_left), false);
     }
 
     return 1;
@@ -1573,8 +1559,7 @@ static int luaA_screen_fake_resize(lua_State* L) {
     int height = luaL_checkinteger(L, 5);
     area_t old_geometry = screen->geometry;
 
-    screen->geometry.x = x;
-    screen->geometry.y = y;
+    screen->geometry.top_left = {x, y};
     screen->geometry.width = width;
     screen->geometry.height = height;
 

@@ -167,10 +167,10 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     if (area_changed) {
         luaA_object_emit_signal(L, didx, "property::geometry", 0);
     }
-    if (old.x != geom.x) {
+    if (old.top_left.x != geom.top_left.x) {
         luaA_object_emit_signal(L, didx, "property::x", 0);
     }
-    if (old.y != geom.y) {
+    if (old.top_left.y != geom.top_left.y) {
         luaA_object_emit_signal(L, didx, "property::y", 0);
     }
     if (old.width != geom.width) {

@@ -77,8 +77,8 @@ void xwindow_configure(xcb_window_t win, area_t geometry, int border) {
     ce.response_type = XCB_CONFIGURE_NOTIFY;
     ce.event = win;
     ce.window = win;
-    ce.x = geometry.x + border;
-    ce.y = geometry.y + border;
+    ce.x = geometry.top_left.x + border;
+    ce.y = geometry.top_left.y + border;
     ce.width = geometry.width;
     ce.height = geometry.height;
     ce.border_width = border;
@@ -387,8 +387,8 @@ void xwindow_translate_for_gravity(xcb_gravity_t gravity,
                                    int16_t change_height_before,
                                    int16_t change_width_after,
                                    int16_t change_height_after,
-                                   int16_t* dx,
-                                   int16_t* dy) {
+                                   int32_t* dx,
+                                   int32_t* dy) {
     int16_t x = 0, y = 0;
     int16_t change_height = change_height_before + change_height_after;
     int16_t change_width = change_width_before + change_width_after;

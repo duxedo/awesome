@@ -1951,8 +1951,8 @@ static void client_geometry_refresh(void) {
                     c->titlebar[CLIENT_TITLEBAR_BOTTOM].size);
             }
 
-            real_geometry.x = c->titlebar[CLIENT_TITLEBAR_LEFT].size;
-            real_geometry.y = c->titlebar[CLIENT_TITLEBAR_TOP].size;
+            real_geometry.top_left = {c->titlebar[CLIENT_TITLEBAR_LEFT].size,
+                                      c->titlebar[CLIENT_TITLEBAR_TOP].size};
             real_geometry.width -= c->titlebar[CLIENT_TITLEBAR_LEFT].size;
             real_geometry.width -= c->titlebar[CLIENT_TITLEBAR_RIGHT].size;
             real_geometry.height -= c->titlebar[CLIENT_TITLEBAR_TOP].size;
@@ -1962,8 +1962,7 @@ static void client_geometry_refresh(void) {
                 log_warn("Resizing a window to size zero!?");
             }
         } else {
-            real_geometry.x = 0;
-            real_geometry.y = 0;
+            real_geometry.top_left = {0, 0};
         }
 
         /* Is there anything to do? */
@@ -1981,14 +1980,15 @@ static void client_geometry_refresh(void) {
             ignored_enterleave = true;
         }
 
-        getConnection().configure_window(
-          c->frame_window,
-          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y | XCB_CONFIG_WINDOW_WIDTH |
-            XCB_CONFIG_WINDOW_HEIGHT,
-          std::array<uint32_t, 4>{
-            (uint32_t)geometry.x, (uint32_t)geometry.y, geometry.width, geometry.height});
-        std::array<uint32_t, 4> geo = {(uint32_t)real_geometry.x,
-                                       (uint32_t)real_geometry.y,
+        getConnection().configure_window(c->frame_window,
+                                         XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
+                                           XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
+                                         std::array<uint32_t, 4>{(uint32_t)geometry.top_left.x,
+                                                                 (uint32_t)geometry.top_left.y,
+                                                                 geometry.width,
+                                                                 geometry.height});
+        std::array<uint32_t, 4> geo = {(uint32_t)real_geometry.top_left.x,
+                                       (uint32_t)real_geometry.top_left.y,
                                        real_geometry.width,
                                        real_geometry.height};
         getConnection().configure_window(c->window,
@@ -2040,8 +2040,8 @@ static void border_width_callback(client* c, uint16_t old_width, uint16_t new_wi
                                       diff,
                                       diff,
                                       diff,
-                                      &geometry.x,
-                                      &geometry.y);
+                                      &geometry.top_left.x,
+                                      &geometry.top_left.y);
         /* inform client about changes */
         client_resize_do(c, geometry);
     }
@@ -2182,13 +2182,12 @@ void client_manage(xcb_window_t w,
     getGlobals().clients.insert(getGlobals().clients.begin(), (client*)luaA_object_ref(L, -1));
 
     /* Set the right screen */
-    screen_client_moveto(c, screen_getbycoord(wgeom->x, wgeom->y), false);
+    screen_client_moveto(c, screen_getbycoord({wgeom->x, wgeom->y}), false);
 
     /* Store initial geometry and emits signals so we inform that geometry have
      * been set. */
 
-    c->geometry.x = wgeom->x;
-    c->geometry.y = wgeom->y;
+    c->geometry.top_left = {wgeom->x, wgeom->y};
     c->geometry.width = wgeom->width;
     c->geometry.height = wgeom->height;
 
@@ -2285,8 +2284,8 @@ void client_manage(xcb_window_t w,
 }
 
 static void client_remove_titlebar_geometry(client* c, area_t* geometry) {
-    geometry->x += c->titlebar[CLIENT_TITLEBAR_LEFT].size;
-    geometry->y += c->titlebar[CLIENT_TITLEBAR_TOP].size;
+    geometry->top_left +=
+      {c->titlebar[CLIENT_TITLEBAR_LEFT].size, c->titlebar[CLIENT_TITLEBAR_TOP].size};
     geometry->width -= c->titlebar[CLIENT_TITLEBAR_LEFT].size;
     geometry->width -= c->titlebar[CLIENT_TITLEBAR_RIGHT].size;
     geometry->height -= c->titlebar[CLIENT_TITLEBAR_TOP].size;
@@ -2294,8 +2293,8 @@ static void client_remove_titlebar_geometry(client* c, area_t* geometry) {
 }
 
 static void client_add_titlebar_geometry(client* c, area_t* geometry) {
-    geometry->x -= c->titlebar[CLIENT_TITLEBAR_LEFT].size;
-    geometry->y -= c->titlebar[CLIENT_TITLEBAR_TOP].size;
+    geometry->top_left -=
+      {c->titlebar[CLIENT_TITLEBAR_LEFT].size, c->titlebar[CLIENT_TITLEBAR_TOP].size};
     geometry->width += c->titlebar[CLIENT_TITLEBAR_LEFT].size;
     geometry->width += c->titlebar[CLIENT_TITLEBAR_RIGHT].size;
     geometry->height += c->titlebar[CLIENT_TITLEBAR_TOP].size;
@@ -2317,8 +2316,8 @@ area_t client_get_undecorated_geometry(client* c) {
                                           -diff_top - c->border_width,
                                           -diff_right - c->border_width,
                                           -diff_bottom - c->border_width,
-                                          &geometry.x,
-                                          &geometry.y);
+                                          &geometry.top_left.x,
+                                          &geometry.top_left.y);
         }
     }
     return geometry;
@@ -2433,7 +2432,7 @@ static void client_resize_do(client* c, area_t geometry) {
 
     screen_t* new_screen = c->screen;
     if (!screen_area_in_screen(new_screen, geometry)) {
-        new_screen = screen_getbycoord(geometry.x, geometry.y);
+        new_screen = screen_getbycoord(geometry.top_left);
     }
 
     /* Also store geometry including border */
@@ -2444,12 +2443,12 @@ static void client_resize_do(client* c, area_t geometry) {
     if (old_geometry != geometry) {
         luaA_object_emit_signal(L, -1, "property::geometry", 0);
     }
-    if (old_geometry.x != geometry.x || old_geometry.y != geometry.y) {
+    if (old_geometry.top_left != geometry.top_left) {
         luaA_object_emit_signal(L, -1, "property::position", 0);
-        if (old_geometry.x != geometry.x) {
+        if (old_geometry.top_left.x != geometry.top_left.x) {
             luaA_object_emit_signal(L, -1, "property::x", 0);
         }
-        if (old_geometry.y != geometry.y) {
+        if (old_geometry.top_left.y != geometry.top_left.y) {
             luaA_object_emit_signal(L, -1, "property::y", 0);
         }
     }
@@ -2479,8 +2478,8 @@ static void client_resize_do(client* c, area_t geometry) {
         area_t area = titlebar_get_area(c, (client_titlebar_t)bar);
 
         /* Convert to global coordinates */
-        area.x += geometry.x;
-        area.y += geometry.y;
+        area.top_left += geometry.top_left;
+
         if (c->fullscreen) {
             area.width = area.height = 0;
         }
@@ -2919,8 +2918,11 @@ void client_unmanage(client* c, client_unmanage_t reason) {
         xwindow_grabkeys(c->window, {});
         area_t geometry = client_get_undecorated_geometry(c);
         xcb_unmap_window(getGlobals().connection, c->window);
-        xcb_reparent_window(
-          getGlobals().connection, c->window, getGlobals().screen->root, geometry.x, geometry.y);
+        xcb_reparent_window(getGlobals().connection,
+                            c->window,
+                            getGlobals().screen->root,
+                            geometry.top_left.x,
+                            geometry.top_left.y);
     }
 
     if (c->nofocus_window != XCB_NONE) {
@@ -2983,7 +2985,6 @@ void client_kill(client* c) {
  * end
  */
 static int luaA_client_get(lua_State* L) {
-    int i = 1;
     screen_t* screen = NULL;
     bool stacked = false;
 
@@ -2996,19 +2997,23 @@ static int luaA_client_get(lua_State* L) {
     }
 
     lua_newtable(L);
+
+    auto pushclient = [i = int(1), L](auto* c) mutable {
+        luaA_object_push(L, c);
+        lua_rawseti(L, -2, i++);
+    };
+
     if (stacked) {
-        for (auto* c : getGlobals().getStack() | std::views::reverse) {
-            if (screen == NULL || c->screen == screen) {
-                luaA_object_push(L, c);
-                lua_rawseti(L, -2, i++);
-            }
+        for (auto* c :
+             getGlobals().getStack() | std::views::reverse |
+               std::views::filter([screen](auto* c) { return !screen || c->screen == screen; })) {
+            pushclient(c);
         }
     } else {
-        for (auto* c : getGlobals().clients) {
-            if (screen == NULL || c->screen == screen) {
-                luaA_object_push(L, c);
-                lua_rawseti(L, -2, i++);
-            }
+        for (auto* c : getGlobals().clients | std::views::filter([screen](auto* c) {
+                           return !screen || c->screen == screen;
+                       })) {
+            pushclient(c);
         }
     }
 
@@ -3350,7 +3355,7 @@ static int luaA_client_unmanage(lua_State* L) {
 
 static area_t titlebar_get_area(client* c, client_titlebar_t bar) {
     area_t result = c->geometry;
-    result.x = result.y = 0;
+    result.top_left = {0, 0};
 
     // Let's try some ascii art:
     // ---------------------------
@@ -3367,14 +3372,14 @@ static area_t titlebar_get_area(client* c, client_titlebar_t bar) {
 
     switch (bar) {
     case CLIENT_TITLEBAR_BOTTOM:
-        result.y = c->geometry.height - c->titlebar[bar].size;
+        result.top_left.y = c->geometry.height - c->titlebar[bar].size;
         /* Fall through */
     case CLIENT_TITLEBAR_TOP: result.height = c->titlebar[bar].size; break;
     case CLIENT_TITLEBAR_RIGHT:
-        result.x = c->geometry.width - c->titlebar[bar].size;
+        result.top_left.x = c->geometry.width - c->titlebar[bar].size;
         /* Fall through */
     case CLIENT_TITLEBAR_LEFT:
-        result.y = c->titlebar[CLIENT_TITLEBAR_TOP].size;
+        result.top_left.y = c->titlebar[CLIENT_TITLEBAR_TOP].size;
         result.width = c->titlebar[bar].size;
         result.height -= c->titlebar[CLIENT_TITLEBAR_TOP].size;
         result.height -= c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
@@ -3385,27 +3390,22 @@ static area_t titlebar_get_area(client* c, client_titlebar_t bar) {
     return result;
 }
 
-drawable_t* client_get_drawable_offset(client* c, int* x, int* y) {
+drawable_t* client_get_drawable_offset(client* c, point* pt) {
     for (int bar = CLIENT_TITLEBAR_TOP; bar < CLIENT_TITLEBAR_COUNT; bar++) {
         area_t area = titlebar_get_area(c, (client_titlebar_t)bar);
-        if (area.left() > *x || area.right() <= *x) {
-            continue;
-        }
-        if (area.top() > *y || area.bottom() <= *y) {
+        if (!area.inside(*pt)) {
             continue;
         }
 
-        *x -= area.x;
-        *y -= area.y;
+        *pt -= area.top_left;
+
         return c->titlebar[bar].drawable;
     }
 
     return NULL;
 }
 
-drawable_t* client_get_drawable(client* c, int x, int y) {
-    return client_get_drawable_offset(c, &x, &y);
-}
+drawable_t* client_get_drawable(client* c, point pt) { return client_get_drawable_offset(c, &pt); }
 
 static void client_refresh_titlebar_partial(
   client* c, client_titlebar_t bar, int16_t x, int16_t y, uint16_t width, uint16_t height) {
@@ -3429,18 +3429,19 @@ static void client_refresh_titlebar_partial(
                   c->titlebar[bar].drawable->pixmap,
                   c->frame_window,
                   getGlobals().gc,
-                  x - area.x,
-                  y - area.y,
+                  x - area.left(),
+                  y - area.top(),
                   x,
                   y,
                   width,
                   height);
 }
 
-#define HANDLE_TITLEBAR_REFRESH(name, index)                                                \
-    static void client_refresh_titlebar_##name(client* c) {                                 \
-        area_t area = titlebar_get_area(c, index);                                          \
-        client_refresh_titlebar_partial(c, index, area.x, area.y, area.width, area.height); \
+#define HANDLE_TITLEBAR_REFRESH(name, index)                           \
+    static void client_refresh_titlebar_##name(client* c) {            \
+        area_t area = titlebar_get_area(c, index);                     \
+        client_refresh_titlebar_partial(                               \
+          c, index, area.left(), area.top(), area.width, area.height); \
     }
 HANDLE_TITLEBAR_REFRESH(top, CLIENT_TITLEBAR_TOP)
 HANDLE_TITLEBAR_REFRESH(right, CLIENT_TITLEBAR_RIGHT)
@@ -3527,8 +3528,8 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
                                       diff_top,
                                       diff_right,
                                       diff_bottom,
-                                      &geometry.x,
-                                      &geometry.y);
+                                      &geometry.top_left.x,
+                                      &geometry.top_left.y);
     }
 
     c->titlebar[bar].size = size;
@@ -3537,26 +3538,19 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
     luaA_object_emit_signal(L, cidx, property_name, 0);
 }
 
-#define HANDLE_TITLEBAR(name, index)                                                    \
-    static int luaA_client_titlebar_##name(lua_State* L) {                              \
-        auto c = client_class.checkudata<client>(L, 1);                                 \
-                                                                                        \
-        if (lua_gettop(L) == 2) {                                                       \
-            if (lua_isnil(L, 2))                                                        \
-                titlebar_resize(L, 1, c, index, 0);                                     \
-            else                                                                        \
-                titlebar_resize(                                                        \
-                  L, 1, c, index, ceil(Lua::checknumber_range(L, 2, 0, MAX_X11_SIZE))); \
-        }                                                                               \
-                                                                                        \
-        luaA_object_push_item(L, 1, titlebar_get_drawable(L, c, 1, index));             \
-        lua_pushinteger(L, c->titlebar[index].size);                                    \
-        return 2;                                                                       \
+template<client_titlebar_t N>
+static int client_titlebar(lua_State* L) {
+    auto c = client_class.checkudata<client>(L, 1);
+
+    if (lua_gettop(L) == 2) {
+        int size = lua_isnil(L, 2) ? 0 : ceil(Lua::checknumber_range(L, 2, 0, MAX_X11_SIZE));
+        titlebar_resize(L, 1, c, N, size);
     }
-HANDLE_TITLEBAR(top, CLIENT_TITLEBAR_TOP)
-HANDLE_TITLEBAR(right, CLIENT_TITLEBAR_RIGHT)
-HANDLE_TITLEBAR(bottom, CLIENT_TITLEBAR_BOTTOM)
-HANDLE_TITLEBAR(left, CLIENT_TITLEBAR_LEFT)
+
+    luaA_object_push_item(L, 1, titlebar_get_drawable(L, c, 1, N));
+    lua_pushinteger(L, c->titlebar[N].size);
+    return 2;
+}
 
 /** Return or set client geometry.
  *
@@ -3582,10 +3576,10 @@ static int luaA_client_geometry(lua_State* L) {
         area_t geometry;
 
         Lua::checktable(L, 2);
-        geometry.x = round(Lua::getopt_number_range(
-          L, 2, "x", c->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        geometry.y = round(Lua::getopt_number_range(
-          L, 2, "y", c->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        geometry.top_left = {(int)round(Lua::getopt_number_range(
+                               L, 2, "x", c->geometry.top_left.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE)),
+                             (int)round(Lua::getopt_number_range(
+                               L, 2, "y", c->geometry.top_left.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE))};
         if (client_isfixed(c)) {
             geometry.width = c->geometry.width;
             geometry.height = c->geometry.height;
@@ -4273,10 +4267,10 @@ void client_class_setup(lua_State* L) {
       {           "raise",            luaA_client_raise},
       {           "lower",            luaA_client_lower},
       {        "unmanage",         luaA_client_unmanage},
-      {    "titlebar_top",     luaA_client_titlebar_top},
-      {  "titlebar_right",   luaA_client_titlebar_right},
-      { "titlebar_bottom",  luaA_client_titlebar_bottom},
-      {   "titlebar_left",    luaA_client_titlebar_left},
+      {    "titlebar_top",     client_titlebar<CLIENT_TITLEBAR_TOP>},
+      {  "titlebar_right",   client_titlebar<CLIENT_TITLEBAR_RIGHT>},
+      { "titlebar_bottom",  client_titlebar<CLIENT_TITLEBAR_BOTTOM>},
+      {   "titlebar_left",    client_titlebar<CLIENT_TITLEBAR_LEFT>},
       {        "get_icon",    luaA_client_get_some_icon}
     });
 
