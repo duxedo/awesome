@@ -360,7 +360,7 @@ static void property_handle_xrootpmap_id(uint8_t state, xcb_window_t window) {
 static void property_handle_propertynotify_xproperty(xcb_property_notify_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
     xproperty lookup = {.atom = ev->atom};
-    void* obj;
+    lua_object_t* obj = nullptr;
 
     auto it = getGlobals().xproperties.find(lookup);
 
@@ -377,8 +377,6 @@ static void property_handle_propertynotify_xproperty(xcb_property_notify_event_t
         if (!obj) {
             return;
         }
-    } else {
-        obj = NULL;
     }
 
     std::string buf = std::format("xproperty::{}", it->name);

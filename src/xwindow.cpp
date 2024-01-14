@@ -101,16 +101,7 @@ void xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& button
     xcb_ungrab_button(getGlobals().connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
 
     for (auto each : buttons) {
-        xcb_grab_button(getGlobals().connection,
-                        false,
-                        win,
-                        BUTTONMASK,
-                        XCB_GRAB_MODE_SYNC,
-                        XCB_GRAB_MODE_ASYNC,
-                        XCB_NONE,
-                        XCB_NONE,
-                        each->button,
-                        each->modifiers);
+        each->grab(win);
     }
 }
 

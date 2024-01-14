@@ -31,6 +31,7 @@
 
 #include "common/backtrace.h"
 #include "common/luaclass.h"
+#include "common/signal.h"
 
 #include <fmt/format.h>
 
@@ -191,7 +192,7 @@ void luaA_object_disconnect_signal(lua_State* L, int oud, const char* name, lua_
 void luaA_object_connect_signal_from_stack(lua_State* L, int oud, const char* name, int ud) {
     Lua::checkfunction(L, ud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
-    obj->signals.connect(name, luaA_object_ref_item(L, oud, ud));
+    obj->signals.connect(name, LuaFunction{luaA_object_ref_item(L, oud, ud)});
 }
 
 /** Remove a signal to an object.
@@ -204,7 +205,7 @@ void luaA_object_disconnect_signal_from_stack(lua_State* L, int oud, const char*
     Lua::checkfunction(L, ud);
     lua_object_t* obj = reinterpret_cast<lua_object_t*>(lua_touserdata(L, oud));
     void* ref = (void*)lua_topointer(L, ud);
-    if (obj->signals.disconnect(name, ref)) {
+    if (obj->signals.disconnect(name, LuaFunction{ref})) {
         luaA_object_unref_item(L, oud, ref);
     }
     lua_remove(L, ud);

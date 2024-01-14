@@ -23,6 +23,7 @@
 
 #include "common/lualib.h"
 #include "common/luaobject.h"
+#include "common/signal.h"
 
 #include <string_view>
 
@@ -31,7 +32,6 @@
 /** Convert a object to a udata if possible.
  * \param L The Lua VM state.
  * \param ud The index.
- * \param class The wanted class.
  * \return A pointer to the object, NULL otherwise.
  */
 lua_object_t* lua_class_t::toudata(lua_State* L, int ud) {
@@ -59,7 +59,6 @@ lua_object_t* lua_class_t::toudata(lua_State* L, int ud) {
 /** Check for a udata class.
  * \param L The Lua VM state.
  * \param ud The object index on the stack.
- * \param class The wanted class.
  */
 lua_object_t* lua_class_t::checkudata(lua_State* L, int ud) {
     auto p = toudata(L, ud);
@@ -172,16 +171,6 @@ int lua_class_t::lua_gc(lua_State* L) {
 
 /** Setup a new Lua class.
  * \param L The Lua VM state.
- * \param name The class name.
- * \param parent The parent class (inheritance).
- * \param allocator The allocator function used when creating a new object.
- * \param Collector The collector function used when garbage collecting an
- * object.
- * \param checker The check function to call when using luaA_checkudata().
- * \param index_miss_property Function to call when an object of this class
- * receive a __index request on an unknown property.
- * \param newindex_miss_property Function to call when an object of this class
- * receive a __newindex request on an unknown property.
  * \param methods The methods to set on the class table.
  * \param meta The meta-methods to set on the class objects.
  */
@@ -241,13 +230,13 @@ void lua_class_t::connect_signal(lua_State* L, const std::string_view& name, int
     emit_signal(L, buf, 1);
 
     /* Register the signal to the CAPI list */
-    _signals.connect(name, luaA_object_ref(L, ud));
+    _signals.connect(name, LuaFunction{luaA_object_ref(L, ud)});
 }
 
 void lua_class_t::disconnect_signal(lua_State* L, const std::string_view& name, int ud) {
     Lua::checkfunction(L, ud);
     void* ref = (void*)lua_topointer(L, ud);
-    if (_signals.disconnect(name, ref)) {
+    if (_signals.disconnect(name, LuaFunction{ref})) {
         luaA_object_unref(L, (void*)ref);
     }
     lua_remove(L, ud);

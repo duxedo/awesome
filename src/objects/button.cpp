@@ -38,6 +38,8 @@
 #include "common/luaclass.h"
 #include "common/luaobject.h"
 #include "lauxlib.h"
+#include "lua.h"
+#include "objects/key.h"
 
 #include <vector>
 
@@ -91,12 +93,6 @@ lua_class_t button_class{
  * @signal release
  */
 
-/** Create a new mouse button bindings.
- * \param L The Lua VM state.
- * \return The number of elements pushed on stack.
- */
-static int luaA_button_new(lua_State* L) { return button_class.new_object(L); }
-
 /** Set a button array with a Lua table.
  * \param L The Lua VM state.
  * \param oidx The index of the object to store items into.
@@ -137,34 +133,42 @@ int luaA_button_array_get(lua_State* L, int oidx, const std::vector<button_t*>& 
     return 1;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(button, button_t, button, lua_pushinteger);
-LUA_OBJECT_EXPORT_PROPERTY(button, button_t, modifiers, luaA_pushmodifiers);
 
-static int button_set_modifiers(lua_State* L, button_t* b) {
-    b->modifiers = luaA_tomodifiers(L, -1);
-    luaA_object_emit_signal(L, -3, "property::modifiers", 0);
-    return 0;
-}
-
-static int button_set_button(lua_State* L, button_t* b) {
-    b->button = luaL_checkinteger(L, -1);
-    luaA_object_emit_signal(L, -3, "property::button", 0);
-    return 0;
+void button_t::grab(xcb_window_t win) {
+    xcb_grab_button(getGlobals().connection,
+                    false,
+                    win,
+                    (XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE),
+                    XCB_GRAB_MODE_SYNC,
+                    XCB_GRAB_MODE_ASYNC,
+                    XCB_NONE,
+                    XCB_NONE,
+                    _button,
+                    _modifiers);
 }
 
 void button_class_setup(lua_State* L) {
     static constexpr auto button_methods = DefineClassMethods<&button_class>({
-      {"__call", luaA_button_new}
+      {"__call", [](auto* L) { return button_class.new_object(L); }}
     });
 
     static constexpr auto button_meta = DefineObjectMethods();
 
     button_class.setup(L, button_methods.data(), button_meta.data());
-
+    auto setBtn = [](lua_State* L, button_t* b) -> int {
+        b->set_button(luaL_checkinteger(L, -1));
+        luaA_object_emit_signal(L, -3, "property::button", 0);
+        return 0;
+    };
+    auto setMod = [](lua_State* L, button_t* b) {
+        b->set_modifiers(luaA_tomodifiers(L, -1));
+        luaA_object_emit_signal(L, -3, "property::modifiers", 0);
+        return 0;
+    };
     button_class.add_property(
-      {"button", button_set_button, luaA_button_get_button, button_set_button});
+      lua_class_property_t::make<button_t>("button", setBtn, [](lua_State * L, button_t * btn) { lua_pushinteger(L, btn->button()); return 1;}, setBtn));
     button_class.add_property(
-      {"modifiers", button_set_modifiers, luaA_button_get_modifiers, button_set_modifiers});
+      lua_class_property_t::make<button_t>("modifiers", setMod, [](lua_State * L, button_t * btn) { return luaA_pushmodifiers(L, btn->modifiers()); }, setMod));
 }
 
 /* @DOC_cobject_COMMON@ */

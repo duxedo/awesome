@@ -21,12 +21,26 @@
 #pragma once
 
 #include "common/luaclass.h"
+#include "common/signal.h"
+#include "lua.h"
 #include "luaa.h"
 
 #include <string_view>
 #include <type_traits>
 
 #define LUAA_OBJECT_REGISTRY_KEY "awesome.object.registry"
+
+template<typename T>
+concept PushableObject = std::is_base_of_v<lua_object_t, std::remove_pointer_t<T>> || std::is_same_v<LuaFunction, T>;
+
+namespace internal {
+inline void* pushableToUd(LuaFunction obj) {
+    return (void*)obj.fcn;
+}
+inline void* pushableToUd(const lua_object_t* obj) {
+    return (void*)obj;
+}
+}
 
 int luaA_settype(lua_State*, lua_class_t*);
 void luaA_object_setup(lua_State*);
@@ -68,11 +82,11 @@ static inline void luaA_object_unref_item(lua_State* L, int ud, void* pointer) {
  * \param pointer The item pointer.
  * \return The number of element pushed on stack.
  */
-static inline int luaA_object_push_item(lua_State* L, int ud, const void* pointer) {
+static inline int luaA_object_push_item(lua_State* L, int ud, PushableObject auto pointer) {
     /* Get env table of the object */
     Lua::getuservalue(L, ud);
     /* Push key */
-    lua_pushlightuserdata(L, (void*)pointer);
+    lua_pushlightuserdata(L, internal::pushableToUd(pointer));
     /* Get env.pointer */
     lua_rawget(L, -2);
     /* Remove env table */
@@ -126,13 +140,15 @@ static inline void luaA_object_unref(lua_State* L, const void* pointer) {
  * \param pointer The object to push.
  * \return The number of element pushed on stack.
  */
-static inline int luaA_object_push(lua_State* L, const void* pointer) {
+static inline int luaA_object_push(lua_State* L, PushableObject auto pointer)
+{
     luaA_object_registry_push(L);
-    lua_pushlightuserdata(L, (void*)pointer);
+    lua_pushlightuserdata(L, internal::pushableToUd(pointer));
     lua_rawget(L, -2);
     lua_remove(L, -2);
     return 1;
 }
+
 
 void signal_object_emit(lua_State*, Signals*, const std::string_view&, int);
 
@@ -230,4 +246,17 @@ constexpr auto DefineObjectMethods() {
                        std::array{
                          luaL_Reg{nullptr, nullptr}
     });
+}
+
+namespace Lua {
+template<typename T>
+int pushArray(lua_State * L, int oidx, const std::vector<T*>& arr)
+requires(std::is_base_of_v<lua_object_t, std::decay_t<T>>)
+{
+    lua_createtable(L, arr.size(), 0);
+    for (size_t i = 0; i < arr.size(); i++) {
+        luaA_object_push_item(L, oidx, arr[i]);
+        lua_rawseti(L, -2, i + 1);
+    }
+}
 }

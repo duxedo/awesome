@@ -49,7 +49,7 @@
 
 struct drawable_t;
 struct drawin_t;
-struct button_t;
+class button_t;
 struct client;
 struct screen_t;
 struct tag_t;
