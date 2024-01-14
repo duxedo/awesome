@@ -21,7 +21,7 @@
  */
 #pragma once
 
-#include "common/luahdr.h"
+#include "common/lualib.h"
 
 #include <xcb/xcb.h>
 
@@ -44,4 +44,11 @@ typedef struct {
 color_init_request_t color_init_unchecked(color_t*, const char*, ssize_t, xcb_visualtype_t* visual);
 bool color_init_reply(color_init_request_t);
 
-int luaA_pushcolor(lua_State*, const color_t);
+
+namespace Lua {
+template<>
+struct Pusher<color_t> {
+    int push(State& L, const color_t c);
+};
+}
+

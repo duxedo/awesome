@@ -187,20 +187,20 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
 
 #define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
     static int luaA_##pfx##_get_##field(lua_State* L, type* object) { \
-        pusher(L, object->field);                                     \
+        Lua::State{L}.push(object->field);                                     \
         return 1;                                                     \
     }
 
 #define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)  \
     static int luaA_##pfx##_get_##name(lua_State* L, type* object) { \
-        pusher(L, object->field);                                    \
+        Lua::State{L}.push(object->field);                                    \
         return 1;                                                    \
     }
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
     static int luaA_##pfx##_get_##field(lua_State* L, type* object) {              \
         if (object->field == empty_value)                                          \
             return 0;                                                              \
-        pusher(L, object->field);                                                  \
+        Lua::State{L}.push(object->field);                                                  \
         return 1;                                                                  \
     }
 
@@ -208,7 +208,7 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
     static int luaA_##pfx##_get_##name(lua_State* L, type* object) {                      \
         if (object->field == empty_value)                                                 \
             return 0;                                                                     \
-        pusher(L, object->field);                                                         \
+        Lua::State{L}.push(object->field);                                                         \
         return 1;                                                                         \
     }
 

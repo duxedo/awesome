@@ -19,6 +19,9 @@
 
 #include "common/lualib.h"
 
+#include "common/luaclass.h"
+#include "common/luaobject.h"
+#include "lua.h"
 #include "luaa.h"
 
 namespace Lua {
@@ -61,5 +64,33 @@ void dumpstack(lua_State* L) {
     fprintf(stderr, "------- Lua stack dump end ------\n");
 }
 
+int State::push(const std::string& str) {
+    lua_pushlstring(L, str.c_str(), str.size());
+    return 1;
+}
+int State::push(const char* str) {
+    lua_pushstring(L, str);
+    return 1;
+}
+int State::push(const std::string_view str) {
+    lua_pushlstring(L, str.data(), str.size());
+    return 1;
+}
+int State::push(int val) {
+    lua_pushinteger(L, val);
+    return 1;
+};
+int State::push(unsigned int val) {
+    lua_pushinteger(L, val);
+    return 1;
+};
+int State::push(bool val) {
+    lua_pushboolean(L, val);
+    return 1;
+};
+int State::push(lua_object_t* val) {
+    luaA_object_push(L, val);
+    return 1;
+};
 } // namespace Lua
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
