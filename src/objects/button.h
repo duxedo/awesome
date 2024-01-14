@@ -27,20 +27,36 @@
 #include <stdint.h>
 #include <vector>
 #include <xcb/xcb.h>
+#include <xcb/xproto.h>
 
 /** Mouse buttons bindings */
-struct button_t: public lua_object_t {
+class button_t: public lua_object_t {
     /** Key modifiers */
-    uint16_t modifiers;
+    uint16_t _modifiers = 0;
     /** Mouse button number */
-    xcb_button_t button;
-
+    xcb_button_t _button = 0;
+    public:
     button_t() = default;
     button_t(button_t&&) = default;
     button_t& operator=(button_t&&) = default;
     button_t(const button_t&) = delete;
     button_t& operator=(const button_t&) = delete;
+
+    uint16_t modifiers() const {
+        return _modifiers;
+    }
+    xcb_button_t button() const {
+        return _button;
+    }
+    void set_modifiers(uint16_t val) {
+        _modifiers = val;
+    }
+    void set_button(xcb_button_t btn) {
+        _button = btn;
+    }
+    void grab(xcb_window_t win);
 };
+
 
 extern lua_class_t button_class;
 LUA_OBJECT_FUNCS(button_class, button_t, button)
