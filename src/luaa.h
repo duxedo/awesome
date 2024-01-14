@@ -232,9 +232,9 @@ static inline int luaA_getopt_integer_range(
  */
 static inline int pusharea(lua_State* L, area_t geometry) {
     lua_createtable(L, 0, 4);
-    lua_pushinteger(L, geometry.x);
+    lua_pushinteger(L, geometry.top_left.x);
     lua_setfield(L, -2, "x");
-    lua_pushinteger(L, geometry.y);
+    lua_pushinteger(L, geometry.top_left.y);
     lua_setfield(L, -2, "y");
     lua_pushinteger(L, geometry.width);
     lua_setfield(L, -2, "width");
