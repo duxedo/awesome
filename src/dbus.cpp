@@ -35,6 +35,7 @@
 #include "dbus.h"
 
 #include "common/lualib.h"
+#include "common/signal.h"
 #include "config.h"
 
 #include <glib.h>
@@ -388,11 +389,11 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
         auto signalIt = dbus_signals.find(interface);
         if (signalIt != dbus_signals.end()) {
             /* there can be only ONE handler to send reply */
-            void* func = (void*)signalIt->second.functions.front();
+            auto func = signalIt->second.functions.front();
 
             int n = lua_gettop(L) - nargs;
 
-            luaA_object_push(L, (void*)func);
+            luaA_object_push(L, func);
             Lua::dofunction(L, nargs, LUA_MULTRET);
 
             n -= lua_gettop(L);
@@ -696,7 +697,7 @@ static int luaA_dbus_connect_signal(lua_State* L) {
         lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name->data());
         return 2;
     } else {
-        dbus_signals.connect(*name, luaA_object_ref(L, 2));
+        dbus_signals.connect(*name, LuaFunction{luaA_object_ref(L, 2)});
         lua_pushboolean(L, 1);
         return 1;
     }
@@ -712,7 +713,7 @@ static int luaA_dbus_disconnect_signal(lua_State* L) {
     const char* name = luaL_checkstring(L, 1);
     Lua::checkfunction(L, 2);
     const void* func = lua_topointer(L, 2);
-    if (dbus_signals.disconnect(name, func)) {
+    if (dbus_signals.disconnect(name, LuaFunction{func})) {
         luaA_object_unref(L, func);
     }
     return 0;

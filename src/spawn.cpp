@@ -123,7 +123,7 @@ static gboolean spawn_monitor_timeout(gpointer sequence) {
             lua_setfield(L, -2, "id");
             for (auto func : sigIt->second.functions) {
                 lua_pushvalue(L, -1);
-                luaA_object_push(L, (void*)func);
+                luaA_object_push(L, func);
                 Lua::dofunction(L, 1, 0);
             }
             lua_pop(L, 1);
@@ -205,7 +205,7 @@ static void spawn_monitor_event(SnMonitorEvent* event, void* data) {
     if (sigIt != Lua::global_signals.end()) {
         for (auto func : sigIt->second.functions) {
             lua_pushvalue(L, -1);
-            luaA_object_push(L, (void*)func);
+            luaA_object_push(L, func);
             Lua::dofunction(L, 1, 0);
         }
         lua_pop(L, 1);

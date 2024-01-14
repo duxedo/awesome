@@ -107,8 +107,8 @@ static bool event_key_match(xcb_key_press_event_t* ev, keyb_t* k, void* data) {
 }
 
 static bool event_button_match(xcb_button_press_event_t* ev, button_t* b, void* data) {
-    return ((!b->button || ev->detail == b->button) &&
-            (b->modifiers == XCB_BUTTON_MASK_ANY || b->modifiers == ev->state));
+    return ((!b->button() || ev->detail == b->button()) &&
+            (b->modifiers() == XCB_BUTTON_MASK_ANY || b->modifiers() == ev->state));
 }
 
 DO_EVENT_HOOK_CALLBACK(button_t, button, XCB_BUTTON, std::vector<button_t*>, event_button_match)

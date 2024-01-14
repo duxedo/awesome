@@ -43,6 +43,8 @@
 #include "objects/button.h"
 #include "xcbcpp/xcb.h"
 #include "xwindow.h"
+#include "objects/drawin.h"
+#include "objects/tag.h"
 
 #include <cairo-xcb.h>
 #include <xcb/xcb_aux.h>
