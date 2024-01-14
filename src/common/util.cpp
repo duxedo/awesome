@@ -81,13 +81,4 @@ void a_exec(const char* cmd) {
     log_fatal("execlp() failed: {}", strerror(errno));
 }
 
-namespace Lua {
-void pushstring(lua_State* L, const std::string& str) {
-    lua_pushlstring(L, str.c_str(), str.size());
-}
-void pushstring(lua_State* L, const char* str) { lua_pushstring(L, str); }
-void pushstring(lua_State* L, const std::string_view str) {
-    lua_pushlstring(L, str.data(), str.size());
-}
-}
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

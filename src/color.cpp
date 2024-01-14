@@ -25,6 +25,7 @@
 #include "globalconf.h"
 
 #include <ctype.h>
+#include <string_view>
 
 /* 0xFFFF / 0xFF == 0x101 (257) */
 #define RGB_8TO16(i) (((i) & 0xff) * 0x101)
@@ -197,7 +198,9 @@ bool color_init_reply(color_init_request_t req) {
  * \param c The color to push.
  * \return The number of elements pushed on stack.
  */
-int luaA_pushcolor(lua_State* L, const color_t c) {
+
+namespace Lua {
+int Pusher<color_t>::push(State& L, const color_t c) {
     uint8_t r = RGB_16TO8(c.red);
     uint8_t g = RGB_16TO8(c.green);
     uint8_t b = RGB_16TO8(c.blue);
@@ -210,8 +213,8 @@ int luaA_pushcolor(lua_State* L, const color_t c) {
     } else {
         len = snprintf(s, sizeof(s), "#%02x%02x%02x%02x", r, g, b, a);
     }
-    lua_pushlstring(L, s, len);
+    L.push(std::string_view(s, len));
     return 1;
 }
-
+}
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
