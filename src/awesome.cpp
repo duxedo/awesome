@@ -36,6 +36,7 @@
 #include "xwindow.h"
 
 #include <algorithm>
+#include <fmt/core.h>
 #include <glib-unix.h>
 #include <ranges>
 #include <sys/time.h>
@@ -544,10 +545,10 @@ int main(int argc, char** argv) {
         auto config = Lua::find_config(
           &xdg, opts.configPath, [](const std::filesystem::path&) { return true; });
         if (!config) {
-            fprintf(stderr, "Config not found");
+            fmt::print(stderr, "Config not found");
             return EXIT_FAILURE;
         }
-        fprintf(stdout, "Checking config '%s'... ", config->c_str());
+        fmt::print(stdout, "Checking config '{}'... ", config->c_str());
 
         /* Try to parse it */
         lua_State* L = luaL_newstate();
@@ -592,7 +593,8 @@ int main(int argc, char** argv) {
     g_unix_signal_add(SIGHUP, restart_on_signal, NULL);
     struct sigaction sa;
     memset(&sa, 0, sizeof(sa));
-    sa.sa_handler = signal_fatal, sa.sa_flags = (decltype(sa.sa_flags))SA_RESETHAND;
+    sa.sa_handler = signal_fatal;
+    sa.sa_flags = (decltype(sa.sa_flags))SA_RESETHAND;
     sigemptyset(&sa.sa_mask);
     sigaction(SIGABRT, &sa, 0);
     sigaction(SIGBUS, &sa, 0);

@@ -112,8 +112,6 @@ class Globals {
     bool have_shape = false;
     /** Check for SHAPE extension with input shape support */
     bool have_input_shape = false;
-    /** Check for XKB extension */
-    bool have_xkb = false;
     /** Check for XFixes extension */
     bool have_xfixes = false;
     /** Custom searchpaths are present, the runtime is tainted */
