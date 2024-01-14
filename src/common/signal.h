@@ -26,8 +26,12 @@
 #include <unordered_map>
 #include <vector>
 
+struct LuaFunction {
+    const void * fcn;
+    bool operator<=>(const LuaFunction&) const = default;
+};
 struct signal_t {
-    std::vector<const void*> functions;
+    std::vector<LuaFunction> functions;
 };
 struct SignalHash {
     using is_transparent = void;
@@ -50,18 +54,18 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
      * \param name The signal name.
      * \param ref The reference to add.
      */
-    void connect(const std::string_view& name, const void* ref) {
+    void connect(const std::string_view& name, LuaFunction  ref) {
         auto it = this->find(name);
         if (it == this->end()) {
             std::string nm(name.begin(), name.end());
             auto [it, done] = this->try_emplace(nm, signal_t{});
-            it->second.functions.push_back(ref);
+            it->second.functions.push_back({ref});
             return;
         }
         if (it->second.functions.capacity() < it->second.functions.size() + 1) {
             it->second.functions.reserve(it->second.functions.size() + 1);
         }
-        it->second.functions.push_back(ref);
+        it->second.functions.push_back({ref});
     }
     /** Disconnect a signal inside a signal array.
      * You are in charge of reference counting.
@@ -69,7 +73,7 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
      * \param name The signal name.
      * \param ref The reference to remove.
      */
-    bool disconnect(const std::string_view& name, const void* ref) {
+    bool disconnect(const std::string_view& name, LuaFunction ref) {
         auto it = this->find(name);
         if (it == this->end()) {
             return false;
