@@ -385,7 +385,6 @@ static int screen_area_gid = 1;
 
 static void luaA_viewport_get_outputs(lua_State* L, viewport_t* a) {
     lua_createtable(L, 0, a ? a->outputs.size() : 0);
-
     if (!a) {
         return;
     }
