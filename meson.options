@@ -1,0 +1,1 @@
+option('data_path', type : 'string', value : '/usr/share/awesome', description : 'Awesome data files prefix')
