@@ -49,7 +49,7 @@ struct screen_t: public lua_object_t {
 
 void screen_class_setup(lua_State* L);
 void screen_scan(void);
-screen_t* screen_getbycoord(int, int);
+screen_t* screen_getbycoord(point);
 bool screen_coord_in_screen(screen_t*, int, int);
 bool screen_area_in_screen(screen_t*, area_t);
 int screen_get_index(screen_t*);

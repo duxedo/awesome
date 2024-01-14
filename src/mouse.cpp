@@ -144,8 +144,8 @@ static bool mouse_query_pointer_root(int16_t* x, int16_t* y, xcb_window_t* child
  * \param x X-coordinate inside window.
  * \param y Y-coordinate inside window.
  */
-static inline void mouse_warp_pointer(xcb_window_t window, int16_t x, int16_t y) {
-    xcb_warp_pointer(getGlobals().connection, XCB_NONE, window, 0, 0, 0, 0, x, y);
+static inline void mouse_warp_pointer(xcb_window_t window, point p) {
+    xcb_warp_pointer(getGlobals().connection, XCB_NONE, window, 0, 0, 0, 0, p.x, p.y);
 }
 
 /** Mouse library.
@@ -180,7 +180,7 @@ static int luaA_mouse_index(lua_State* L) {
         return 1;
     }
 
-    luaA_object_push(L, screen_getbycoord(mouse_x, mouse_y));
+    luaA_object_push(L, screen_getbycoord({mouse_x, mouse_y}));
     return 1;
 }
 
@@ -202,7 +202,7 @@ static int luaA_mouse_newindex(lua_State* L) {
     }
 
     screen = luaA_checkscreen(L, 3);
-    mouse_warp_pointer(getGlobals().screen->root, screen->geometry.x, screen->geometry.y);
+    mouse_warp_pointer(getGlobals().screen->root, screen->geometry.top_left);
     return 0;
 }
 
@@ -258,7 +258,7 @@ static int luaA_mouse_coords(lua_State* L) {
             client_ignore_enterleave_events();
         }
 
-        mouse_warp_pointer(getGlobals().screen->root, x, y);
+        mouse_warp_pointer(getGlobals().screen->root, {x, y});
 
         if (ignore_enter_notify) {
             client_restore_enterleave_events();

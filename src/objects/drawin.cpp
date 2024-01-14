@@ -222,8 +222,8 @@ static void drawin_apply_moveresize(drawin_t* w) {
 
     w->geometry_dirty = false;
     client_ignore_enterleave_events();
-    std::array values = {(uint32_t)w->geometry.x,
-                         (uint32_t)w->geometry.y,
+    std::array values = {(uint32_t)w->geometry.top_left.x,
+                         (uint32_t)w->geometry.top_left.y,
                          (uint32_t)w->geometry.width,
                          (uint32_t)w->geometry.height};
     getConnection().configure_window(w->window,
@@ -280,10 +280,10 @@ static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
     if (old_geometry != w->geometry) {
         luaA_object_emit_signal(L, udx, "property::geometry", 0);
     }
-    if (old_geometry.x != w->geometry.x) {
+    if (old_geometry.top_left.x != w->geometry.top_left.x) {
         luaA_object_emit_signal(L, udx, "property::x", 0);
     }
-    if (old_geometry.y != w->geometry.y) {
+    if (old_geometry.top_left.y != w->geometry.top_left.y) {
         luaA_object_emit_signal(L, udx, "property::y", 0);
     }
     if (old_geometry.width != w->geometry.width) {
@@ -293,8 +293,8 @@ static void drawin_moveresize(lua_State* L, int udx, area_t geometry) {
         luaA_object_emit_signal(L, udx, "property::height", 0);
     }
 
-    screen_t* old_screen = screen_getbycoord(old_geometry.x, old_geometry.y);
-    screen_t* new_screen = screen_getbycoord(w->geometry.x, w->geometry.y);
+    screen_t* old_screen = screen_getbycoord(old_geometry.top_left);
+    screen_t* new_screen = screen_getbycoord(w->geometry.top_left);
     if (old_screen != new_screen && strut_has_value(&w->strut)) {
         screen_update_workarea(old_screen);
         screen_update_workarea(new_screen);
@@ -397,7 +397,7 @@ static void drawin_set_visible(lua_State* L, int udx, bool v) {
 
         luaA_object_emit_signal(L, udx, "property::visible", 0);
         if (strut_has_value(&drawin->strut)) {
-            screen_update_workarea(screen_getbycoord(drawin->geometry.x, drawin->geometry.y));
+            screen_update_workarea(screen_getbycoord(drawin->geometry.top_left));
         }
     }
 }
@@ -434,8 +434,8 @@ drawin_t* drawin_allocator(lua_State* L) {
                       getGlobals().default_depth,
                       w->window,
                       s->root,
-                      w->geometry.x,
-                      w->geometry.y,
+                      w->geometry.top_left.x,
+                      w->geometry.top_left.y,
                       w->geometry.width,
                       w->geometry.height,
                       w->border_width,
@@ -474,10 +474,10 @@ static int luaA_drawin_geometry(lua_State* L) {
         area_t wingeom;
 
         Lua::checktable(L, 2);
-        wingeom.x = round(Lua::getopt_number_range(
-          L, 2, "x", drawin->geometry.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-        wingeom.y = round(Lua::getopt_number_range(
-          L, 2, "y", drawin->geometry.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        wingeom.top_left.x = round(Lua::getopt_number_range(
+          L, 2, "x", drawin->geometry.top_left.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
+        wingeom.top_left.y = round(Lua::getopt_number_range(
+          L, 2, "y", drawin->geometry.top_left.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
         wingeom.width = ceil(Lua::getopt_number_range(
           L, 2, "width", drawin->geometry.width, MIN_X11_SIZE, MAX_X11_SIZE));
         wingeom.height = ceil(Lua::getopt_number_range(
@@ -499,15 +499,15 @@ static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
     int x = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     drawin_moveresize(L,
                       -3,
-                      (area_t){.x = (int16_t)x,
-                               .y = drawin->geometry.y,
-                               .width = drawin->geometry.width,
-                               .height = drawin->geometry.height});
+                      (area_t){{(int16_t)x,
+                               drawin->geometry.top()},
+                                drawin->geometry.width,
+                                drawin->geometry.height});
     return 0;
 }
 
 static int luaA_drawin_get_x(lua_State* L, drawin_t* drawin) {
-    lua_pushinteger(L, drawin->geometry.x);
+    lua_pushinteger(L, drawin->geometry.left());
     return 1;
 }
 
@@ -515,15 +515,15 @@ static int luaA_drawin_set_y(lua_State* L, drawin_t* drawin) {
     int y = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     drawin_moveresize(L,
                       -3,
-                      (area_t){.x = drawin->geometry.x,
-                               .y = (int16_t)y,
-                               .width = drawin->geometry.width,
-                               .height = drawin->geometry.height});
+                      (area_t){{drawin->geometry.left(),
+                                y},
+                                drawin->geometry.width,
+                                drawin->geometry.height});
     return 0;
 }
 
 static int luaA_drawin_get_y(lua_State* L, drawin_t* drawin) {
-    lua_pushinteger(L, drawin->geometry.y);
+    lua_pushinteger(L, drawin->geometry.top());
     return 1;
 }
 
@@ -531,10 +531,9 @@ static int luaA_drawin_set_width(lua_State* L, drawin_t* drawin) {
     int width = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
     drawin_moveresize(L,
                       -3,
-                      (area_t){.x = drawin->geometry.x,
-                               .y = drawin->geometry.y,
-                               .width = (uint16_t)width,
-                               .height = drawin->geometry.height});
+                      (area_t){ drawin->geometry.top_left,
+                                (uint16_t)width,
+                                drawin->geometry.height});
     return 0;
 }
 
@@ -547,10 +546,9 @@ static int luaA_drawin_set_height(lua_State* L, drawin_t* drawin) {
     int height = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
     drawin_moveresize(L,
                       -3,
-                      (area_t){.x = drawin->geometry.x,
-                               .y = drawin->geometry.y,
-                               .width = drawin->geometry.width,
-                               .height = (uint16_t)height});
+                      (area_t){ drawin->geometry.top_left,
+                                drawin->geometry.width,
+                                (uint16_t)height});
     return 0;
 }
 
