@@ -26,8 +26,12 @@
 #include "lauxlib.h"
 #include "lua.h"
 
+#include <concepts>
 #include <optional>
 #include <string_view>
+#include <type_traits>
+
+struct lua_object_t;
 
 namespace Lua {
 inline std::optional<std::string_view> checkstring(lua_State* L, int numArg) {
@@ -41,10 +45,43 @@ inline std::optional<std::string_view> tostring(lua_State* L, int numArg) {
     const char* str = lua_tolstring(L, numArg, &length);
     return std::string_view{str, length};
 }
+template<typename T>
+struct Pusher;
 
-void pushstring(lua_State* L, const std::string& str);
-void pushstring(lua_State* L, const char* str);
-void pushstring(lua_State* L, const std::string_view str);
+struct State;
+
+template<typename T>
+concept Pushable = requires (T x) {
+    {Pusher<std::decay_t<T>>{}.push(std::declval<State&>(), x)} -> std::same_as<int>;
+};
+
+struct State {
+    lua_State* L;
+    int push(const std::string& str);
+    int push(const char* str);
+    int push(const std::string_view str);
+    int push(int);
+    int push(unsigned int);
+    int push(unsigned short i) { return push((int)i); }
+    int push(bool);
+    int push(lua_object_t*);
+
+    template<Pushable T>
+    int push(T && val) {
+        return Pusher<std::decay_t<T>>{}.push(*this, std::forward<T>(val));
+    }
+
+    template<typename T>
+    requires(std::is_base_of_v<lua_object_t, T>)
+    int push(T * val) {
+        return push(static_cast<lua_object_t*>(val));
+    }
+};
+
+template<typename T>
+void pushstring(lua_State* s, T&& str) {
+    State{s}.push(std::forward<T>(str));
+}
 
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;

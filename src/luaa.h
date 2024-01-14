@@ -243,6 +243,21 @@ static inline int pusharea(lua_State* L, area_t geometry) {
     return 1;
 }
 
+template<>
+struct Pusher<area_t> {
+    int push(State& L, area_t geometry) {
+        lua_createtable(L.L, 0, 4);
+        lua_pushinteger(L.L, geometry.top_left.x);
+        lua_setfield(L.L, -2, "x");
+        lua_pushinteger(L.L, geometry.top_left.y);
+        lua_setfield(L.L, -2, "y");
+        lua_pushinteger(L.L, geometry.width);
+        lua_setfield(L.L, -2, "width");
+        lua_pushinteger(L.L, geometry.height);
+        lua_setfield(L.L, -2, "height");
+        return 1;
+    }
+};
 /** Register an Lua object.
  * \param L The Lua stack.
  * \param idx Index of the object in the stack.
