@@ -32,16 +32,13 @@
 
 #define LUAA_OBJECT_REGISTRY_KEY "awesome.object.registry"
 
-template<typename T>
-concept PushableObject = std::is_base_of_v<lua_object_t, std::remove_pointer_t<T>> || std::is_same_v<LuaFunction, T>;
+template <typename T>
+concept PushableObject =
+  std::is_base_of_v<lua_object_t, std::remove_pointer_t<T>> || std::is_same_v<LuaFunction, T>;
 
 namespace internal {
-inline void* pushableToUd(LuaFunction obj) {
-    return (void*)obj.fcn;
-}
-inline void* pushableToUd(const lua_object_t* obj) {
-    return (void*)obj;
-}
+inline void* pushableToUd(LuaFunction obj) { return (void*)obj.fcn; }
+inline void* pushableToUd(const lua_object_t* obj) { return (void*)obj; }
 }
 
 int luaA_settype(lua_State*, lua_class_t*);
@@ -142,15 +139,13 @@ static inline void luaA_object_unref(lua_State* L, const void* pointer) {
  * \param pointer The object to push.
  * \return The number of element pushed on stack.
  */
-static inline int luaA_object_push(lua_State* L, PushableObject auto pointer)
-{
+static inline int luaA_object_push(lua_State* L, PushableObject auto pointer) {
     luaA_object_registry_push(L);
     lua_pushlightuserdata(L, internal::pushableToUd(pointer));
     lua_rawget(L, -2);
     lua_remove(L, -2);
     return 1;
 }
-
 
 void signal_object_emit(lua_State*, Signals*, const std::string_view&, int);
 
@@ -165,79 +160,74 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
                                         T,
                                         std::add_lvalue_reference_t<std::add_const_t<T>>>;
 
-#define LUA_OBJECT_FUNCS(lua_class, type, prefix)     \
-    static inline type* prefix##_new(lua_State* L) {  \
-        void* mem = lua_newuserdata(L, sizeof(type)); \
-        auto p = new (mem) type{};                    \
-        (lua_class).ref();                            \
-        luaA_settype(L, &(lua_class));                \
-        lua_newtable(L);                              \
-        lua_newtable(L);                              \
-        lua_setmetatable(L, -2);                      \
-        lua_newtable(L);                              \
-        lua_setfield(L, -2, "data");                  \
-        Lua::setuservalue(L, -2);                     \
-        lua_pushvalue(L, -1);                         \
-        lua_class.emit_signal(L, "new", 1);           \
-        return p;                                     \
-    }
+template <typename T, auto& lua_class>
+static inline T* newobj(lua_State* L) {
+    void* mem = lua_newuserdata(L, sizeof(T));
+    auto p = new (mem) T{};
+    (lua_class).ref();
+    luaA_settype(L, &(lua_class));
+    lua_newtable(L);
+    lua_newtable(L);
+    lua_setmetatable(L, -2);
+    lua_newtable(L);
+    lua_setfield(L, -2, "data");
+    Lua::setuservalue(L, -2);
+    lua_pushvalue(L, -1);
+    lua_class.emit_signal(L, "new", 1);
+    return p;
+}
 
-#define OBJECT_EXPORT_PROPERTY(pfx, type, field)                                               \
-    FieldAccessT<decltype(std::declval<type>().field)> pfx##_get_##field(const type* object) { \
-        return object->field;                                                                  \
-    }
-
-#define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
+#define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)                  \
     static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) { \
-        Lua::State{L}.push(static_cast<type*>(object)->field);                                     \
-        return 1;                                                     \
+        Lua::State{L}.push(static_cast<type*>(object)->field);                \
+        return 1;                                                             \
     }
 
-#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)  \
+#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)          \
     static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) { \
-        Lua::State{L}.push(static_cast<type*>(object)->field);                                    \
-        return 1;                                                    \
+        Lua::State{L}.push(static_cast<type*>(object)->field);               \
+        return 1;                                                            \
     }
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
-    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) {              \
-        if (static_cast<type*>(object)->field == empty_value)                                          \
+    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) {      \
+        if (static_cast<type*>(object)->field == empty_value)                      \
             return 0;                                                              \
         Lua::State{L}.push(static_cast<type*>(object)->field);                     \
         return 1;                                                                  \
     }
 
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(pfx, type, field, name, pusher, empty_value) \
-    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) {                      \
-        if (static_cast<type*>(object)->field == empty_value)                                                 \
+    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) {              \
+        if (static_cast<type*>(object)->field == empty_value)                             \
             return 0;                                                                     \
         Lua::State{L}.push(static_cast<type*>(object)->field);                            \
         return 1;                                                                         \
     }
 
-template<typename T, typename Rt, typename ... Args>
-using MemFPtr = Rt (T::*)(Args ...);
+template <typename T, typename Rt, typename... Args>
+using MemFPtr = Rt (T::*)(Args...);
 
-template<typename Rt, typename ... Args>
-using FPtr = Rt (*)(Args ...);
+template <typename Rt, typename... Args>
+using FPtr = Rt (*)(Args...);
 
-template<typename T, typename ClassT>
-using MPtr = T (ClassT::*);
+template <typename T, typename ClassT>
+using MPtr = T(ClassT::*);
 
 namespace internal {
-template<typename T, typename Rt>
-T memptr(Rt (T::*p) () const);
-template<typename T, typename Rt>
+template <typename T, typename Rt>
+T memptr(Rt (T::*p)() const);
+template <typename T, typename Rt>
 T mempbr(Rt T::*p);
 }
-template<auto f, typename ClassT = decltype(internal::memptr(f))>
+template <auto f, typename ClassT = decltype(internal::memptr(f))>
 consteval auto exportProp() {
-     return (lua_class_propfunc_t) [](lua_State* L, lua_object_t * object) -> int {
+    return (lua_class_propfunc_t)[](lua_State * L, lua_object_t * object)->int {
         return Lua::State{L}.push((static_cast<ClassT*>(object)->*f)());
     };
 }
-template<auto f, typename ClassT = decltype(internal::mempbr(f))>
+template <auto f, typename ClassT = decltype(internal::mempbr(f))>
 consteval auto exportPropVal() {
-     return (lua_class_propfunc_t) [](lua_State* L, lua_object_t * object) -> int {
+    return (lua_class_propfunc_t)[](lua_State * L, lua_object_t * object)->int {
         return Lua::State{L}.push(static_cast<ClassT*>(object)->*f);
     };
 }
@@ -265,9 +255,10 @@ constexpr auto LuaObjectMeta() {
 }
 template <size_t N>
 constexpr auto DefineObjectMethods(luaL_Reg (&&arr)[N]) {
-    return array::join(array::join(array::join(internal::LuaClassMeta, LuaObjectMeta()), std::move(arr)),
-                       std::array{
-                         luaL_Reg{nullptr, nullptr}
+    return array::join(
+      array::join(array::join(internal::LuaClassMeta, LuaObjectMeta()), std::move(arr)),
+      std::array{
+        luaL_Reg{nullptr, nullptr}
     });
 }
 constexpr auto DefineObjectMethods() {
@@ -278,8 +269,8 @@ constexpr auto DefineObjectMethods() {
 }
 
 namespace Lua {
-template<typename T>
-int pushArray(lua_State * L, int oidx, const std::vector<T*>& arr)
+template <typename T>
+int pushArray(lua_State* L, int oidx, const std::vector<T*>& arr)
 requires(std::is_base_of_v<lua_object_t, std::decay_t<T>>)
 {
     lua_createtable(L, arr.size(), 0);

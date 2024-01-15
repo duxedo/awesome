@@ -277,19 +277,15 @@ struct screen_output_t {
 /** Check if a screen is valid */
 static bool screen_checker(screen_t* s) { return s->valid; }
 
-static inline screen_t* screen_new(lua_State*);
-
 static lua_class_t screen_class{
   "screen",
   NULL,
-  {[](auto* state) -> lua_object_t* { return screen_new(state); },
+  {[](auto* state) -> lua_object_t* { return newobj<screen_t, screen_class>(state); },
     destroyObject<screen_t>,
     [](auto* obj) { return screen_checker(static_cast<screen_t*>(obj)); },
     Lua::class_index_miss_property,
     Lua::class_newindex_miss_property},
 };
-
-LUA_OBJECT_FUNCS(screen_class, screen_t, screen)
 
 /** Get a screen argument from the lua stack */
 screen_t* luaA_checkscreen(lua_State* L, int sidx) {
@@ -560,7 +556,7 @@ static void viewport_purge(void) {
 }
 
 static screen_t* screen_add(lua_State* L, std::vector<screen_t*>* screens) {
-    screen_t* new_screen = screen_new(L);
+    screen_t* new_screen = newobj<screen_t, screen_class>(L);
     luaA_object_ref(L, -1);
     screens->push_back(new_screen);
     new_screen->xid = XCB_NONE;

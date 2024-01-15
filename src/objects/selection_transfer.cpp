@@ -58,8 +58,6 @@ struct selection_transfer_t: public lua_object_t {
     bool more_data;
 };
 
-static inline selection_transfer_t* selection_transfer_new(lua_State*);
-
 static bool selection_transfer_checker(selection_transfer_t* transfer) {
     return transfer->state != TRANSFER_DONE;
 }
@@ -68,15 +66,13 @@ static lua_class_t selection_transfer_class{
   "selection_transfer",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(selection_transfer_new(state)); },
+    [](auto* state) { return static_cast<lua_object_t*>(newobj<selection_transfer_t, selection_transfer_class>(state)); },
     destroyObject<selection_transfer_t>,
     [](auto* obj) { return selection_transfer_checker(static_cast<selection_transfer_t*>(obj)); },
     Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
     }
 };
-
-LUA_OBJECT_FUNCS(selection_transfer_class, selection_transfer_t, selection_transfer)
 
 static size_t max_property_length(void) {
     uint32_t max_request_length = xcb_get_maximum_request_length(getGlobals().connection);

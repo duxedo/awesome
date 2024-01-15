@@ -37,18 +37,15 @@ struct selection_getter_t: public lua_object_t {
 
     ~selection_getter_t() { xcb_destroy_window(getGlobals().connection, window); }
 };
-static inline selection_getter_t* selection_getter_new(lua_State*);
 
 static lua_class_t selection_getter_class{
   "selection_getter",
   NULL,
-  {[](auto* state) { return static_cast<lua_object_t*>(selection_getter_new(state)); },
+  {[](auto* state) { return static_cast<lua_object_t*>(newobj<selection_getter_t, selection_getter_class>(state)); },
     destroyObject<selection_getter_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property}
 };
-
-LUA_OBJECT_FUNCS(selection_getter_class, selection_getter_t, selection_getter)
 
 static int luaA_selection_getter_new(lua_State* L) {
     size_t name_length, target_length;

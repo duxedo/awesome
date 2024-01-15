@@ -41,7 +41,6 @@ struct keyb_t: public lua_object_t {
 };
 
 extern lua_class_t key_class;
-LUA_OBJECT_FUNCS(key_class, keyb_t, key)
 
 void key_class_setup(lua_State*);
 

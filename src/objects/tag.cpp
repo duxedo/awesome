@@ -212,7 +212,7 @@
 lua_class_t tag_class{
   "tag",
   NULL,
-  {[](auto* state) -> lua_object_t* { return tag_new(state); },
+  {[](auto* state) -> lua_object_t* { return newobj<tag_t, tag_class>(state); },
     destroyObject<tag_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property},
