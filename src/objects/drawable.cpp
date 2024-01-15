@@ -102,23 +102,21 @@
  * @tparam function cb The meta-method
  * @staticfct set_newindex_miss_handler
  */
-static inline drawable_t* drawable_new(lua_State*);
 
 static lua_class_t drawable_class{
   "drawable",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(drawable_new(state)); },
+    [](auto* state) { return static_cast<lua_object_t*>(newobj<drawable_t, drawable_class>(state)); },
     destroyObject<drawable_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
     },
 };
 
-LUA_OBJECT_FUNCS(drawable_class, drawable_t, drawable)
 
 drawable_t* drawable_allocator(lua_State* L, drawable_refresh_callback* callback, void* data) {
-    drawable_t* d = drawable_new(L);
+    drawable_t* d = newobj<drawable_t, drawable_class>(L);
     d->refresh_callback = callback;
     d->refresh_data = data;
     d->refreshed = false;

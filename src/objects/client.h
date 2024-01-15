@@ -233,8 +233,6 @@ struct client: public window_t {
 /** Client class */
 extern lua_class_t client_class;
 
-LUA_OBJECT_FUNCS(client_class, client, client)
-
 bool client_on_selected_tags(client*);
 client* client_getbywin(xcb_window_t);
 client* client_getbynofocuswin(xcb_window_t);

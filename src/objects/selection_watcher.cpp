@@ -39,18 +39,14 @@ struct selection_watcher_t: public lua_object_t {
     xcb_window_t window;
 };
 
-static inline selection_watcher_t* selection_watcher_new(lua_State*);
-
 static lua_class_t selection_watcher_class{
   "selection_watcher",
   NULL,
-  {[](auto* state) { return static_cast<lua_object_t*>(selection_watcher_new(state)); },
+  {[](auto* state) { return static_cast<lua_object_t*>(newobj<selection_watcher_t, selection_watcher_class>(state)); },
     destroyObject<selection_watcher_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property},
 };
-
-LUA_OBJECT_FUNCS(selection_watcher_class, selection_watcher_t, selection_watcher)
 
 void event_handle_xfixes_selection_notify(xcb_generic_event_t* ev) {
     auto e = (xcb_xfixes_selection_notify_event_t*)ev;
