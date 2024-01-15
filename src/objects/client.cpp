@@ -110,6 +110,7 @@
 #include <cairo-xcb.h>
 #include <cstdint>
 #include <ranges>
+#include <string_view>
 #include <xcb/shape.h>
 #include <xcb/xcb_atom.h>
 #include <xcb/xproto.h>
@@ -3755,10 +3756,6 @@ static int luaA_client_set_startup_id(lua_State* L, lua_object_t*) {
     return 0;
 }
 
-LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, screen, luaA_object_push, NULL)
-LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(client, client, getMachine(), machine, Lua::pushstring, "")
-LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, pid, lua_pushinteger, 0)
-
 static int luaA_client_get_motif_wm_hints(lua_State* L, lua_object_t* o) {
     auto c = static_cast<client*>(o);
     if (!(c->motif_wm_hints.hints & MWM_HINTS_AWESOME_SET)) {
@@ -4147,7 +4144,8 @@ static int luaA_client_keys(lua_State* L) {
     return luaA_key_array_get(L, 1, keys);
 }
 
-static int luaA_client_get_icon_sizes(lua_State* L, client* c) {
+static int luaA_client_get_icon_sizes(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     int index = 1;
 
     lua_newtable(L);
@@ -4268,66 +4266,64 @@ void client_class_setup(lua_State* L) {
     client_class.set_tostring(client_tostring);
     client_class.add_property(
       "name", luaA_client_set_name, exportProp<&client::getName>(), luaA_client_set_name);
-    client_class.add_property("transient_for", NULL, exportPropVal<&client::transient_for>(), NULL);
+    client_class.add_property("transient_for", NULL, exportProp<&client::transient_for>(), NULL);
     client_class.add_property("skip_taskbar",
                               luaA_client_set_skip_taskbar,
-                              exportPropVal<&client::skip_taskbar>(),
+                              exportProp<&client::skip_taskbar>(),
                               luaA_client_set_skip_taskbar);
     client_class.add_property("content", NULL, luaA_client_get_content, NULL);
-    client_class.add_property("type", NULL, exportPropVal<&client::type>(), NULL);
+    client_class.add_property("type", NULL, exportProp<&client::type>(), NULL);
     client_class.add_property("class", NULL, exportProp<&client::getCls>(), NULL);
     client_class.add_property("instance", NULL, exportProp<&client::getInstance>(), NULL);
     client_class.add_property("role", NULL, exportProp<&client::getRole>(), NULL);
-    client_class.add_property("pid", NULL, luaA_client_get_pid, NULL);
-    client_class.add_property("leader_window", NULL, exportPropVal<&client::leader_window>(), NULL);
-    client_class.add_property("machine", NULL, luaA_client_get_machine, NULL);
-    client_class.add_property(
-      "icon_name", NULL, (lua_class_propfunc_t)luaA_client_get_icon_name, NULL);
-    client_class.add_property("screen", NULL, luaA_client_get_screen, luaA_client_set_screen);
-    client_class.add_property(
-      "hidden", luaA_client_set_hidden, exportPropVal<&client::hidden>(), luaA_client_set_hidden);
+    client_class.add_property("pid", NULL, exportProp<&client::pid, 0>(), NULL);
+    client_class.add_property("leader_window", NULL, exportProp<&client::leader_window>(), NULL);
+    client_class.add_property("machine", NULL, exportProp<&client::getMachine, [] { return ""; }>(), NULL);
+    client_class.add_property("icon_name", NULL, luaA_client_get_icon_name, NULL);
+    client_class.add_property("screen", NULL, exportProp<&client::screen, nullptr>(), luaA_client_set_screen);
+    client_class.add_property("hidden", luaA_client_set_hidden, exportProp<&client::hidden>(), luaA_client_set_hidden);
     client_class.add_property("minimized",
                               luaA_client_set_minimized,
-                              exportPropVal<&client::minimized>(),
+                              exportProp<&client::minimized>(),
                               luaA_client_set_minimized);
     client_class.add_property("fullscreen",
                               luaA_client_set_fullscreen,
-                              exportPropVal<&client::fullscreen>(),
+                              exportProp<&client::fullscreen>(),
                               luaA_client_set_fullscreen);
     client_class.add_property(
-      "modal", luaA_client_set_modal, exportPropVal<&client::modal>(), luaA_client_set_modal);
+      "modal", luaA_client_set_modal, exportProp<&client::modal>(), luaA_client_set_modal);
     client_class.add_property("motif_wm_hints", NULL, luaA_client_get_motif_wm_hints, NULL);
-    client_class.add_property("group_window", NULL, exportPropVal<&client::group_window>(), NULL);
+    client_class.add_property("group_window", NULL, exportProp<&client::group_window>(), NULL);
     client_class.add_property("maximized",
                               luaA_client_set_maximized,
-                              exportPropVal<&client::maximized>(),
+                              exportProp<&client::maximized>(),
                               luaA_client_set_maximized);
     client_class.add_property("maximized_horizontal",
                               luaA_client_set_maximized_horizontal,
-                              exportPropVal<&client::maximized_horizontal>(),
+                              exportProp<&client::maximized_horizontal>(),
                               luaA_client_set_maximized_horizontal);
     client_class.add_property("maximized_vertical",
                               luaA_client_set_maximized_vertical,
-                              exportPropVal<&client::maximized_vertical>(),
+                              exportProp<&client::maximized_vertical>(),
                               luaA_client_set_maximized_vertical);
     client_class.add_property(
       "icon", luaA_client_set_icon, luaA_client_get_icon, luaA_client_set_icon);
     client_class.add_property(
-      "icon_sizes", NULL, (lua_class_propfunc_t)luaA_client_get_icon_sizes, NULL);
+      "icon_sizes", NULL, luaA_client_get_icon_sizes, NULL);
     client_class.add_property(
-      "ontop", luaA_client_set_ontop, exportPropVal<&client::ontop>(), luaA_client_set_ontop);
+      "ontop", luaA_client_set_ontop, exportProp<&client::ontop>(), luaA_client_set_ontop);
     client_class.add_property(
-      "above", luaA_client_set_above, exportPropVal<&client::above>(), luaA_client_set_above);
+      "above", luaA_client_set_above, exportProp<&client::above>(), luaA_client_set_above);
     client_class.add_property(
-      "below", luaA_client_set_below, exportPropVal<&client::below>(), luaA_client_set_below);
+      "below", luaA_client_set_below, exportProp<&client::below>(), luaA_client_set_below);
     client_class.add_property(
-      "sticky", luaA_client_set_sticky, exportPropVal<&client::sticky>(), luaA_client_set_sticky);
+      "sticky", luaA_client_set_sticky, exportProp<&client::sticky>(), luaA_client_set_sticky);
     client_class.add_property("size_hints_honor",
                               luaA_client_set_size_hints_honor,
-                              exportPropVal<&client::size_hints_honor>(),
+                              exportProp<&client::size_hints_honor>(),
                               luaA_client_set_size_hints_honor);
     client_class.add_property(
-      "urgent", luaA_client_set_urgent, exportPropVal<&client::urgent>(), luaA_client_set_urgent);
+      "urgent", luaA_client_set_urgent, exportProp<&client::urgent>(), luaA_client_set_urgent);
     client_class.add_property("size_hints", NULL, luaA_client_get_size_hints, NULL);
     client_class.add_property("focusable",
                               luaA_client_set_focusable,
