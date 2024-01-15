@@ -50,5 +50,3 @@ LUA_OBJECT_FUNCS(tag_class, tag_t, tag)
 
 void tag_class_setup(lua_State*);
 
-bool tag_get_selected(const tag_t*);
-const std::string& tag_get_name(const tag_t*);

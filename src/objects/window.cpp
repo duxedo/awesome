@@ -222,32 +222,34 @@ void window_set_border_width(lua_State* L, int idx, int width) {
     luaA_object_emit_signal(L, idx, "property::border_width", 0);
 }
 
-/** Get the window type.
+/** Push window type to stack.
  * \param L The Lua VM state.
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-int luaA_window_get_type(lua_State* L, window_t* w) {
-    switch (w->type) {
-    case WINDOW_TYPE_DESKTOP: lua_pushliteral(L, "desktop"); break;
-    case WINDOW_TYPE_DOCK: lua_pushliteral(L, "dock"); break;
-    case WINDOW_TYPE_SPLASH: lua_pushliteral(L, "splash"); break;
-    case WINDOW_TYPE_DIALOG: lua_pushliteral(L, "dialog"); break;
-    case WINDOW_TYPE_MENU: lua_pushliteral(L, "menu"); break;
-    case WINDOW_TYPE_TOOLBAR: lua_pushliteral(L, "toolbar"); break;
-    case WINDOW_TYPE_UTILITY: lua_pushliteral(L, "utility"); break;
-    case WINDOW_TYPE_DROPDOWN_MENU: lua_pushliteral(L, "dropdown_menu"); break;
-    case WINDOW_TYPE_POPUP_MENU: lua_pushliteral(L, "popup_menu"); break;
-    case WINDOW_TYPE_TOOLTIP: lua_pushliteral(L, "tooltip"); break;
-    case WINDOW_TYPE_NOTIFICATION: lua_pushliteral(L, "notification"); break;
-    case WINDOW_TYPE_COMBO: lua_pushliteral(L, "combo"); break;
-    case WINDOW_TYPE_DND: lua_pushliteral(L, "dnd"); break;
-    case WINDOW_TYPE_NORMAL: lua_pushliteral(L, "normal"); break;
+
+namespace Lua {
+int Pusher<window_type_t>::push(State& L, const window_type_t t) {
+    switch (t) {
+    case WINDOW_TYPE_DESKTOP: L.push("desktop"); break;
+    case WINDOW_TYPE_DOCK: L.push("dock"); break;
+    case WINDOW_TYPE_SPLASH: L.push("splash"); break;
+    case WINDOW_TYPE_DIALOG: L.push("dialog"); break;
+    case WINDOW_TYPE_MENU: L.push("menu"); break;
+    case WINDOW_TYPE_TOOLBAR: L.push("toolbar"); break;
+    case WINDOW_TYPE_UTILITY: L.push("utility"); break;
+    case WINDOW_TYPE_DROPDOWN_MENU: L.push("dropdown_menu"); break;
+    case WINDOW_TYPE_POPUP_MENU: L.push("popup_menu"); break;
+    case WINDOW_TYPE_TOOLTIP: L.push("tooltip"); break;
+    case WINDOW_TYPE_NOTIFICATION: L.push("notification"); break;
+    case WINDOW_TYPE_COMBO: L.push("combo"); break;
+    case WINDOW_TYPE_DND: L.push("dnd"); break;
+    case WINDOW_TYPE_NORMAL: L.push("normal"); break;
     default: return 0;
     }
     return 1;
 }
-
+}
 /** Set the window type.
  * \param L The Lua VM state.
  * \param window The window object.

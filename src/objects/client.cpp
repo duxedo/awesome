@@ -90,6 +90,7 @@
 
 #include "common/atoms.h"
 #include "common/luaclass.h"
+#include "common/luaobject.h"
 #include "common/xutil.h"
 #include "draw.h"
 #include "event.h"
@@ -1688,7 +1689,7 @@ bool client_on_selected_tags(client* c) {
     }
 
     for (auto& tag : getGlobals().tags) {
-        if (tag_get_selected(tag.get()) && is_client_tagged(c, tag.get())) {
+        if (tag.get()->selected && is_client_tagged(c, tag.get())) {
             return true;
         }
     }
@@ -2623,9 +2624,8 @@ void client_set_sticky(lua_State* L, int cidx, bool s) {
 static void client_set_focusable(lua_State* L, int cidx, bool s) {
     auto c = client_class.checkudata<client>(L, cidx);
 
-    if (c->focusable != s || !c->focusable_set) {
+    if (c->focusable != s) {
         c->focusable = s;
-        c->focusable_set = true;
         luaA_object_emit_signal(L, cidx, "property::focusable", 0);
     }
 }
@@ -2637,8 +2637,8 @@ static void client_set_focusable(lua_State* L, int cidx, bool s) {
 static void client_unset_focusable(lua_State* L, int cidx) {
     auto c = client_class.checkudata<client>(L, cidx);
 
-    if (c->focusable_set) {
-        c->focusable_set = false;
+    if (c->focusable.has_value()) {
+        c->focusable.reset();
         luaA_object_emit_signal(L, cidx, "property::focusable", 0);
     }
 }
@@ -3274,7 +3274,8 @@ static int luaA_client_tags(lua_State* L) {
 
 /** Get the first tag of a client.
  */
-static int luaA_client_get_first_tag(lua_State* L, client* c) {
+static int luaA_client_get_first_tag(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     for (const auto& tag : getGlobals().tags) {
         if (is_client_tagged(c, tag.get())) {
             luaA_object_push(L, tag.get());
@@ -3538,7 +3539,7 @@ static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t
     luaA_object_emit_signal(L, cidx, property_name, 0);
 }
 
-template<client_titlebar_t N>
+template <client_titlebar_t N>
 static int client_titlebar(lua_State* L) {
     auto c = client_class.checkudata<client>(L, 1);
 
@@ -3576,10 +3577,11 @@ static int luaA_client_geometry(lua_State* L) {
         area_t geometry;
 
         Lua::checktable(L, 2);
-        geometry.top_left = {(int)round(Lua::getopt_number_range(
-                               L, 2, "x", c->geometry.top_left.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE)),
-                             (int)round(Lua::getopt_number_range(
-                               L, 2, "y", c->geometry.top_left.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE))};
+        geometry.top_left = {
+          (int)round(Lua::getopt_number_range(
+            L, 2, "x", c->geometry.top_left.x, MIN_X11_COORDINATE, MAX_X11_COORDINATE)),
+          (int)round(Lua::getopt_number_range(
+            L, 2, "y", c->geometry.top_left.y, MIN_X11_COORDINATE, MAX_X11_COORDINATE))};
         if (client_isfixed(c)) {
             geometry.width = c->geometry.width;
             geometry.height = c->geometry.height;
@@ -3629,56 +3631,56 @@ static int luaA_client_apply_size_hints(lua_State* L) {
     return 2;
 }
 
-static int luaA_client_set_screen(lua_State* L, client* c) {
-    screen_client_moveto(c, luaA_checkscreen(L, -1), true);
+static int luaA_client_set_screen(lua_State* L, lua_object_t* c) {
+    screen_client_moveto(static_cast<client*>(c), luaA_checkscreen(L, -1), true);
     return 0;
 }
 
-static int luaA_client_set_hidden(lua_State* L, client* c) {
+static int luaA_client_set_hidden(lua_State* L, lua_object_t* c) {
     client_set_hidden(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_minimized(lua_State* L, client* c) {
+static int luaA_client_set_minimized(lua_State* L, lua_object_t* c) {
     client_set_minimized(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_fullscreen(lua_State* L, client* c) {
+static int luaA_client_set_fullscreen(lua_State* L, lua_object_t* c) {
     client_set_fullscreen(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_modal(lua_State* L, client* c) {
+static int luaA_client_set_modal(lua_State* L, lua_object_t* c) {
     client_set_modal(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_maximized(lua_State* L, client* c) {
+static int luaA_client_set_maximized(lua_State* L, lua_object_t* c) {
     client_set_maximized(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_maximized_horizontal(lua_State* L, client* c) {
+static int luaA_client_set_maximized_horizontal(lua_State* L, lua_object_t* c) {
     client_set_maximized_horizontal(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_maximized_vertical(lua_State* L, client* c) {
+static int luaA_client_set_maximized_vertical(lua_State* L, lua_object_t* c) {
     client_set_maximized_vertical(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_icon(lua_State* L, client* c) {
+static int luaA_client_set_icon(lua_State* L, lua_object_t* c) {
     cairo_surface_t* surf = NULL;
     if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
     }
-    client_set_icon(c, surf);
+    client_set_icon(static_cast<client*>(c), surf);
     return 0;
 }
 
-static int luaA_client_set_focusable(lua_State* L, client* c) {
+static int luaA_client_set_focusable(lua_State* L, lua_object_t* c) {
     if (lua_isnil(L, -1)) {
         client_unset_focusable(L, -3);
     } else {
@@ -3687,43 +3689,44 @@ static int luaA_client_set_focusable(lua_State* L, client* c) {
     return 0;
 }
 
-static int luaA_client_set_sticky(lua_State* L, client* c) {
+static int luaA_client_set_sticky(lua_State* L, lua_object_t* c) {
     client_set_sticky(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_size_hints_honor(lua_State* L, client* c) {
-    c->size_hints_honor = Lua::checkboolean(L, -1);
+static int luaA_client_set_size_hints_honor(lua_State* L, lua_object_t* c) {
+    static_cast<client*>(c)->size_hints_honor = Lua::checkboolean(L, -1);
     luaA_object_emit_signal(L, -3, "property::size_hints_honor", 0);
     return 0;
 }
 
-static int luaA_client_set_ontop(lua_State* L, client* c) {
+static int luaA_client_set_ontop(lua_State* L, lua_object_t*) {
     client_set_ontop(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_below(lua_State* L, client* c) {
+static int luaA_client_set_below(lua_State* L, lua_object_t*) {
     client_set_below(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_above(lua_State* L, client* c) {
+static int luaA_client_set_above(lua_State* L, lua_object_t*) {
     client_set_above(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_urgent(lua_State* L, client* c) {
+static int luaA_client_set_urgent(lua_State* L, lua_object_t*) {
     client_set_urgent(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_set_skip_taskbar(lua_State* L, client* c) {
+static int luaA_client_set_skip_taskbar(lua_State* L, lua_object_t*) {
     client_set_skip_taskbar(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
 
-static int luaA_client_get_name(lua_State* L, client* c) {
+static int luaA_client_get_name(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     lua_pushstring(L, !c->getName().empty() ? c->getName().c_str() : c->getAltName().c_str());
     return 1;
 }
@@ -3733,50 +3736,31 @@ static int luaA_client_get_name(lua_State* L, client* c) {
  * \param client The client to name.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_set_name(lua_State* L, client* c) {
+static int luaA_client_set_name(lua_State* L, lua_object_t*) {
     const auto name = Lua::checkstring(L, -1);
     client_set_Name(L, 1, std::string{name->begin(), name->end()});
     return 0;
 }
 
-static int luaA_client_get_icon_name(lua_State* L, client* c) {
+static int luaA_client_get_icon_name(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     lua_pushstring(
       L, !c->getIconName().empty() ? c->getIconName().c_str() : c->getAltIconName().c_str());
     return 1;
 }
 
-static int luaA_client_set_startup_id(lua_State* L, client* c) {
+static int luaA_client_set_startup_id(lua_State* L, lua_object_t*) {
     const char* startup_id = luaL_checkstring(L, -1);
     client_set_StartupId(L, 1, startup_id);
     return 0;
 }
 
 LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, screen, luaA_object_push, NULL)
-LUA_OBJECT_EXPORT_PROPERTY2(client, client, getCls(), class, Lua::pushstring)
-LUA_OBJECT_EXPORT_PROPERTY2(client, client, getInstance(), instance, Lua::pushstring)
 LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(client, client, getMachine(), machine, Lua::pushstring, "")
-LUA_OBJECT_EXPORT_PROPERTY2(client, client, getRole(), role, Lua::pushstring)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, transient_for, luaA_object_push)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, skip_taskbar, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, leader_window, lua_pushinteger)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, group_window, lua_pushinteger)
 LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(client, client, pid, lua_pushinteger, 0)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, hidden, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, minimized, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, fullscreen, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, modal, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, ontop, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, urgent, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, above, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, below, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, sticky, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, size_hints_honor, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized_horizontal, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized_vertical, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(client, client, maximized, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY2(client, client, getStartupId(), startup_id, Lua::pushstring)
 
-static int luaA_client_get_motif_wm_hints(lua_State* L, client* c) {
+static int luaA_client_get_motif_wm_hints(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     if (!(c->motif_wm_hints.hints & MWM_HINTS_AWESOME_SET)) {
         return 0;
     }
@@ -3836,7 +3820,8 @@ static int luaA_client_get_motif_wm_hints(lua_State* L, client* c) {
     return 1;
 }
 
-static int luaA_client_get_content(lua_State* L, client* c) {
+static int luaA_client_get_content(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surface;
     int width = c->geometry.width;
     int height = c->geometry.height;
@@ -3853,7 +3838,8 @@ static int luaA_client_get_content(lua_State* L, client* c) {
     return 1;
 }
 
-static int luaA_client_get_icon(lua_State* L, client* c) {
+static int luaA_client_get_icon(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     if (c->icons.empty()) {
         return 0;
     }
@@ -3888,26 +3874,20 @@ static int luaA_client_get_icon(lua_State* L, client* c) {
     return 1;
 }
 
-static int luaA_client_get_focusable(lua_State* L, client* c) {
-    bool ret;
+static int luaA_client_get_focusable(lua_State* L, lua_object_t* o) {
+    auto* c = static_cast<client*>(o);
 
-    if (c->focusable_set) {
-        ret = c->focusable;
+    if (c->focusable.has_value()) {
+        lua_pushboolean(L, c->focusable.value());
+        return 1;
     }
 
-    /* A client can be focused if it doesnt have the "nofocus" hint...*/
-    else if (!c->nofocus) {
-        ret = true;
-    } else {
-        /* ...or if it knows the WM_TAKE_FOCUS protocol */
-        ret = client_hasproto(c, WM_TAKE_FOCUS);
-    }
-
-    lua_pushboolean(L, ret);
+    lua_pushboolean(L, !c->nofocus || client_hasproto(c, WM_TAKE_FOCUS));
     return 1;
 }
 
-static int luaA_client_get_size_hints(lua_State* L, client* c) {
+static int luaA_client_get_size_hints(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     const char* u_or_p = NULL;
 
     lua_createtable(L, 0, 1);
@@ -4006,7 +3986,8 @@ static int luaA_client_get_size_hints(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_get_client_shape_bounding(lua_State* L, client* c) {
+static int luaA_client_get_client_shape_bounding(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = xwindow_get_shape(c->window, XCB_SHAPE_SK_BOUNDING);
     if (!surf) {
         return 0;
@@ -4021,7 +4002,8 @@ static int luaA_client_get_client_shape_bounding(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_get_shape_bounding(lua_State* L, client* c) {
+static int luaA_client_get_shape_bounding(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = xwindow_get_shape(c->frame_window, XCB_SHAPE_SK_BOUNDING);
     if (!surf) {
         return 0;
@@ -4036,7 +4018,8 @@ static int luaA_client_get_shape_bounding(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_set_shape_bounding(lua_State* L, client* c) {
+static int luaA_client_set_shape_bounding(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = NULL;
     if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
@@ -4056,7 +4039,8 @@ static int luaA_client_set_shape_bounding(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_get_client_shape_clip(lua_State* L, client* c) {
+static int luaA_client_get_client_shape_clip(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = xwindow_get_shape(c->window, XCB_SHAPE_SK_CLIP);
     if (!surf) {
         return 0;
@@ -4071,7 +4055,8 @@ static int luaA_client_get_client_shape_clip(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_get_shape_clip(lua_State* L, client* c) {
+static int luaA_client_get_shape_clip(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = xwindow_get_shape(c->frame_window, XCB_SHAPE_SK_CLIP);
     if (!surf) {
         return 0;
@@ -4086,7 +4071,8 @@ static int luaA_client_get_shape_clip(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_set_shape_clip(lua_State* L, client* c) {
+static int luaA_client_set_shape_clip(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = NULL;
     if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
@@ -4102,7 +4088,8 @@ static int luaA_client_set_shape_clip(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_get_shape_input(lua_State* L, client* c) {
+static int luaA_client_get_shape_input(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = xwindow_get_shape(c->frame_window, XCB_SHAPE_SK_INPUT);
     if (!surf) {
         return 0;
@@ -4117,7 +4104,8 @@ static int luaA_client_get_shape_input(lua_State* L, client* c) {
  * \param client The client object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_client_set_shape_input(lua_State* L, client* c) {
+static int luaA_client_set_shape_input(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     cairo_surface_t* surf = NULL;
     if (!lua_isnil(L, -1)) {
         surf = (cairo_surface_t*)lua_touserdata(L, -1);
@@ -4208,7 +4196,8 @@ static int luaA_client_get_some_icon(lua_State* L) {
     return 1;
 }
 
-static int client_tostring(lua_State* L, client* c) {
+static int client_tostring(lua_State* L, lua_object_t* o) {
+    auto c = static_cast<client*>(o);
     const auto& name = c->getName().empty() ? c->getAltName() : c->getName();
     ssize_t limit = 20;
 
@@ -4257,144 +4246,113 @@ void client_class_setup(lua_State* L) {
     });
 
     static constexpr auto meta = DefineObjectMethods({
-      {           "_keys",             luaA_client_keys},
-      {       "isvisible",        luaA_client_isvisible},
-      {        "geometry",         luaA_client_geometry},
-      {"apply_size_hints", luaA_client_apply_size_hints},
-      {            "tags",             luaA_client_tags},
-      {            "kill",             luaA_client_kill},
-      {            "swap",             luaA_client_swap},
-      {           "raise",            luaA_client_raise},
-      {           "lower",            luaA_client_lower},
-      {        "unmanage",         luaA_client_unmanage},
-      {    "titlebar_top",     client_titlebar<CLIENT_TITLEBAR_TOP>},
-      {  "titlebar_right",   client_titlebar<CLIENT_TITLEBAR_RIGHT>},
-      { "titlebar_bottom",  client_titlebar<CLIENT_TITLEBAR_BOTTOM>},
-      {   "titlebar_left",    client_titlebar<CLIENT_TITLEBAR_LEFT>},
-      {        "get_icon",    luaA_client_get_some_icon}
+      {           "_keys",                        luaA_client_keys},
+      {       "isvisible",                   luaA_client_isvisible},
+      {        "geometry",                    luaA_client_geometry},
+      {"apply_size_hints",            luaA_client_apply_size_hints},
+      {            "tags",                        luaA_client_tags},
+      {            "kill",                        luaA_client_kill},
+      {            "swap",                        luaA_client_swap},
+      {           "raise",                       luaA_client_raise},
+      {           "lower",                       luaA_client_lower},
+      {        "unmanage",                    luaA_client_unmanage},
+      {    "titlebar_top",    client_titlebar<CLIENT_TITLEBAR_TOP>},
+      {  "titlebar_right",  client_titlebar<CLIENT_TITLEBAR_RIGHT>},
+      { "titlebar_bottom", client_titlebar<CLIENT_TITLEBAR_BOTTOM>},
+      {   "titlebar_left",   client_titlebar<CLIENT_TITLEBAR_LEFT>},
+      {        "get_icon",               luaA_client_get_some_icon}
     });
 
     client_class.setup(L, methods.data(), meta.data());
 
-    client_class.set_tostring((lua_class_propfunc_t)client_tostring);
-    client_class.add_property("name",
-                              (lua_class_propfunc_t)luaA_client_set_name,
-                              (lua_class_propfunc_t)luaA_client_get_name,
-                              (lua_class_propfunc_t)luaA_client_set_name);
+    client_class.set_tostring(client_tostring);
     client_class.add_property(
-      "transient_for", NULL, (lua_class_propfunc_t)luaA_client_get_transient_for, NULL);
+      "name", luaA_client_set_name, exportProp<&client::getName>(), luaA_client_set_name);
+    client_class.add_property("transient_for", NULL, exportPropVal<&client::transient_for>(), NULL);
     client_class.add_property("skip_taskbar",
-                              (lua_class_propfunc_t)luaA_client_set_skip_taskbar,
-                              (lua_class_propfunc_t)luaA_client_get_skip_taskbar,
-                              (lua_class_propfunc_t)luaA_client_set_skip_taskbar);
-    client_class.add_property("content", NULL, (lua_class_propfunc_t)luaA_client_get_content, NULL);
-    client_class.add_property("type", NULL, (lua_class_propfunc_t)luaA_window_get_type, NULL);
-    client_class.add_property("class", NULL, (lua_class_propfunc_t)luaA_client_get_class, NULL);
-    client_class.add_property(
-      "instance", NULL, (lua_class_propfunc_t)luaA_client_get_instance, NULL);
-    client_class.add_property("role", NULL, (lua_class_propfunc_t)luaA_client_get_role, NULL);
-    client_class.add_property("pid", NULL, (lua_class_propfunc_t)luaA_client_get_pid, NULL);
-    client_class.add_property(
-      "leader_window", NULL, (lua_class_propfunc_t)luaA_client_get_leader_window, NULL);
-    client_class.add_property("machine", NULL, (lua_class_propfunc_t)luaA_client_get_machine, NULL);
+                              luaA_client_set_skip_taskbar,
+                              exportPropVal<&client::skip_taskbar>(),
+                              luaA_client_set_skip_taskbar);
+    client_class.add_property("content", NULL, luaA_client_get_content, NULL);
+    client_class.add_property("type", NULL, exportPropVal<&client::type>(), NULL);
+    client_class.add_property("class", NULL, exportProp<&client::getCls>(), NULL);
+    client_class.add_property("instance", NULL, exportProp<&client::getInstance>(), NULL);
+    client_class.add_property("role", NULL, exportProp<&client::getRole>(), NULL);
+    client_class.add_property("pid", NULL, luaA_client_get_pid, NULL);
+    client_class.add_property("leader_window", NULL, exportPropVal<&client::leader_window>(), NULL);
+    client_class.add_property("machine", NULL, luaA_client_get_machine, NULL);
     client_class.add_property(
       "icon_name", NULL, (lua_class_propfunc_t)luaA_client_get_icon_name, NULL);
-    client_class.add_property("screen",
-                              NULL,
-                              (lua_class_propfunc_t)luaA_client_get_screen,
-                              (lua_class_propfunc_t)luaA_client_set_screen);
-    client_class.add_property("hidden",
-                              (lua_class_propfunc_t)luaA_client_set_hidden,
-                              (lua_class_propfunc_t)luaA_client_get_hidden,
-                              (lua_class_propfunc_t)luaA_client_set_hidden);
+    client_class.add_property("screen", NULL, luaA_client_get_screen, luaA_client_set_screen);
+    client_class.add_property(
+      "hidden", luaA_client_set_hidden, exportPropVal<&client::hidden>(), luaA_client_set_hidden);
     client_class.add_property("minimized",
-                              (lua_class_propfunc_t)luaA_client_set_minimized,
-                              (lua_class_propfunc_t)luaA_client_get_minimized,
-                              (lua_class_propfunc_t)luaA_client_set_minimized);
+                              luaA_client_set_minimized,
+                              exportPropVal<&client::minimized>(),
+                              luaA_client_set_minimized);
     client_class.add_property("fullscreen",
-                              (lua_class_propfunc_t)luaA_client_set_fullscreen,
-                              (lua_class_propfunc_t)luaA_client_get_fullscreen,
-                              (lua_class_propfunc_t)luaA_client_set_fullscreen);
-    client_class.add_property("modal",
-                              (lua_class_propfunc_t)luaA_client_set_modal,
-                              (lua_class_propfunc_t)luaA_client_get_modal,
-                              (lua_class_propfunc_t)luaA_client_set_modal);
+                              luaA_client_set_fullscreen,
+                              exportPropVal<&client::fullscreen>(),
+                              luaA_client_set_fullscreen);
     client_class.add_property(
-      "motif_wm_hints", NULL, (lua_class_propfunc_t)luaA_client_get_motif_wm_hints, NULL);
-    client_class.add_property(
-      "group_window", NULL, (lua_class_propfunc_t)luaA_client_get_group_window, NULL);
+      "modal", luaA_client_set_modal, exportPropVal<&client::modal>(), luaA_client_set_modal);
+    client_class.add_property("motif_wm_hints", NULL, luaA_client_get_motif_wm_hints, NULL);
+    client_class.add_property("group_window", NULL, exportPropVal<&client::group_window>(), NULL);
     client_class.add_property("maximized",
-                              (lua_class_propfunc_t)luaA_client_set_maximized,
-                              (lua_class_propfunc_t)luaA_client_get_maximized,
-                              (lua_class_propfunc_t)luaA_client_set_maximized);
+                              luaA_client_set_maximized,
+                              exportPropVal<&client::maximized>(),
+                              luaA_client_set_maximized);
     client_class.add_property("maximized_horizontal",
-                              (lua_class_propfunc_t)luaA_client_set_maximized_horizontal,
-                              (lua_class_propfunc_t)luaA_client_get_maximized_horizontal,
-                              (lua_class_propfunc_t)luaA_client_set_maximized_horizontal);
+                              luaA_client_set_maximized_horizontal,
+                              exportPropVal<&client::maximized_horizontal>(),
+                              luaA_client_set_maximized_horizontal);
     client_class.add_property("maximized_vertical",
-                              (lua_class_propfunc_t)luaA_client_set_maximized_vertical,
-                              (lua_class_propfunc_t)luaA_client_get_maximized_vertical,
-                              (lua_class_propfunc_t)luaA_client_set_maximized_vertical);
-    client_class.add_property("icon",
-                              (lua_class_propfunc_t)luaA_client_set_icon,
-                              (lua_class_propfunc_t)luaA_client_get_icon,
-                              (lua_class_propfunc_t)luaA_client_set_icon);
+                              luaA_client_set_maximized_vertical,
+                              exportPropVal<&client::maximized_vertical>(),
+                              luaA_client_set_maximized_vertical);
+    client_class.add_property(
+      "icon", luaA_client_set_icon, luaA_client_get_icon, luaA_client_set_icon);
     client_class.add_property(
       "icon_sizes", NULL, (lua_class_propfunc_t)luaA_client_get_icon_sizes, NULL);
-    client_class.add_property("ontop",
-                              (lua_class_propfunc_t)luaA_client_set_ontop,
-                              (lua_class_propfunc_t)luaA_client_get_ontop,
-                              (lua_class_propfunc_t)luaA_client_set_ontop);
-    client_class.add_property("above",
-                              (lua_class_propfunc_t)luaA_client_set_above,
-                              (lua_class_propfunc_t)luaA_client_get_above,
-                              (lua_class_propfunc_t)luaA_client_set_above);
-    client_class.add_property("below",
-                              (lua_class_propfunc_t)luaA_client_set_below,
-                              (lua_class_propfunc_t)luaA_client_get_below,
-                              (lua_class_propfunc_t)luaA_client_set_below);
-    client_class.add_property("sticky",
-                              (lua_class_propfunc_t)luaA_client_set_sticky,
-                              (lua_class_propfunc_t)luaA_client_get_sticky,
-                              (lua_class_propfunc_t)luaA_client_set_sticky);
+    client_class.add_property(
+      "ontop", luaA_client_set_ontop, exportPropVal<&client::ontop>(), luaA_client_set_ontop);
+    client_class.add_property(
+      "above", luaA_client_set_above, exportPropVal<&client::above>(), luaA_client_set_above);
+    client_class.add_property(
+      "below", luaA_client_set_below, exportPropVal<&client::below>(), luaA_client_set_below);
+    client_class.add_property(
+      "sticky", luaA_client_set_sticky, exportPropVal<&client::sticky>(), luaA_client_set_sticky);
     client_class.add_property("size_hints_honor",
-                              (lua_class_propfunc_t)luaA_client_set_size_hints_honor,
-                              (lua_class_propfunc_t)luaA_client_get_size_hints_honor,
-                              (lua_class_propfunc_t)luaA_client_set_size_hints_honor);
-    client_class.add_property("urgent",
-                              (lua_class_propfunc_t)luaA_client_set_urgent,
-                              (lua_class_propfunc_t)luaA_client_get_urgent,
-                              (lua_class_propfunc_t)luaA_client_set_urgent);
+                              luaA_client_set_size_hints_honor,
+                              exportPropVal<&client::size_hints_honor>(),
+                              luaA_client_set_size_hints_honor);
     client_class.add_property(
-      "size_hints", NULL, (lua_class_propfunc_t)luaA_client_get_size_hints, NULL);
+      "urgent", luaA_client_set_urgent, exportPropVal<&client::urgent>(), luaA_client_set_urgent);
+    client_class.add_property("size_hints", NULL, luaA_client_get_size_hints, NULL);
     client_class.add_property("focusable",
-                              (lua_class_propfunc_t)luaA_client_set_focusable,
-                              (lua_class_propfunc_t)luaA_client_get_focusable,
-                              (lua_class_propfunc_t)luaA_client_set_focusable);
+                              luaA_client_set_focusable,
+                              luaA_client_get_focusable,
+                              luaA_client_set_focusable);
     client_class.add_property("shape_bounding",
-                              (lua_class_propfunc_t)luaA_client_set_shape_bounding,
-                              (lua_class_propfunc_t)luaA_client_get_shape_bounding,
-                              (lua_class_propfunc_t)luaA_client_set_shape_bounding);
+                              luaA_client_set_shape_bounding,
+                              luaA_client_get_shape_bounding,
+                              luaA_client_set_shape_bounding);
     client_class.add_property("shape_clip",
-                              (lua_class_propfunc_t)luaA_client_set_shape_clip,
-                              (lua_class_propfunc_t)luaA_client_get_shape_clip,
-                              (lua_class_propfunc_t)luaA_client_set_shape_clip);
+                              luaA_client_set_shape_clip,
+                              luaA_client_get_shape_clip,
+                              luaA_client_set_shape_clip);
     client_class.add_property("shape_input",
-                              (lua_class_propfunc_t)luaA_client_set_shape_input,
-                              (lua_class_propfunc_t)luaA_client_get_shape_input,
-                              (lua_class_propfunc_t)luaA_client_set_shape_input);
+                              luaA_client_set_shape_input,
+                              luaA_client_get_shape_input,
+                              luaA_client_set_shape_input);
+    client_class.add_property(
+      "client_shape_bounding", NULL, luaA_client_get_client_shape_bounding, NULL);
     client_class.add_property("startup_id",
-                              (lua_class_propfunc_t)luaA_client_set_startup_id,
-                              (lua_class_propfunc_t)luaA_client_get_startup_id,
-                              (lua_class_propfunc_t)luaA_client_set_startup_id);
-    client_class.add_property("client_shape_bounding",
-                              NULL,
-                              (lua_class_propfunc_t)luaA_client_get_client_shape_bounding,
-                              NULL);
-    client_class.add_property(
-      "client_shape_clip", NULL, (lua_class_propfunc_t)luaA_client_get_client_shape_clip, NULL);
-    client_class.add_property(
-      "first_tag", NULL, (lua_class_propfunc_t)luaA_client_get_first_tag, NULL);
+                              luaA_client_set_startup_id,
+                              exportProp<&client::getStartupId>(),
+                              luaA_client_set_startup_id);
+    client_class.add_property("client_shape_clip", NULL, luaA_client_get_client_shape_clip, NULL);
+    client_class.add_property("first_tag", NULL, luaA_client_get_first_tag, NULL);
 }
 
 /* @DOC_cobject_COMMON@ */

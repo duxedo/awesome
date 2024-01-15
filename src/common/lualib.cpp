@@ -68,10 +68,6 @@ int State::push(const std::string& str) {
     lua_pushlstring(L, str.c_str(), str.size());
     return 1;
 }
-int State::push(const char* str) {
-    lua_pushstring(L, str);
-    return 1;
-}
 int State::push(const std::string_view str) {
     lua_pushlstring(L, str.data(), str.size());
     return 1;
