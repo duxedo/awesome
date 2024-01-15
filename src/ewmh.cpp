@@ -294,7 +294,7 @@ void ewmh_update_net_desktop_names(void) {
     std::vector<char> buf;
 
     for (const auto& tag : getGlobals().tags) {
-        auto tagname = tag_get_name(tag.get());
+        auto tagname = tag.get()->name;
         buf.insert(buf.begin() + buf.size(), tagname.data(), tagname.data() + (tagname.size()) + 1);
     }
 

@@ -21,10 +21,12 @@
 #pragma once
 
 #include "common/luaclass.h"
+#include "common/lualib.h"
 #include "common/signal.h"
 #include "lua.h"
 #include "luaa.h"
 
+#include <functional>
 #include <string_view>
 #include <type_traits>
 
@@ -186,32 +188,59 @@ using FieldAccessT = std::conditional_t<std::is_trivial_v<T> && sizeof(T) <= 32,
     }
 
 #define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)          \
-    static int luaA_##pfx##_get_##field(lua_State* L, type* object) { \
-        Lua::State{L}.push(object->field);                                     \
+    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) { \
+        Lua::State{L}.push(static_cast<type*>(object)->field);                                     \
         return 1;                                                     \
     }
 
 #define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)  \
-    static int luaA_##pfx##_get_##name(lua_State* L, type* object) { \
-        Lua::State{L}.push(object->field);                                    \
+    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) { \
+        Lua::State{L}.push(static_cast<type*>(object)->field);                                    \
         return 1;                                                    \
     }
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
-    static int luaA_##pfx##_get_##field(lua_State* L, type* object) {              \
-        if (object->field == empty_value)                                          \
+    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) {              \
+        if (static_cast<type*>(object)->field == empty_value)                                          \
             return 0;                                                              \
-        Lua::State{L}.push(object->field);                                                  \
+        Lua::State{L}.push(static_cast<type*>(object)->field);                     \
         return 1;                                                                  \
     }
 
 #define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(pfx, type, field, name, pusher, empty_value) \
-    static int luaA_##pfx##_get_##name(lua_State* L, type* object) {                      \
-        if (object->field == empty_value)                                                 \
+    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) {                      \
+        if (static_cast<type*>(object)->field == empty_value)                                                 \
             return 0;                                                                     \
-        Lua::State{L}.push(object->field);                                                         \
+        Lua::State{L}.push(static_cast<type*>(object)->field);                            \
         return 1;                                                                         \
     }
 
+template<typename T, typename Rt, typename ... Args>
+using MemFPtr = Rt (T::*)(Args ...);
+
+template<typename Rt, typename ... Args>
+using FPtr = Rt (*)(Args ...);
+
+template<typename T, typename ClassT>
+using MPtr = T (ClassT::*);
+
+namespace internal {
+template<typename T, typename Rt>
+T memptr(Rt (T::*p) () const);
+template<typename T, typename Rt>
+T mempbr(Rt T::*p);
+}
+template<auto f, typename ClassT = decltype(internal::memptr(f))>
+consteval auto exportProp() {
+     return (lua_class_propfunc_t) [](lua_State* L, lua_object_t * object) -> int {
+        return Lua::State{L}.push((static_cast<ClassT*>(object)->*f)());
+    };
+}
+template<auto f, typename ClassT = decltype(internal::mempbr(f))>
+consteval auto exportPropVal() {
+     return (lua_class_propfunc_t) [](lua_State* L, lua_object_t * object) -> int {
+        return Lua::State{L}.push(static_cast<ClassT*>(object)->*f);
+    };
+}
 int luaA_object_tostring(lua_State*);
 
 constexpr auto LuaObjectMeta() {

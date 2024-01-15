@@ -491,10 +491,6 @@ static int luaA_drawin_geometry(lua_State* L) {
     return Lua::pusharea(L, drawin->geometry);
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, ontop, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, cursor, Lua::pushstring)
-LUA_OBJECT_EXPORT_PROPERTY(drawin, drawin_t, visible, lua_pushboolean)
-
 static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
     int x = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
     drawin_moveresize(L,
@@ -737,35 +733,35 @@ void drawin_class_setup(lua_State* L) {
       "drawable", NULL, (lua_class_propfunc_t)luaA_drawin_get_drawable, NULL);
     drawin_class.add_property("visible",
                               (lua_class_propfunc_t)luaA_drawin_set_visible,
-                              (lua_class_propfunc_t)luaA_drawin_get_visible,
+                              exportPropVal<&drawin_t::visible>(),
                               (lua_class_propfunc_t)luaA_drawin_set_visible);
     drawin_class.add_property("ontop",
                               (lua_class_propfunc_t)luaA_drawin_set_ontop,
-                              (lua_class_propfunc_t)luaA_drawin_get_ontop,
+                              exportPropVal<&drawin_t::ontop>(),
                               (lua_class_propfunc_t)luaA_drawin_set_ontop);
     drawin_class.add_property("cursor",
                               (lua_class_propfunc_t)luaA_drawin_set_cursor,
-                              (lua_class_propfunc_t)luaA_drawin_get_cursor,
+                              exportPropVal<&drawin_t::cursor>(),
                               (lua_class_propfunc_t)luaA_drawin_set_cursor);
     drawin_class.add_property("x",
                               (lua_class_propfunc_t)luaA_drawin_set_x,
-                              (lua_class_propfunc_t)luaA_drawin_get_x,
+                              exportProp<&drawin_t::x>(),
                               (lua_class_propfunc_t)luaA_drawin_set_x);
     drawin_class.add_property("y",
                               (lua_class_propfunc_t)luaA_drawin_set_y,
-                              (lua_class_propfunc_t)luaA_drawin_get_y,
+                              exportProp<&drawin_t::y>(),
                               (lua_class_propfunc_t)luaA_drawin_set_y);
     drawin_class.add_property("width",
                               (lua_class_propfunc_t)luaA_drawin_set_width,
-                              (lua_class_propfunc_t)luaA_drawin_get_width,
+                              exportProp<&drawin_t::w>(),
                               (lua_class_propfunc_t)luaA_drawin_set_width);
     drawin_class.add_property("height",
                               (lua_class_propfunc_t)luaA_drawin_set_height,
-                              (lua_class_propfunc_t)luaA_drawin_get_height,
+                              exportProp<&drawin_t::h>(),
                               (lua_class_propfunc_t)luaA_drawin_set_height);
     drawin_class.add_property("type",
                               (lua_class_propfunc_t)luaA_window_set_type,
-                              (lua_class_propfunc_t)luaA_window_get_type,
+                              exportPropVal<&drawin_t::type>(),
                               (lua_class_propfunc_t)luaA_window_set_type);
     drawin_class.add_property("shape_bounding",
                               (lua_class_propfunc_t)luaA_drawin_set_shape_bounding,

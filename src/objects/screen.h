@@ -52,7 +52,7 @@ void screen_scan(void);
 screen_t* screen_getbycoord(point);
 bool screen_coord_in_screen(screen_t*, int, int);
 bool screen_area_in_screen(screen_t*, area_t);
-int screen_get_index(screen_t*);
+int screen_get_index(lua_object_t*);
 void screen_client_moveto(client*, screen_t*, bool);
 void screen_update_primary(void);
 void screen_update_workarea(screen_t*);

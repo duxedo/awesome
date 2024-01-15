@@ -177,8 +177,7 @@ struct client: public window_t {
     bool nofocus;
     /** True if the client is focusable.  Overrides nofocus, and can be set
      * from Lua. */
-    bool focusable;
-    bool focusable_set;
+    std::optional<bool> focusable;
     /** True if the client window has a _NET_WM_WINDOW_TYPE proeprty */
     bool has_NET_WM_WINDOW_TYPE;
     /** Window of the group leader */

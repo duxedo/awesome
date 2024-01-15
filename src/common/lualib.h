@@ -58,7 +58,10 @@ concept Pushable = requires (T x) {
 struct State {
     lua_State* L;
     int push(const std::string& str);
-    int push(const char* str);
+    template<size_t N>
+    int push(const char (&arr)[N]) {
+        return push(std::string_view(arr));
+    }
     int push(const std::string_view str);
     int push(int);
     int push(unsigned int);
