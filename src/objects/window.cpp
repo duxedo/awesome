@@ -55,6 +55,7 @@
 
 #include "common/atoms.h"
 #include "common/luaclass.h"
+#include "common/luaobject.h"
 #include "common/xutil.h"
 #include "ewmh.h"
 #include "globalconf.h"
@@ -142,7 +143,7 @@ void window_set_opacity(lua_State* L, int idx, double opacity) {
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_window_set_opacity(lua_State* L, window_t* window) {
+static int luaA_window_set_opacity(lua_State* L, lua_object_t* o) {
     if (lua_isnil(L, -1)) {
         window_set_opacity(L, -3, -1);
     } else {
@@ -159,7 +160,8 @@ static int luaA_window_set_opacity(lua_State* L, window_t* window) {
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_window_get_opacity(lua_State* L, window_t* window) {
+static int luaA_window_get_opacity(lua_State* L, lua_object_t* o) {
+    auto window = static_cast<window_t*>(o);
     if (window->opacity >= 0) {
         lua_pushnumber(L, window->opacity);
     } else {
@@ -186,8 +188,9 @@ void window_border_refresh(window_t* window) {
  * \param window The window object.
  * \return The number of elements pushed on stack.
  */
-static int luaA_window_set_border_color(lua_State* L, window_t* window) {
-    size_t len;
+static int luaA_window_set_border_color(lua_State* L, lua_object_t* o) {
+    auto window = static_cast<window_t*>(o);
+    size_t len = 0;
     const char* color_name = luaL_checklstring(L, -1, &len);
 
     if (color_name && color_init_reply(color_init_unchecked(
@@ -420,14 +423,11 @@ uint32_t window_translate_type(window_type_t type) {
     return _NET_WM_WINDOW_TYPE_NORMAL;
 }
 
-static int luaA_window_set_border_width(lua_State* L, window_t* c) {
+static int luaA_window_set_border_width(lua_State* L, lua_object_t*) {
     window_set_border_width(L, -3, round(Lua::checknumber_range(L, -1, 0, MAX_X11_SIZE)));
     return 0;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(window, window_t, window, lua_pushinteger)
-LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_color, luaA_pushcolor)
-LUA_OBJECT_EXPORT_PROPERTY(window, window_t, border_width, lua_pushinteger)
 
 void window_class_setup(lua_State* L) {
     static const struct luaL_Reg window_methods[] = {
@@ -444,19 +444,19 @@ void window_class_setup(lua_State* L) {
 
     window_class.setup(L, window_methods, window_meta);
 
-    window_class.add_property("window", NULL, (lua_class_propfunc_t)luaA_window_get_window, NULL);
+    window_class.add_property("window", nullptr, exportProp<&window_t::window>(), nullptr);
     window_class.add_property("_opacity",
-                              (lua_class_propfunc_t)luaA_window_set_opacity,
-                              (lua_class_propfunc_t)luaA_window_get_opacity,
-                              (lua_class_propfunc_t)luaA_window_set_opacity);
+                              luaA_window_set_opacity,
+                              luaA_window_get_opacity,
+                              luaA_window_set_opacity);
     window_class.add_property("_border_color",
-                              (lua_class_propfunc_t)luaA_window_set_border_color,
-                              (lua_class_propfunc_t)luaA_window_get_border_color,
-                              (lua_class_propfunc_t)luaA_window_set_border_color);
+                              luaA_window_set_border_color,
+                              exportProp<&window_t::border_color>(),
+                              luaA_window_set_border_color);
     window_class.add_property("_border_width",
-                              (lua_class_propfunc_t)luaA_window_set_border_width,
-                              (lua_class_propfunc_t)luaA_window_get_border_width,
-                              (lua_class_propfunc_t)luaA_window_set_border_width);
+                              luaA_window_set_border_width,
+                              exportProp<&window_t::border_width>(),
+                              luaA_window_set_border_width);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

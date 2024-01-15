@@ -55,7 +55,7 @@ struct window_t: lua_object_t {
     /** The frame window, might be XCB_NONE */
     xcb_window_t frame_window;
     /** Opacity */
-    double opacity;
+    double opacity = 1.0;
     /** Strut */
     strut_t strut;
     /** Button bindings */
