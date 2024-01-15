@@ -497,18 +497,14 @@ static int luaA_tag_clients(lua_State* L) {
     return 1;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, name, Lua::pushstring)
-LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, selected, lua_pushboolean)
-LUA_OBJECT_EXPORT_PROPERTY(tag, tag_t, activated, lua_pushboolean)
-
 /** Set the tag name.
  * \param L The Lua VM state.
  * \param tag The tag to name.
  * \return The number of elements pushed on stack.
  */
-static int luaA_tag_set_name(lua_State* L, tag_t* tag) {
+static int luaA_tag_set_name(lua_State* L, lua_object_t* tag) {
     const char* buf = luaL_checkstring(L, -1);
-    tag->name = buf ? buf : "";
+    static_cast<tag_t*>(tag)->name = buf ? buf : "";
     luaA_object_emit_signal(L, -3, "property::name", 0);
     ewmh_update_net_desktop_names();
     return 0;
@@ -519,7 +515,7 @@ static int luaA_tag_set_name(lua_State* L, tag_t* tag) {
  * \param tag The tag to set the selection status for.
  * \return The number of elements pushed on stack.
  */
-static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
+static int luaA_tag_set_selected(lua_State* L, lua_object_t*) {
     tag_view(L, -3, Lua::checkboolean(L, -1));
     return 0;
 }
@@ -529,7 +525,8 @@ static int luaA_tag_set_selected(lua_State* L, tag_t* tag) {
  * \param tag The tag to set the activated status for.
  * \return The number of elements pushed on stack.
  */
-static int luaA_tag_set_activated(lua_State* L, tag_t* tag) {
+static int luaA_tag_set_activated(lua_State* L, lua_object_t* o) {
+    auto tag = static_cast<tag_t*>(o);
     bool activated = Lua::checkboolean(L, -1);
     if (activated == tag->activated) {
         return 0;
@@ -575,17 +572,17 @@ void tag_class_setup(lua_State* L) {
 
     tag_class.setup(L, methods.data(), meta.data());
     tag_class.add_property("name",
-                           (lua_class_propfunc_t)luaA_tag_set_name,
-                           (lua_class_propfunc_t)luaA_tag_get_name,
-                           (lua_class_propfunc_t)luaA_tag_set_name);
+                           luaA_tag_set_name,
+                           exportProp<&tag_t::name>(),
+                           luaA_tag_set_name);
     tag_class.add_property("selected",
-                           (lua_class_propfunc_t)luaA_tag_set_selected,
-                           (lua_class_propfunc_t)luaA_tag_get_selected,
-                           (lua_class_propfunc_t)luaA_tag_set_selected);
+                           luaA_tag_set_selected,
+                           exportProp<&tag_t::selected>(),
+                           luaA_tag_set_selected);
     tag_class.add_property("activated",
-                           (lua_class_propfunc_t)luaA_tag_set_activated,
-                           (lua_class_propfunc_t)luaA_tag_get_activated,
-                           (lua_class_propfunc_t)luaA_tag_set_activated);
+                           luaA_tag_set_activated,
+                           exportProp<&tag_t::activated>(),
+                           luaA_tag_set_activated);
 }
 
 /* @DOC_cobject_COMMON@ */

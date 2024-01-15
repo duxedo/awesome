@@ -177,58 +177,38 @@ static inline T* newobj(lua_State* L) {
     return p;
 }
 
-#define LUA_OBJECT_EXPORT_PROPERTY(pfx, type, field, pusher)                  \
-    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) { \
-        Lua::State{L}.push(static_cast<type*>(object)->field);                \
-        return 1;                                                             \
-    }
-
-#define LUA_OBJECT_EXPORT_PROPERTY2(pfx, type, field, name, pusher)          \
-    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) { \
-        Lua::State{L}.push(static_cast<type*>(object)->field);               \
-        return 1;                                                            \
-    }
-#define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY(pfx, type, field, pusher, empty_value) \
-    static int luaA_##pfx##_get_##field(lua_State* L, lua_object_t* object) {      \
-        if (static_cast<type*>(object)->field == empty_value)                      \
-            return 0;                                                              \
-        Lua::State{L}.push(static_cast<type*>(object)->field);                     \
-        return 1;                                                                  \
-    }
-
-#define LUA_OBJECT_EXPORT_OPTIONAL_PROPERTY2(pfx, type, field, name, pusher, empty_value) \
-    static int luaA_##pfx##_get_##name(lua_State* L, lua_object_t* object) {              \
-        if (static_cast<type*>(object)->field == empty_value)                             \
-            return 0;                                                                     \
-        Lua::State{L}.push(static_cast<type*>(object)->field);                            \
-        return 1;                                                                         \
-    }
-
-template <typename T, typename Rt, typename... Args>
-using MemFPtr = Rt (T::*)(Args...);
-
-template <typename Rt, typename... Args>
-using FPtr = Rt (*)(Args...);
-
-template <typename T, typename ClassT>
-using MPtr = T(ClassT::*);
-
 namespace internal {
 template <typename T, typename Rt>
-T memptr(Rt (T::*p)() const);
-template <typename T, typename Rt>
-T mempbr(Rt T::*p);
+T classOf(Rt T::*p);
+struct none {};
 }
-template <auto f, typename ClassT = decltype(internal::memptr(f))>
+template <auto f,
+          auto defaultVal = internal::none{},
+          typename ClassT = decltype(internal::classOf(f))>
 consteval auto exportProp() {
     return (lua_class_propfunc_t)[](lua_State * L, lua_object_t * object)->int {
-        return Lua::State{L}.push((static_cast<ClassT*>(object)->*f)());
-    };
-}
-template <auto f, typename ClassT = decltype(internal::mempbr(f))>
-consteval auto exportPropVal() {
-    return (lua_class_propfunc_t)[](lua_State * L, lua_object_t * object)->int {
-        return Lua::State{L}.push(static_cast<ClassT*>(object)->*f);
+        constexpr auto is_function = requires { (ClassT{}.*f)(); };
+        decltype(auto) val = [](auto* object) -> decltype(auto) {
+            if constexpr (is_function) {
+                return (static_cast<ClassT*>(object)->*f)();
+            } else {
+                return static_cast<ClassT*>(object)->*f;
+            }
+        }(object);
+
+        if constexpr (!std::is_same_v<decltype(defaultVal), internal::none>) {
+            constexpr auto is_function = requires { defaultVal(); };
+            if constexpr (is_function) {
+                if (defaultVal() == val) {
+                    return 0;
+                }
+            } else {
+                if (defaultVal == val) {
+                    return 0;
+                }
+            }
+        }
+        return Lua::State{L}.push(std::move(val));
     };
 }
 int luaA_object_tostring(lua_State*);
