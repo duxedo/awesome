@@ -46,7 +46,7 @@
 lua_class_t button_class{
   "button",
   NULL,
-  {[](auto* state) { return static_cast<lua_object_t*>(button_new(state)); },
+  {[](auto* state) { return static_cast<lua_object_t*>(newobj<button_t, button_class>(state)); },
     destroyObject<button_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property}

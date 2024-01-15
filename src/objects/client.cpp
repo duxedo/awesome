@@ -121,7 +121,7 @@ static bool client_checker(client* c) { return c->window != XCB_NONE; }
 lua_class_t client_class{
   "client",
   &window_class,
-  {[](auto* state) -> lua_object_t* { return client_new(state); },
+  {[](auto* state) -> lua_object_t* { return newobj<client, client_class>(state); },
                 destroyObject<client>,
                 [](auto* obj) { return client_checker(static_cast<client*>(obj)); },
                 Lua::class_index_miss_property,
@@ -2117,7 +2117,7 @@ void client_manage(xcb_window_t w,
         xcb_shape_select_input(getGlobals().connection, w, 1);
     }
 
-    client* c = client_new(L);
+    client* c = newobj<client, client_class>(L);
     xcb_screen_t* s = getGlobals().screen;
     c->border_width_callback = (void (*)(void*, uint16_t, uint16_t))border_width_callback;
 

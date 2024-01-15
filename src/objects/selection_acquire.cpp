@@ -42,21 +42,17 @@ static bool selection_acquire_checker(selection_acquire_t* selection) {
     return selection->selection != XCB_NONE;
 }
 
-static inline selection_acquire_t* selection_acquire_new(lua_State*);
-
 static lua_class_t selection_acquire_class{
   "selection_acquire",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(selection_acquire_new(state)); },
+    [](auto* state) { return static_cast<lua_object_t*>(newobj<selection_acquire_t, selection_acquire_class>(state)); },
     destroyObject<selection_acquire_t>,
     [](auto* obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
     Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
     }
 };
-
-LUA_OBJECT_FUNCS(selection_acquire_class, selection_acquire_t, selection_acquire)
 
 static void luaA_pushatom(lua_State* L, xcb_atom_t atom) { lua_pushnumber(L, atom); }
 
