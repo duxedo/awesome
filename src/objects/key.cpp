@@ -267,8 +267,6 @@ static int luaA_key_set_modifiers(lua_State* L, keyb_t* k) {
     return 0;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(key, keyb_t, modifiers, luaA_pushmodifiers)
-
 /* It's caller's responsibility to release the returned string. */
 std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym) {
     std::optional<std::string> ret = std::string{};
@@ -286,7 +284,8 @@ std::optional<std::string> key_get_keysym_name(xkb_keysym_t keysym) {
     return ret;
 }
 
-static int luaA_key_get_key(lua_State* L, keyb_t* k) {
+static int luaA_key_get_key(lua_State* L, lua_object_t* o) {
+    auto k = static_cast<keyb_t*>(o);
     if (k->keycode) {
         char buf[12];
         int slen = snprintf(buf, sizeof(buf), "#%u", k->keycode);
@@ -301,8 +300,8 @@ static int luaA_key_get_key(lua_State* L, keyb_t* k) {
     return 1;
 }
 
-static int luaA_key_get_keysym(lua_State* L, keyb_t* k) {
-    auto name = key_get_keysym_name(k->keysym);
+static int luaA_key_get_keysym(lua_State* L, lua_object_t* k) {
+    auto name = key_get_keysym_name(static_cast<keyb_t*>(k)->keysym);
     if (!name) {
         return 0;
     }
@@ -326,15 +325,27 @@ void key_class_setup(lua_State* L) {
 
     key_class.setup(L, methods.data(), meta.data());
 
-    key_class.add_property("key",
-                           (lua_class_propfunc_t)luaA_key_set_key,
-                           (lua_class_propfunc_t)luaA_key_get_key,
-                           (lua_class_propfunc_t)luaA_key_set_key);
-    key_class.add_property("keysym", NULL, (lua_class_propfunc_t)luaA_key_get_keysym, NULL);
-    key_class.add_property("modifiers",
-                           (lua_class_propfunc_t)luaA_key_set_modifiers,
-                           (lua_class_propfunc_t)luaA_key_get_modifiers,
-                           (lua_class_propfunc_t)luaA_key_set_modifiers);
+    auto setKey = [](lua_State* L, lua_object_t* b) -> int {
+        size_t klen;
+        const char* key = luaL_checklstring(L, -1, &klen);
+        luaA_keystore(L, -3, key, klen);
+        return 0;
+    };
+
+    key_class.add_property("key", setKey, luaA_key_get_key, setKey);
+    key_class.add_property("keysym", nullptr, luaA_key_get_keysym, nullptr);
+    auto setMod = [](lua_State* L, lua_object_t* o) {
+        static_cast<keyb_t*>(o)->modifiers = luaA_tomodifiers(L, -1);
+        luaA_object_emit_signal(L, -3, "property::modifiers", 0);
+        return 0;
+    };
+    key_class.add_property(
+      "modifiers",
+      setMod,
+      [](lua_State* L, lua_object_t* k) {
+          return luaA_pushmodifiers(L, static_cast<keyb_t*>(k)->modifiers);
+      },
+      setMod);
 }
 
 /* @DOC_cobject_COMMON@ */

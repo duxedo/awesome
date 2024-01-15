@@ -1376,8 +1376,6 @@ static int luaA_screen_module_call(lua_State* L) {
     return 1;
 }
 
-LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, Lua::pusharea)
-
 static int luaA_screen_get_index(lua_State* L, lua_object_t* s) {
     lua_pushinteger(L, screen_get_index(s));
     return 1;
@@ -1621,14 +1619,14 @@ void screen_class_setup(lua_State* L) {
     screen_class.setup(L, methods.data(), meta.data());
 
     screen_class.add_property(
-      "geometry", NULL, exportPropVal<&screen_t::geometry>(), NULL);
+      "geometry", NULL, exportProp<&screen_t::geometry>(), NULL);
     screen_class.add_property("index", NULL, luaA_screen_get_index, NULL);
     screen_class.add_property(
       "_outputs", NULL, luaA_screen_get_outputs, NULL);
     screen_class.add_property(
       "_managed", NULL, luaA_screen_get_managed, NULL);
     screen_class.add_property(
-      "workarea", NULL, exportPropVal<&screen_t::workarea>(), NULL);
+      "workarea", NULL, exportProp<&screen_t::workarea>(), NULL);
     screen_class.add_property("name",
                               set_name,
                               get_name,
