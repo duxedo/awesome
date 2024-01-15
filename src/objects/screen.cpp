@@ -1240,16 +1240,9 @@ void screen_client_moveto(client* c, screen_t* new_screen, bool doresize) {
 }
 
 /** Get a screen's index. */
-int screen_get_index(screen_t* s) {
-    int res = 0;
-    for (auto* screen : getGlobals().screens) {
-        res++;
-        if (screen == s) {
-            return res;
-        }
-    }
-
-    return 0;
+int screen_get_index(lua_object_t* s) {
+    auto it = std::ranges::find(getGlobals().screens, static_cast<screen_t*>(s));
+    return it != getGlobals().screens.end() ? (it - getGlobals().screens.begin()) + 1 : 0;
 }
 
 void screen_update_primary(void) {
@@ -1389,19 +1382,20 @@ static int luaA_screen_module_call(lua_State* L) {
 
 LUA_OBJECT_EXPORT_PROPERTY(screen, screen_t, geometry, Lua::pusharea)
 
-static int luaA_screen_get_index(lua_State* L, screen_t* s) {
+static int luaA_screen_get_index(lua_State* L, lua_object_t* s) {
     lua_pushinteger(L, screen_get_index(s));
     return 1;
 }
 
-static int luaA_screen_get_outputs(lua_State* L, screen_t* s) {
-    luaA_viewport_get_outputs(L, s->viewport);
+static int luaA_screen_get_outputs(lua_State* L, lua_object_t* s) {
+    luaA_viewport_get_outputs(L, static_cast<screen_t*>(s)->viewport);
 
     /* The table of tables we created. */
     return 1;
 }
 
-static int luaA_screen_get_managed(lua_State* L, screen_t* s) {
+static int luaA_screen_get_managed(lua_State* L, lua_object_t* o) {
+    auto s = static_cast<screen_t*>(o);
     if (s->lifecycle & SCREEN_LIFECYCLE_LUA) {
         lua_pushstring(L, "Lua");
     } else if (s->lifecycle & SCREEN_LIFECYCLE_C) {
@@ -1413,25 +1407,14 @@ static int luaA_screen_get_managed(lua_State* L, screen_t* s) {
     return 1;
 }
 
-static int luaA_screen_get_workarea(lua_State* L, screen_t* s) {
-    Lua::pusharea(L, s->workarea);
-    return 1;
-}
-
-static int luaA_screen_set_name(lua_State* L, screen_t* s) {
-    s->name = *Lua::checkstring(L, -1);
+static int set_name(lua_State* L, lua_object_t* s) {
+    static_cast<screen_t*>(s)->name = *Lua::checkstring(L, -1);
     return 0;
 }
 
-static int luaA_screen_get_name(lua_State* L, screen_t* s) {
-    Lua::pushstring(L, s->name.empty() ? s->name : "screen");
-
-    /* Fallback to "screen1", "screen2", etc if no name is set */
-    if (s->name.empty()) {
-        lua_pushinteger(L, screen_get_index(s));
-        lua_concat(L, 2);
-    }
-
+static int get_name(lua_State* L, lua_object_t* o) {
+    auto s = static_cast<screen_t*>(o);
+    Lua::State{L}.push(s->name.empty() ? s->name : fmt::format("screen{}", screen_get_index(s)));
     return 1;
 }
 
@@ -1642,18 +1625,18 @@ void screen_class_setup(lua_State* L) {
     screen_class.setup(L, methods.data(), meta.data());
 
     screen_class.add_property(
-      "geometry", NULL, (lua_class_propfunc_t)luaA_screen_get_geometry, NULL);
-    screen_class.add_property("index", NULL, (lua_class_propfunc_t)luaA_screen_get_index, NULL);
+      "geometry", NULL, exportPropVal<&screen_t::geometry>(), NULL);
+    screen_class.add_property("index", NULL, luaA_screen_get_index, NULL);
     screen_class.add_property(
-      "_outputs", NULL, (lua_class_propfunc_t)luaA_screen_get_outputs, NULL);
+      "_outputs", NULL, luaA_screen_get_outputs, NULL);
     screen_class.add_property(
-      "_managed", NULL, (lua_class_propfunc_t)luaA_screen_get_managed, NULL);
+      "_managed", NULL, luaA_screen_get_managed, NULL);
     screen_class.add_property(
-      "workarea", NULL, (lua_class_propfunc_t)luaA_screen_get_workarea, NULL);
+      "workarea", NULL, exportPropVal<&screen_t::workarea>(), NULL);
     screen_class.add_property("name",
-                              (lua_class_propfunc_t)luaA_screen_set_name,
-                              (lua_class_propfunc_t)luaA_screen_get_name,
-                              (lua_class_propfunc_t)luaA_screen_set_name);
+                              set_name,
+                              get_name,
+                              set_name);
 }
 
 /* @DOC_cobject_COMMON@ */
