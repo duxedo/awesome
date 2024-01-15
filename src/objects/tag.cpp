@@ -318,8 +318,6 @@ void tag_unref_simplified(tag_t* tag) {
     luaA_object_unref(L, tag);
 }
 
-OBJECT_EXPORT_PROPERTY(tag, tag_t, selected)
-OBJECT_EXPORT_PROPERTY(tag, tag_t, name)
 
 /** View or unview a tag.
  * \param L The Lua VM state.

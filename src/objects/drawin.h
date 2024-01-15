@@ -39,6 +39,11 @@ struct drawin_t: public window_t {
     /** Do we have a pending geometry change that still needs to be applied? */
     bool geometry_dirty;
 
+    auto x() const { return geometry.left(); }
+    auto y() const { return geometry.top(); }
+    auto w() const { return geometry.width; }
+    auto h() const { return geometry.height; }
+
     ~drawin_t();
 };
 
