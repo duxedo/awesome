@@ -166,8 +166,6 @@ lua_class_t drawin_class{
  * @function set_newindex_miss_handler
  */
 
-LUA_OBJECT_FUNCS(drawin_class, drawin_t, drawin)
-
 /** Kick out systray windows.
  */
 static void drawin_systray_kickout(drawin_t* w) {
@@ -404,7 +402,7 @@ static void drawin_set_visible(lua_State* L, int udx, bool v) {
 
 drawin_t* drawin_allocator(lua_State* L) {
     xcb_screen_t* s = getGlobals().screen;
-    drawin_t* w = drawin_new(L);
+    auto w = newobj<drawin_t, drawin_class>(L);
 
     w->visible = false;
 

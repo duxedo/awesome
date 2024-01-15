@@ -50,7 +50,7 @@
 lua_class_t key_class{
   "key",
   NULL,
-  {[](auto* state) { return static_cast<lua_object_t*>(key_new(state)); },
+  {[](auto* state) { return static_cast<lua_object_t*>(newobj<keyb_t, key_class>(state)); },
     destroyObject<keyb_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property}

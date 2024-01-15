@@ -59,7 +59,6 @@ class button_t: public lua_object_t {
 
 
 extern lua_class_t button_class;
-LUA_OBJECT_FUNCS(button_class, button_t, button)
 
 int luaA_button_array_get(lua_State*, int, const std::vector<button_t*>&);
 void luaA_button_array_set(lua_State*, int, int, std::vector<button_t*>*);
