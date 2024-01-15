@@ -43,8 +43,10 @@
 #include "xkb.h"
 
 /* XStringToKeysym() */
-#include <X11/Xlib.h>
+#include <fmt/core.h>
 #include <glib.h>
+#include <sys/types.h>
+#include <xkbcommon/xkbcommon-keysyms.h>
 #include <xkbcommon/xkbcommon.h>
 
 lua_class_t key_class{
@@ -115,8 +117,7 @@ static void luaA_keystore(lua_State* L, int ud, const char* str, ssize_t len) {
         key->keysym = 0;
     } else {
         key->keycode = 0;
-
-        if ((key->keysym = XStringToKeysym(str)) == NoSymbol) {
+        if ((key->keysym = xkb_keysym_from_name(str, XKB_KEYSYM_NO_FLAGS)) == XKB_KEY_NoSymbol) {
             glong length;
             gunichar unicode;
 

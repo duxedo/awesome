@@ -49,6 +49,7 @@
 #include <cairo-xcb.h>
 #include <xcb/xcb_aux.h>
 #include <xcb/xtest.h>
+#include <xkbcommon/xkbcommon.h>
 
 static int miss_index_handler = LUA_REFNIL;
 static int miss_newindex_handler = LUA_REFNIL;
@@ -212,7 +213,7 @@ static xcb_keycode_t _string_to_key_code(const char* s) {
     xcb_keysym_t keysym;
     xcb_keycode_t* keycodes;
 
-    keysym = XStringToKeysym(s);
+    keysym = xkb_keysym_from_name(s, XKB_KEYSYM_NO_FLAGS);
     keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, keysym);
 
     if (keycodes) {
