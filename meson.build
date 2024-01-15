@@ -1,7 +1,6 @@
 project('pellicle', 'c', 'cpp', default_options: ['cpp_std=c++2a', 'c_std=gnu18'])
 xorg_deps = [
     dependency('xcb', version : '>=1.6'),
-    dependency('x11'),
     dependency('xcb-cursor'),
     dependency('xcb-randr'),
     dependency('xcb-xtest'),
