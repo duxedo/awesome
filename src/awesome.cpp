@@ -160,13 +160,12 @@ static void restore_client_order(xcb_get_property_cookie_t prop_cookie) {
     }
 
     windows = (xcb_window_t*)xcb_get_property_value(reply.get());
+
     for (uint32_t i = 0; i < reply->value_len; i++) {
         //   Find windows[i] and swap it to where it belongs
         for (auto*& c : getGlobals().clients) {
             if (c->window == windows[i]) {
-                client* tmp = c;
-                c = getGlobals().clients[client_idx];
-                getGlobals().clients[client_idx] = tmp;
+                std::swap(c, getGlobals().clients[client_idx]);
                 client_idx++;
             }
         }
@@ -415,9 +414,9 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
     }
 
     /* Don't sleep if there is a pending event */
-    assert(getGlobals().pending_event == NULL);
+    assert(!getGlobals().pending_event);
     getGlobals().pending_event = xcb_poll_for_event(getGlobals().connection);
-    if (getGlobals().pending_event != NULL) {
+    if (getGlobals().pending_event) {
         timeout = 0;
     }
 
