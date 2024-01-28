@@ -155,7 +155,7 @@ color_init_unchecked(color_t* color, const char* colstr, ssize_t len, xcb_visual
         req.color->initialized = true;
         return req;
     }
-    req.cookie_hexa = xcb_alloc_color_unchecked(getGlobals().connection,
+    req.cookie_hexa = xcb_alloc_color_unchecked(getGlobals().x.connection,
                                                 getGlobals().default_cmap,
                                                 RGB_8TO16(red),
                                                 RGB_8TO16(green),
@@ -178,7 +178,7 @@ bool color_init_reply(color_init_request_t req) {
 
     xcb_alloc_color_reply_t* hexa_color;
 
-    if ((hexa_color = xcb_alloc_color_reply(getGlobals().connection, req.cookie_hexa, NULL))) {
+    if ((hexa_color = xcb_alloc_color_reply(getGlobals().x.connection, req.cookie_hexa, NULL))) {
         req.color->pixel = hexa_color->pixel;
         req.color->red = hexa_color->red;
         req.color->green = hexa_color->green;

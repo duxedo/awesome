@@ -178,7 +178,7 @@ void ewmh_init(void) {
     /* create our own window */
     xcb_window_t father = getConnection().generate_id();
 
-    xcb_create_window(getGlobals().connection,
+    xcb_create_window(getGlobals().x.connection,
                       xscreen->root_depth,
                       father,
                       xscreen->root,
@@ -484,7 +484,7 @@ void ewmh_client_update_desktop(client* c) {
         }
     }
     /* It doesn't have any tags, remove the property */
-    xcb_delete_property(getGlobals().connection, c->window, _NET_WM_DESKTOP);
+    xcb_delete_property(getGlobals().x.connection, c->window, _NET_WM_DESKTOP);
 }
 
 /** Update the client struts.
@@ -527,23 +527,33 @@ void ewmh_client_check_hints(client* c) {
     bool is_v_max = false;
 
     /* Send the GetProperty requests which will be processed later */
-    c0 = xcb_get_property_unchecked(
-      getGlobals().connection, false, c->window, _NET_WM_DESKTOP, XCB_GET_PROPERTY_TYPE_ANY, 0, 1);
+    c0 = xcb_get_property_unchecked(getGlobals().x.connection,
+                                    false,
+                                    c->window,
+                                    _NET_WM_DESKTOP,
+                                    XCB_GET_PROPERTY_TYPE_ANY,
+                                    0,
+                                    1);
 
     c1 = xcb_get_property_unchecked(
-      getGlobals().connection, false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+      getGlobals().x.connection, false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
-    c2 = xcb_get_property_unchecked(
-      getGlobals().connection, false, c->window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+    c2 = xcb_get_property_unchecked(getGlobals().x.connection,
+                                    false,
+                                    c->window,
+                                    _NET_WM_WINDOW_TYPE,
+                                    XCB_ATOM_ATOM,
+                                    0,
+                                    UINT32_MAX);
 
-    reply = xcb_get_property_reply(getGlobals().connection, c0, NULL);
+    reply = xcb_get_property_reply(getGlobals().x.connection, c0, NULL);
     if (reply && reply->value_len && (data = xcb_get_property_value(reply))) {
         ewmh_process_desktop(c, *(uint32_t*)data);
     }
 
     p_delete(&reply);
 
-    reply = xcb_get_property_reply(getGlobals().connection, c1, NULL);
+    reply = xcb_get_property_reply(getGlobals().x.connection, c1, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         state = (xcb_atom_t*)data;
         for (int i = 0; i < xcb_get_property_value_length(reply) / (int)sizeof(xcb_atom_t); i++) {
@@ -577,7 +587,7 @@ void ewmh_client_check_hints(client* c) {
 
     p_delete(&reply);
 
-    reply = xcb_get_property_reply(getGlobals().connection, c2, NULL);
+    reply = xcb_get_property_reply(getGlobals().x.connection, c2, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         c->has_NET_WM_WINDOW_TYPE = true;
         state = (xcb_atom_t*)data;
@@ -613,8 +623,8 @@ void ewmh_process_client_strut(client* c) {
     xcb_get_property_reply_t* strut_r;
 
     xcb_get_property_cookie_t strut_q = xcb_get_property_unchecked(
-      getGlobals().connection, false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
-    strut_r = xcb_get_property_reply(getGlobals().connection, strut_q, NULL);
+      getGlobals().x.connection, false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
+    strut_r = xcb_get_property_reply(getGlobals().x.connection, strut_q, NULL);
 
     if (strut_r && strut_r->value_len && (data = xcb_get_property_value(strut_r))) {
         auto strut = (uint32_t*)data;
@@ -654,7 +664,7 @@ void ewmh_process_client_strut(client* c) {
  */
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t w) {
     return xcb_get_property_unchecked(
-      getGlobals().connection, false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
+      getGlobals().x.connection, false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
 }
 
 static cairo_surface_t* ewmh_window_icon_from_reply_next(uint32_t** data, uint32_t* data_end) {
@@ -707,7 +717,7 @@ static std::vector<cairo_surface_handle> ewmh_window_icon_from_reply(xcb_get_pro
  * \return An array of icons.
  */
 std::vector<cairo_surface_handle> ewmh_window_icon_get_reply(xcb_get_property_cookie_t cookie) {
-    xcb_get_property_reply_t* r = xcb_get_property_reply(getGlobals().connection, cookie, NULL);
+    xcb_get_property_reply_t* r = xcb_get_property_reply(getGlobals().x.connection, cookie, NULL);
     std::vector<cairo_surface_handle> result = ewmh_window_icon_from_reply(r);
     p_delete(&r);
     return result;

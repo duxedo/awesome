@@ -41,10 +41,10 @@
 #include "globals.h"
 #include "math.h"
 #include "objects/button.h"
-#include "xcbcpp/xcb.h"
-#include "xwindow.h"
 #include "objects/drawin.h"
 #include "objects/tag.h"
+#include "xcbcpp/xcb.h"
+#include "xwindow.h"
 
 #include <cairo-xcb.h>
 #include <xcb/xcb_aux.h>
@@ -123,7 +123,7 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
      * the new one directly and doesn't need GetImage and PutImage.
      */
     surface = cairo_xcb_surface_create(
-      getGlobals().connection, p, draw_default_visual(screen), width, height);
+      getGlobals().x.connection, p, draw_default_visual(screen), width, height);
     cr = cairo_create(surface);
     /* Paint the pattern to the surface */
     cairo_set_source(cr, pattern);
@@ -131,15 +131,15 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
     cairo_paint(cr);
     cairo_destroy(cr);
     cairo_surface_flush(surface);
-    xcb_aux_sync(getGlobals().connection);
+    xcb_aux_sync(getGlobals().x.connection);
 
     /* Change the wallpaper, without sending us a PropertyNotify event */
-    xcb_grab_server(getGlobals().connection);
+    xcb_grab_server(getGlobals().x.connection);
     getConnection().clear_attributes(getGlobals().screen->root, XCB_CW_EVENT_MASK);
     root_set_wallpaper_pixmap(getConnection(), p);
     getConnection().change_attributes(
       getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
-    xutil_ungrab_server(getGlobals().connection);
+    xutil_ungrab_server(getGlobals().x.connection);
 
     /* Make sure our pixmap is not destroyed when we disconnect. */
     xcb_set_close_down_mode(c, XCB_CLOSE_DOWN_RETAIN_PERMANENT);
@@ -164,14 +164,14 @@ void root_update_wallpaper(void) {
     cairo_surface_destroy(getGlobals().wallpaper);
     getGlobals().wallpaper = NULL;
 
-    prop_c = xcb_get_property_unchecked(getGlobals().connection,
+    prop_c = xcb_get_property_unchecked(getGlobals().x.connection,
                                         false,
                                         getGlobals().screen->root,
                                         _XROOTPMAP_ID,
                                         XCB_ATOM_PIXMAP,
                                         0,
                                         1);
-    prop_r = xcb_get_property_reply(getGlobals().connection, prop_c, NULL);
+    prop_r = xcb_get_property_reply(getGlobals().x.connection, prop_c, NULL);
 
     if (!prop_r || !prop_r->value_len) {
         p_delete(&prop_r);
@@ -184,8 +184,8 @@ void root_update_wallpaper(void) {
         return;
     }
 
-    geom_c = xcb_get_geometry_unchecked(getGlobals().connection, *rootpix);
-    geom_r = xcb_get_geometry_reply(getGlobals().connection, geom_c, NULL);
+    geom_c = xcb_get_geometry_unchecked(getGlobals().x.connection, *rootpix);
+    geom_r = xcb_get_geometry_reply(getGlobals().x.connection, geom_c, NULL);
     if (!geom_r) {
         p_delete(&prop_r);
         return;
@@ -199,7 +199,7 @@ void root_update_wallpaper(void) {
                  draw_visual_depth(getGlobals().screen, getGlobals().default_visual->visual_id));
     }
 
-    getGlobals().wallpaper = cairo_xcb_surface_create(getGlobals().connection,
+    getGlobals().wallpaper = cairo_xcb_surface_create(getGlobals().x.connection,
                                                       *rootpix,
                                                       getGlobals().default_visual,
                                                       geom_r->width,
@@ -214,7 +214,7 @@ static xcb_keycode_t _string_to_key_code(const char* s) {
     xcb_keycode_t* keycodes;
 
     keysym = xkb_keysym_from_name(s, XKB_KEYSYM_NO_FLAGS);
-    keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, keysym);
+    keycodes = xcb_key_symbols_get_keycode(getGlobals().input.keysyms, keysym);
 
     if (keycodes) {
         return keycodes[0]; /* XXX only returning the first is probably not
@@ -284,7 +284,7 @@ static xcb_keycode_t _string_to_key_code(const char* s) {
  * @staticfct fake_input
  */
 static int luaA_root_fake_input(lua_State* L) {
-    if (!getGlobals().have_xtest) {
+    if (!getGlobals().x.caps.have_xtest) {
         Lua::warn(L, "XTest extension is not available, cannot fake input.");
         return 0;
     }
@@ -322,7 +322,7 @@ static int luaA_root_fake_input(lua_State* L) {
         return 0;
     }
 
-    xcb_test_fake_input(getGlobals().connection,
+    xcb_test_fake_input(getGlobals().x.connection,
                         type,
                         detail,
                         0, /* This is a delay, not a timestamp! */
@@ -432,10 +432,10 @@ static int luaA_root_cursor(lua_State* L) {
     uint16_t cursor_font = xcursor_font_fromstr(cursor_name);
 
     if (cursor_font) {
-        uint32_t change_win_vals[] = {xcursor_new(getGlobals().cursor_ctx, cursor_font)};
+        uint32_t change_win_vals[] = {xcursor_new(getGlobals().x.cursor_ctx, cursor_font)};
 
         xcb_change_window_attributes(
-          getGlobals().connection, getGlobals().screen->root, XCB_CW_CURSOR, change_win_vals);
+          getGlobals().x.connection, getGlobals().screen->root, XCB_CW_CURSOR, change_win_vals);
     } else {
         Lua::warn(L, "invalid cursor %s", cursor_name);
     }
@@ -501,7 +501,7 @@ static int luaA_root_wallpaper(lua_State* L) {
 static int luaA_root_get_content(lua_State* L) {
     cairo_surface_t* surface;
 
-    surface = cairo_xcb_surface_create(getGlobals().connection,
+    surface = cairo_xcb_surface_create(getGlobals().x.connection,
                                        getGlobals().screen->root,
                                        getGlobals().default_visual,
                                        getGlobals().screen->width_in_pixels,

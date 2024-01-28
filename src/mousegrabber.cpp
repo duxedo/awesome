@@ -45,7 +45,7 @@ static bool mousegrabber_grab(xcb_cursor_t cursor) {
     for (int i = 1000; i; i--) {
         xcb_grab_pointer_reply_t* grab_ptr_r;
         xcb_grab_pointer_cookie_t grab_ptr_c =
-          xcb_grab_pointer_unchecked(getGlobals().connection,
+          xcb_grab_pointer_unchecked(getGlobals().x.connection,
                                      false,
                                      root,
                                      XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
@@ -56,7 +56,7 @@ static bool mousegrabber_grab(xcb_cursor_t cursor) {
                                      cursor,
                                      XCB_CURRENT_TIME);
 
-        if ((grab_ptr_r = xcb_grab_pointer_reply(getGlobals().connection, grab_ptr_c, NULL))) {
+        if ((grab_ptr_r = xcb_grab_pointer_reply(getGlobals().x.connection, grab_ptr_c, NULL))) {
             p_delete(&grab_ptr_r);
             return true;
         }
@@ -106,7 +106,7 @@ static int luaA_mousegrabber_run(lua_State* L) {
             return 0;
         }
 
-        cursor = xcursor_new(getGlobals().cursor_ctx, cfont);
+        cursor = xcursor_new(getGlobals().x.cursor_ctx, cfont);
     }
 
     Lua::registerfct(L, 1, &(getGlobals().mousegrabber));
@@ -125,7 +125,7 @@ static int luaA_mousegrabber_run(lua_State* L) {
  * @noreturn
  */
 int luaA_mousegrabber_stop(lua_State* L) {
-    xcb_ungrab_pointer(getGlobals().connection, XCB_CURRENT_TIME);
+    xcb_ungrab_pointer(getGlobals().x.connection, XCB_CURRENT_TIME);
     Lua::unregister(L, &getGlobals().mousegrabber);
     return 0;
 }

@@ -173,7 +173,7 @@ static void drawin_systray_kickout(drawin_t* w) {
         /* Who! Check that we're not deleting a drawin with a systray, because it
          * may be its parent. If so, we reparent to root before, otherwise it will
          * hurt very much. */
-        xcb_reparent_window(getGlobals().connection,
+        xcb_reparent_window(getGlobals().x.connection,
                             getGlobals().systray.window,
                             getGlobals().screen->root,
                             -512,
@@ -193,7 +193,7 @@ drawin_t::~drawin_t() {
     if (window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(this);
-        xcb_destroy_window(getGlobals().connection, window);
+        xcb_destroy_window(getGlobals().x.connection, window);
     }
     /* No unref needed because we are being garbage collected */
     drawable = NULL;
@@ -316,7 +316,7 @@ void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint1
 
     /* Make cairo do all pending drawing */
     cairo_surface_flush(drawin->drawable->surface);
-    xcb_copy_area(getGlobals().connection,
+    xcb_copy_area(getGlobals().x.connection,
                   drawin->drawable->pixmap,
                   drawin->window,
                   getGlobals().gc,
@@ -335,7 +335,7 @@ static void drawin_map(lua_State* L, int widx) {
     /* Activate BMA */
     client_ignore_enterleave_events();
     /* Map the drawin */
-    xcb_map_window(getGlobals().connection, drawin->window);
+    xcb_map_window(getGlobals().x.connection, drawin->window);
     /* Deactivate BMA */
     client_restore_enterleave_events();
     /* Stack this drawin correctly */
@@ -349,7 +349,7 @@ static void drawin_map(lua_State* L, int widx) {
 }
 
 static void drawin_unmap(drawin_t* drawin) {
-    xcb_unmap_window(getGlobals().connection, drawin->window);
+    xcb_unmap_window(getGlobals().x.connection, drawin->window);
     auto it = std::ranges::find(getGlobals().drawins, drawin);
     if (it != getGlobals().drawins.end()) {
         getGlobals().drawins.erase(it);
@@ -427,8 +427,8 @@ drawin_t* drawin_allocator(lua_State* L) {
         XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE |
         XCB_EVENT_MASK_PROPERTY_CHANGE,
       getGlobals().default_cmap,
-      xcursor_new(getGlobals().cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
-    xcb_create_window(getGlobals().connection,
+      xcursor_new(getGlobals().x.cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
+    xcb_create_window(getGlobals().x.connection,
                       getGlobals().default_depth,
                       w->window,
                       s->root,
@@ -491,12 +491,13 @@ static int luaA_drawin_geometry(lua_State* L) {
 
 static int luaA_drawin_set_x(lua_State* L, drawin_t* drawin) {
     int x = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    drawin_moveresize(L,
-                      -3,
-                      (area_t){{(int16_t)x,
-                               drawin->geometry.top()},
-                                drawin->geometry.width,
-                                drawin->geometry.height});
+    drawin_moveresize(
+      L,
+      -3,
+      (area_t){
+        {(int16_t)x, drawin->geometry.top()},
+        drawin->geometry.width, drawin->geometry.height
+    });
     return 0;
 }
 
@@ -507,12 +508,13 @@ static int luaA_drawin_get_x(lua_State* L, drawin_t* drawin) {
 
 static int luaA_drawin_set_y(lua_State* L, drawin_t* drawin) {
     int y = round(Lua::checknumber_range(L, -1, MIN_X11_COORDINATE, MAX_X11_COORDINATE));
-    drawin_moveresize(L,
-                      -3,
-                      (area_t){{drawin->geometry.left(),
-                                y},
-                                drawin->geometry.width,
-                                drawin->geometry.height});
+    drawin_moveresize(
+      L,
+      -3,
+      (area_t){
+        {drawin->geometry.left(), y},
+        drawin->geometry.width, drawin->geometry.height
+    });
     return 0;
 }
 
@@ -523,11 +525,8 @@ static int luaA_drawin_get_y(lua_State* L, drawin_t* drawin) {
 
 static int luaA_drawin_set_width(lua_State* L, drawin_t* drawin) {
     int width = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
-    drawin_moveresize(L,
-                      -3,
-                      (area_t){ drawin->geometry.top_left,
-                                (uint16_t)width,
-                                drawin->geometry.height});
+    drawin_moveresize(
+      L, -3, (area_t){drawin->geometry.top_left, (uint16_t)width, drawin->geometry.height});
     return 0;
 }
 
@@ -538,11 +537,8 @@ static int luaA_drawin_get_width(lua_State* L, drawin_t* drawin) {
 
 static int luaA_drawin_set_height(lua_State* L, drawin_t* drawin) {
     int height = ceil(Lua::checknumber_range(L, -1, MIN_X11_SIZE, MAX_X11_SIZE));
-    drawin_moveresize(L,
-                      -3,
-                      (area_t){ drawin->geometry.top_left,
-                                drawin->geometry.width,
-                                (uint16_t)height});
+    drawin_moveresize(
+      L, -3, (area_t){drawin->geometry.top_left, drawin->geometry.width, (uint16_t)height});
     return 0;
 }
 
@@ -575,7 +571,7 @@ static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
     auto buf = Lua::checkstring(L, -1);
     uint16_t cursor_font = xcursor_font_fromstr(buf->data());
     if (cursor_font) {
-        xcb_cursor_t cursor = xcursor_new(getGlobals().cursor_ctx, cursor_font);
+        xcb_cursor_t cursor = xcursor_new(getGlobals().x.cursor_ctx, cursor_font);
         drawin->cursor = buf ? buf.value() : "";
         xwindow_set_cursor(drawin->window, cursor);
         luaA_object_emit_signal(L, -3, "property::cursor", 0);

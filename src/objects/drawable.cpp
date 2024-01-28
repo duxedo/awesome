@@ -107,13 +107,13 @@ static lua_class_t drawable_class{
   "drawable",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(newobj<drawable_t, drawable_class>(state)); },
-    destroyObject<drawable_t>,
+    [](auto* state) {
+    return static_cast<lua_object_t*>(newobj<drawable_t, drawable_class>(state));
+    }, destroyObject<drawable_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
     },
 };
-
 
 drawable_t* drawable_allocator(lua_State* L, drawable_refresh_callback* callback, void* data) {
     drawable_t* d = newobj<drawable_t, drawable_class>(L);
@@ -131,7 +131,7 @@ static void drawable_unset_surface(drawable_t* d) {
         cairo_surface_destroy(d->surface);
     }
     if (d->pixmap) {
-        xcb_free_pixmap(getGlobals().connection, d->pixmap);
+        xcb_free_pixmap(getGlobals().x.connection, d->pixmap);
     }
     d->refreshed = false;
     d->surface = NULL;
@@ -151,14 +151,14 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     }
     if (area_changed && geom.width > 0 && geom.height > 0) {
         d->pixmap = getConnection().generate_id();
-        xcb_create_pixmap(getGlobals().connection,
+        xcb_create_pixmap(getGlobals().x.connection,
                           getGlobals().default_depth,
                           d->pixmap,
                           getGlobals().screen->root,
                           geom.width,
                           geom.height);
         d->surface = cairo_xcb_surface_create(
-          getGlobals().connection, d->pixmap, getGlobals().visual, geom.width, geom.height);
+          getGlobals().x.connection, d->pixmap, getGlobals().visual, geom.width, geom.height);
         luaA_object_emit_signal(L, didx, "property::surface", 0);
     }
 

@@ -239,17 +239,21 @@ uint8_t draw_visual_depth(const xcb_screen_t* s, xcb_visualid_t vis) {
 
 void draw_test_cairo_xcb(void) {
     xcb_pixmap_t pixmap = getConnection().generate_id();
-    xcb_create_pixmap(
-      getGlobals().connection, getGlobals().default_depth, pixmap, getGlobals().screen->root, 1, 1);
+    xcb_create_pixmap(getGlobals().x.connection,
+                      getGlobals().default_depth,
+                      pixmap,
+                      getGlobals().screen->root,
+                      1,
+                      1);
     cairo_surface_t* surface =
-      cairo_xcb_surface_create(getGlobals().connection, pixmap, getGlobals().visual, 1, 1);
+      cairo_xcb_surface_create(getGlobals().x.connection, pixmap, getGlobals().visual, 1, 1);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         log_fatal("Could not set up display: got cairo surface with status {}",
                   cairo_status_to_string(cairo_surface_status(surface)));
     }
     cairo_surface_finish(surface);
     cairo_surface_destroy(surface);
-    xcb_free_pixmap(getGlobals().connection, pixmap);
+    xcb_free_pixmap(getGlobals().x.connection, pixmap);
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

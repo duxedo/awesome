@@ -87,7 +87,7 @@ void eprint_version(void) {
       /* XRandR minor */ XCB_RANDR_MINOR_VERSION,
       /* LGI version  */ lua_tostring(L, -1),
       /* ARGB support */ getGlobals().had_overriden_depth ? "no" : "yes",
-      /* Search path  */ getGlobals().have_searchpaths ? "yes" : "no");
+      /* Search path  */ getGlobals().startup.have_searchpaths ? "yes" : "no");
     lua_close(L);
 
     exit(EXIT_SUCCESS);

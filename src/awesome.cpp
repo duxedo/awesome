@@ -48,7 +48,7 @@ Globals& getGlobals() {
     return *gGlobals;
 }
 
-XCB::Connection& getConnection() { return getGlobals()._connection; }
+XCB::Connection& getConnection() { return getGlobals().x._connection; }
 
 /** argv used to run awesome */
 static char** awesome_argv;
@@ -130,20 +130,20 @@ void awesome_atexit(bool restart) {
      * Immediately afterwards, this parent is destroyed and the focus is gone.
      * Work around this by placing the focus where we like it to be.
      */
-    xcb_set_input_focus(getGlobals().connection,
+    xcb_set_input_focus(getGlobals().x.connection,
                         XCB_INPUT_FOCUS_POINTER_ROOT,
                         XCB_NONE,
-                        getGlobals().get_timestamp());
-    xcb_aux_sync(getGlobals().connection);
+                        getGlobals().x.get_timestamp());
+    xcb_aux_sync(getGlobals().x.connection);
 
     xkb_free();
 
     /* Disconnect *after* closing lua */
-    xcb_cursor_context_free(getGlobals().cursor_ctx);
+    xcb_cursor_context_free(getGlobals().x.cursor_ctx);
 #ifdef WITH_XCB_ERRORS
-    xcb_errors_context_free(getGlobals().errors_ctx);
+    xcb_errors_context_free(getGlobals().x.errors_ctx);
 #endif
-    xcb_disconnect(getGlobals().connection);
+    xcb_disconnect(getGlobals().x.connection);
 
     close(sigchld_pipe[0]);
     close(sigchld_pipe[1]);
@@ -228,10 +228,10 @@ static void acquire_WM_Sn(bool replace) {
     xcb_get_selection_owner_reply_t* get_sel_reply;
 
     /* Get the WM_Sn atom */
-    getGlobals().selection_owner_window = getConnection().generate_id();
-    xcb_create_window(getGlobals().connection,
+    getGlobals().x.selection_owner_window = getConnection().generate_id();
+    xcb_create_window(getGlobals().x.connection,
                       getGlobals().screen->root_depth,
-                      getGlobals().selection_owner_window,
+                      getGlobals().x.selection_owner_window,
                       getGlobals().screen->root,
                       -1,
                       -1,
@@ -242,32 +242,32 @@ static void acquire_WM_Sn(bool replace) {
                       getGlobals().screen->root_visual,
                       0,
                       NULL);
-    xwindow_set_class_instance(getGlobals().selection_owner_window);
-    xwindow_set_name_static(getGlobals().selection_owner_window,
+    xwindow_set_class_instance(getGlobals().x.selection_owner_window);
+    xwindow_set_name_static(getGlobals().x.selection_owner_window,
                             "Awesome WM_Sn selection owner window");
 
-    auto atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().default_screen);
+    auto atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().x.default_screen);
     if (!atom_name) {
         log_fatal("error getting WM_Sn atom name");
     }
 
     atom_q =
-      xcb_intern_atom_unchecked(getGlobals().connection, false, strlen(atom_name), atom_name);
+      xcb_intern_atom_unchecked(getGlobals().x.connection, false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
-    atom_r = xcb_intern_atom_reply(getGlobals().connection, atom_q, NULL);
+    atom_r = xcb_intern_atom_reply(getGlobals().x.connection, atom_q, NULL);
     if (!atom_r) {
         log_fatal("error getting WM_Sn atom");
     }
 
-    getGlobals().selection_atom = atom_r->atom;
+    getGlobals().x.selection_atom = atom_r->atom;
     p_delete(&atom_r);
 
     /* Is the selection already owned? */
     get_sel_reply = xcb_get_selection_owner_reply(
-      getGlobals().connection,
-      xcb_get_selection_owner(getGlobals().connection, getGlobals().selection_atom),
+      getGlobals().x.connection,
+      xcb_get_selection_owner(getGlobals().x.connection, getGlobals().x.selection_atom),
       NULL);
     if (!get_sel_reply) {
         log_fatal("GetSelectionOwner for WM_Sn failed");
@@ -277,18 +277,18 @@ static void acquire_WM_Sn(bool replace) {
     }
 
     /* Acquire the selection */
-    xcb_set_selection_owner(getGlobals().connection,
-                            getGlobals().selection_owner_window,
-                            getGlobals().selection_atom,
-                            getGlobals().get_timestamp());
+    xcb_set_selection_owner(getGlobals().x.connection,
+                            getGlobals().x.selection_owner_window,
+                            getGlobals().x.selection_atom,
+                            getGlobals().x.get_timestamp());
     if (get_sel_reply->owner != XCB_NONE) {
         /* Wait for the old owner to go away */
         xcb_get_geometry_reply_t* geom_reply = NULL;
         do {
             p_delete(&geom_reply);
             geom_reply = xcb_get_geometry_reply(
-              getGlobals().connection,
-              xcb_get_geometry(getGlobals().connection, get_sel_reply->owner),
+              getGlobals().x.connection,
+              xcb_get_geometry(getGlobals().x.connection, get_sel_reply->owner),
               NULL);
         } while (geom_reply != NULL);
     }
@@ -300,13 +300,14 @@ static void acquire_WM_Sn(bool replace) {
                                   .sequence = 0,
                                   .window = getGlobals().screen->root,
                                   .type = MANAGER,
-                                  .data{.data32 = {getGlobals().get_timestamp(),
-                                                   getGlobals().selection_atom,
-                                                   getGlobals().selection_owner_window,
+                                  .data{.data32 = {getGlobals().x.get_timestamp(),
+                                                   getGlobals().x.selection_atom,
+                                                   getGlobals().x.selection_owner_window,
                                                    0,
                                                    0}}};
 
-    xcb_send_event(getGlobals().connection, false, getGlobals().screen->root, 0xFFFFFF, (char*)&ev);
+    xcb_send_event(
+      getGlobals().x.connection, false, getGlobals().screen->root, 0xFFFFFF, (char*)&ev);
 }
 
 static void acquire_timestamp(void) {
@@ -318,19 +319,19 @@ static void acquire_timestamp(void) {
     xcb_atom_t atom = XCB_ATOM_RESOURCE_MANAGER; /* Just something random */
     xcb_atom_t type = XCB_ATOM_STRING;           /* Equally random */
 
-    xcb_grab_server(getGlobals().connection);
+    xcb_grab_server(getGlobals().x.connection);
     getConnection().change_attributes(
       win, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
     getConnection().append_property(win, atom, type, std::span{"", 0});
     getConnection().clear_attributes(win, XCB_CW_EVENT_MASK);
-    xutil_ungrab_server(getGlobals().connection);
+    xutil_ungrab_server(getGlobals().x.connection);
 
     /* Now wait for the event */
-    while ((event = xcb_wait_for_event(getGlobals().connection))) {
+    while ((event = xcb_wait_for_event(getGlobals().x.connection))) {
         /* Is it the event we are waiting for? */
         if (XCB_EVENT_RESPONSE_TYPE(event) == XCB_PROPERTY_NOTIFY) {
             xcb_property_notify_event_t* ev = (xcb_property_notify_event_t*)event;
-            getGlobals().update_timestamp(ev);
+            getGlobals().x.update_timestamp(ev);
             p_delete(&event);
             break;
         }
@@ -351,7 +352,7 @@ static xcb_generic_event_t* poll_for_event(void) {
         return event;
     }
 
-    return xcb_poll_for_event(getGlobals().connection);
+    return xcb_poll_for_event(getGlobals().x.connection);
 }
 
 static void a_xcb_check(void) {
@@ -388,9 +389,9 @@ static void a_xcb_check(void) {
 static gboolean a_xcb_io_cb(GIOChannel* source, GIOCondition cond, gpointer data) {
     /* a_xcb_check() already handled all events */
 
-    if (xcb_connection_has_error(getGlobals().connection)) {
+    if (xcb_connection_has_error(getGlobals().x.connection)) {
         log_fatal("X server connection broke (error {})",
-                  xcb_connection_has_error(getGlobals().connection));
+                  xcb_connection_has_error(getGlobals().x.connection));
     }
 
     return TRUE;
@@ -415,7 +416,7 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
 
     /* Don't sleep if there is a pending event */
     assert(!getGlobals().pending_event);
-    getGlobals().pending_event = xcb_poll_for_event(getGlobals().connection);
+    getGlobals().pending_event = xcb_poll_for_event(getGlobals().x.connection);
     if (getGlobals().pending_event) {
         timeout = 0;
     }
@@ -532,11 +533,11 @@ int main(int argc, char** argv) {
     /* clear the globalconf structure */
     gGlobals = new Globals;
     getGlobals().api_level = opts.api_level ? opts.api_level.value() : awesome_default_api_level();
-    getGlobals().have_searchpaths = opts.have_searchpaths;
+    getGlobals().startup.have_searchpaths = opts.have_searchpaths;
     getGlobals().had_overriden_depth = opts.had_overriden_depth;
 
     if (opts.no_auto_screen.has_value()) {
-        getGlobals().no_auto_screen = opts.no_auto_screen.value();
+        getGlobals().startup.no_auto_screen = opts.no_auto_screen.value();
     }
 
     /* Check the configfile syntax and exit */
@@ -615,14 +616,15 @@ int main(int argc, char** argv) {
     getGlobals().preferred_icon_size = 0;
 
     /* X stuff */
-    getGlobals().connection = xcb_connect(NULL, &getGlobals().default_screen);
+    getGlobals().x.connection = xcb_connect(NULL, &getGlobals().x.default_screen);
 
-    if (xcb_connection_has_error(getGlobals().connection)) {
+    if (xcb_connection_has_error(getGlobals().x.connection)) {
         log_fatal("cannot open display (error {})",
-                  xcb_connection_has_error(getGlobals().connection));
+                  xcb_connection_has_error(getGlobals().x.connection));
     }
 
-    getGlobals().screen = xcb_aux_get_screen(getGlobals().connection, getGlobals().default_screen);
+    getGlobals().screen =
+      xcb_aux_get_screen(getGlobals().x.connection, getGlobals().x.default_screen);
     getGlobals().default_visual = draw_default_visual(getGlobals().screen);
     if (default_init_flags & Options::INIT_FLAG_ARGB) {
         getGlobals().visual = draw_argb_visual(getGlobals().screen);
@@ -636,7 +638,7 @@ int main(int argc, char** argv) {
     if (getGlobals().default_depth != getGlobals().screen->root_depth) {
         // We need our own color map if we aren't using the default depth
         getGlobals().default_cmap = getConnection().generate_id();
-        xcb_create_colormap(getGlobals().connection,
+        xcb_create_colormap(getGlobals().x.connection,
                             XCB_COLORMAP_ALLOC_NONE,
                             getGlobals().default_cmap,
                             getGlobals().screen->root,
@@ -644,7 +646,7 @@ int main(int argc, char** argv) {
     }
 
 #ifdef WITH_XCB_ERRORS
-    if (xcb_errors_context_new(getGlobals().connection, &getGlobals().errors_ctx) < 0) {
+    if (xcb_errors_context_new(getGlobals().x.connection, &getGlobals().x.errors_ctx) < 0) {
         log_fatal("Failed to initialize xcb-errors");
     }
 #endif
@@ -653,22 +655,22 @@ int main(int argc, char** argv) {
     acquire_timestamp();
 
     /* Prefetch all the extensions we might need */
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_big_requests_id);
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_test_id);
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_randr_id);
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_xinerama_id);
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_shape_id);
-    xcb_prefetch_extension_data(getGlobals().connection, &xcb_xfixes_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_big_requests_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_test_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_randr_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_xinerama_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_shape_id);
+    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_xfixes_id);
 
     if (xcb_cursor_context_new(
-          getGlobals().connection, getGlobals().screen, &getGlobals().cursor_ctx) < 0) {
+          getGlobals().x.connection, getGlobals().screen, &getGlobals().x.cursor_ctx) < 0) {
         log_fatal("Failed to initialize xcb-cursor");
     }
-    getGlobals().xrmdb = xcb_xrm_database_from_default(getGlobals().connection);
-    if (getGlobals().xrmdb == NULL) {
-        getGlobals().xrmdb = xcb_xrm_database_from_string("");
+    getGlobals().x.xrmdb = xcb_xrm_database_from_default(getGlobals().x.connection);
+    if (getGlobals().x.xrmdb == NULL) {
+        getGlobals().x.xrmdb = xcb_xrm_database_from_string("");
     }
-    if (getGlobals().xrmdb == NULL) {
+    if (getGlobals().x.xrmdb == NULL) {
         log_fatal("Failed to initialize xcb-xrm");
     }
 
@@ -682,64 +684,66 @@ int main(int argc, char** argv) {
     a_dbus_init();
 
     /* Get the file descriptor corresponding to the X connection */
-    int xfd = xcb_get_file_descriptor(getGlobals().connection);
+    int xfd = xcb_get_file_descriptor(getGlobals().x.connection);
     GIOChannel* channel = g_io_channel_unix_new(xfd);
     g_io_add_watch(channel, G_IO_IN, a_xcb_io_cb, NULL);
     g_io_channel_unref(channel);
 
     /* Grab server */
-    xcb_grab_server(getGlobals().connection);
+    xcb_grab_server(getGlobals().x.connection);
 
     {
         const uint32_t select_input_val = XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT;
         xcb_void_cookie_t cookie;
 
         /* This causes an error if some other window manager is running */
-        cookie = xcb_change_window_attributes_checked(
-          getGlobals().connection, getGlobals().screen->root, XCB_CW_EVENT_MASK, &select_input_val);
-        if (xcb_request_check(getGlobals().connection, cookie)) {
+        cookie = xcb_change_window_attributes_checked(getGlobals().x.connection,
+                                                      getGlobals().screen->root,
+                                                      XCB_CW_EVENT_MASK,
+                                                      &select_input_val);
+        if (xcb_request_check(getGlobals().x.connection, cookie)) {
             log_fatal(
               "another window manager is already running (can't select SubstructureRedirect)");
         }
     }
 
     /* Prefetch the maximum request length */
-    xcb_prefetch_maximum_request_length(getGlobals().connection);
+    xcb_prefetch_maximum_request_length(getGlobals().x.connection);
 
     /* check for xtest extension */
     const xcb_query_extension_reply_t* query;
-    query = xcb_get_extension_data(getGlobals().connection, &xcb_test_id);
-    getGlobals().have_xtest = query && query->present;
+    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_test_id);
+    getGlobals().x.caps.have_xtest = query && query->present;
 
     /* check for shape extension */
-    query = xcb_get_extension_data(getGlobals().connection, &xcb_shape_id);
-    getGlobals().have_shape = query && query->present;
-    if (getGlobals().have_shape) {
-        xcb_shape_query_version_reply_t* reply =
-          xcb_shape_query_version_reply(getGlobals().connection,
-                                        xcb_shape_query_version_unchecked(getGlobals().connection),
-                                        NULL);
-        getGlobals().have_input_shape =
+    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_shape_id);
+    getGlobals().x.caps.have_shape = query && query->present;
+    if (getGlobals().x.caps.have_shape) {
+        xcb_shape_query_version_reply_t* reply = xcb_shape_query_version_reply(
+          getGlobals().x.connection,
+          xcb_shape_query_version_unchecked(getGlobals().x.connection),
+          NULL);
+        getGlobals().x.caps.have_input_shape =
           reply &&
           (reply->major_version > 1 || (reply->major_version == 1 && reply->minor_version >= 1));
         p_delete(&reply);
     }
 
     /* check for xfixes extension */
-    query = xcb_get_extension_data(getGlobals().connection, &xcb_xfixes_id);
-    getGlobals().have_xfixes = query && query->present;
-    if (getGlobals().have_xfixes) {
-        xcb_discard_reply(getGlobals().connection,
-                          xcb_xfixes_query_version(getGlobals().connection, 1, 0).sequence);
+    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_xfixes_id);
+    getGlobals().x.caps.have_xfixes = query && query->present;
+    if (getGlobals().x.caps.have_xfixes) {
+        xcb_discard_reply(getGlobals().x.connection,
+                          xcb_xfixes_query_version(getGlobals().x.connection, 1, 0).sequence);
     }
 
     event_init();
 
     /* Allocate the key symbols */
-    getGlobals().keysyms = xcb_key_symbols_alloc(getGlobals().connection);
+    getGlobals().input.keysyms = xcb_key_symbols_alloc(getGlobals().x.connection);
 
     /* init atom cache */
-    atoms_init(getGlobals().connection);
+    atoms_init(getGlobals().x.connection);
 
     ewmh_init();
     systray_init();
@@ -761,7 +765,7 @@ int main(int argc, char** argv) {
                                        1,
                                        getGlobals().default_cmap};
 
-    xcb_create_window(getGlobals().connection,
+    xcb_create_window(getGlobals().x.connection,
                       getGlobals().default_depth,
                       getGlobals().focus.window_no_focus,
                       getGlobals().screen->root,
@@ -777,10 +781,10 @@ int main(int argc, char** argv) {
                       create_window_values);
     xwindow_set_class_instance(getGlobals().focus.window_no_focus);
     xwindow_set_name_static(getGlobals().focus.window_no_focus, "Awesome no input window");
-    xcb_map_window(getGlobals().connection, getGlobals().focus.window_no_focus);
+    xcb_map_window(getGlobals().x.connection, getGlobals().focus.window_no_focus);
     uint32_t create_gc_flags[] = {getGlobals().screen->black_pixel,
                                   getGlobals().screen->white_pixel};
-    xcb_create_gc(getGlobals().connection,
+    xcb_create_gc(getGlobals().x.connection,
                   getGlobals().gc,
                   getGlobals().focus.window_no_focus,
                   XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
@@ -794,7 +798,7 @@ int main(int argc, char** argv) {
       getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
 
     /* we will receive events, stop grabbing server */
-    xutil_ungrab_server(getGlobals().connection);
+    xutil_ungrab_server(getGlobals().x.connection);
 
     /* get the current wallpaper, from now on we are informed when it changes */
     root_update_wallpaper();
@@ -807,9 +811,9 @@ int main(int argc, char** argv) {
     ewmh_init_lua();
 
     /* Parse and run configuration file before adding the screens */
-    if (getGlobals().no_auto_screen) {
+    if (getGlobals().startup.no_auto_screen) {
         /* Disable automatic screen creation, awful.screen has a fallback */
-        getGlobals().ignore_screens = true;
+        getGlobals().startup.ignore_screens = true;
 
         if (!opts.configPath || !Lua::parserc(&xdg, opts.configPath->c_str())) {
             log_fatal("couldn't find any rc file");
@@ -820,7 +824,7 @@ int main(int argc, char** argv) {
     screen_scan();
 
     /* Parse and run configuration file after adding the screens */
-    if (((!getGlobals().no_auto_screen) && !Lua::parserc(&xdg, opts.configPath))) {
+    if (((!getGlobals().startup.no_auto_screen) && !Lua::parserc(&xdg, opts.configPath))) {
         log_fatal("couldn't find any rc file");
     }
 
@@ -831,7 +835,7 @@ int main(int argc, char** argv) {
     screen_emit_scanned();
 
     /* Exit if the user doesn't read the instructions properly */
-    if (getGlobals().no_auto_screen && !getGlobals().screens.size()) {
+    if (getGlobals().startup.no_auto_screen && !getGlobals().screens.size()) {
         log_fatal(
           "When -m/--screen is set to \"off\", you **must** create a "
           "screen object before or inside the screen \"scanned\" "

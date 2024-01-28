@@ -66,24 +66,76 @@ struct TagDeleter {
 
 using tag_ptr = std::unique_ptr<tag_t, TagDeleter>;
 
-/** Main configuration structure */
-class Globals {
-  public:
+struct XOrg {
+    /** Default screen number */
+    int default_screen = 0;
     /** Connection ref */
     XCB::Connection _connection;
     xcb_connection_t*& connection = _connection.connection;
     /** X Resources DB */
     xcb_xrm_database_t* xrmdb = nullptr;
-    /** Default screen number */
-    int default_screen = 0;
     /** xcb-cursor context */
     xcb_cursor_context_t* cursor_ctx = nullptr;
 #ifdef WITH_XCB_ERRORS
     /** xcb-errors context */
     xcb_errors_context_t* errors_ctx;
 #endif
+    /** Atom for WM_Sn */
+    xcb_atom_t selection_atom = 0;
+    /** Window owning the WM_Sn selection */
+    xcb_window_t selection_owner_window = 0;
+    /** Do we have a RandR screen update pending? */
+    bool screen_refresh_pending = false;
+
+    struct capabilities {
+        /** Check for XTest extension */
+        bool have_xtest = false;
+        /** Check for SHAPE extension */
+        bool have_shape = false;
+        /** Check for SHAPE extension with input shape support */
+        bool have_input_shape = false;
+        /** Check for XFixes extension */
+        bool have_xfixes = false;
+    } caps;
+
+    uint8_t event_base_shape = 0;
+    uint8_t event_base_xkb = 0;
+    uint8_t event_base_randr = 0;
+    uint8_t event_base_xfixes = 0;
+
+  private:
+    xcb_timestamp_t timestamp = 0;
+
+  public:
+    xcb_timestamp_t get_timestamp() const { return timestamp; }
+
+    template <typename EventT>
+    requires(std::is_same_v<decltype(timestamp), decltype(std::declval<EventT>().time)>)
+    void update_timestamp(const EventT* ev) {
+        timestamp = ev->time;
+    }
+};
+
+struct Input {
     /** Keys symbol table */
     xcb_key_symbols_t* keysyms = nullptr;
+};
+
+struct StartupConfig {
+    /** Should screens be created before rc.lua is loaded? */
+    bool no_auto_screen = false;
+    /** Should the screen be created automatically? */
+    bool ignore_screens = false;
+    /** Custom searchpaths are present, the runtime is tainted */
+    bool have_searchpaths = false;
+};
+
+/** Main configuration structure */
+class Globals {
+  public:
+    XOrg x;
+    Input input;
+    StartupConfig startup;
     /** Logical screens */
     std::vector<screen_t*> screens;
     /** The primary screen, access through screen_get_primary() */
@@ -92,32 +144,8 @@ class Globals {
     std::vector<keyb_t*> keys;
     /** Root window mouse bindings */
     std::vector<button_t*> buttons;
-    /** Atom for WM_Sn */
-    xcb_atom_t selection_atom = 0;
-    /** Window owning the WM_Sn selection */
-    xcb_window_t selection_owner_window = 0;
-    /** Do we have a RandR screen update pending? */
-    bool screen_refresh_pending = false;
-    /** Should screens be created before rc.lua is loaded? */
-    bool no_auto_screen = false;
-    /** Should the screen be created automatically? */
-    bool ignore_screens = false;
-    /** Check for XTest extension */
-    bool have_xtest = false;
-    /** Check for SHAPE extension */
-    bool have_shape = false;
-    /** Check for SHAPE extension with input shape support */
-    bool have_input_shape = false;
-    /** Check for XFixes extension */
-    bool have_xfixes = false;
-    /** Custom searchpaths are present, the runtime is tainted */
-    bool have_searchpaths = false;
     /** When --no-argb is used in the modeline or command line */
     bool had_overriden_depth = false;
-    uint8_t event_base_shape = 0;
-    uint8_t event_base_xkb = 0;
-    uint8_t event_base_randr = 0;
-    uint8_t event_base_xfixes = 0;
     /** Clients list */
     std::vector<client*> clients;
     /** Embedded windows */
@@ -158,17 +186,6 @@ class Globals {
     /** The startup notification display struct */
     SnDisplay* sndisplay = nullptr;
     /** Latest timestamp we got from the X server */
-  private:
-    xcb_timestamp_t timestamp = 0;
-
-  public:
-    xcb_timestamp_t get_timestamp() const { return timestamp; }
-
-    template <typename EventT>
-    requires(std::is_same_v<decltype(timestamp), decltype(std::declval<EventT>().time)>)
-    void update_timestamp(const EventT* ev) {
-        timestamp = ev->time;
-    }
 
     /** Window that contains the systray */
     struct {
