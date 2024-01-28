@@ -32,24 +32,20 @@
 typedef struct _GdkPixbuf GdkPixbuf;
 
 struct point {
-    int x,y;
+    int x, y;
 
-    point& operator-=(const point & rhs) {
+    point& operator-=(const point& rhs) {
         x -= rhs.x;
         y -= rhs.y;
         return *this;
     }
-    point& operator+=(const point & rhs) {
+    point& operator+=(const point& rhs) {
         x += rhs.x;
         y += rhs.y;
         return *this;
     }
-    point operator-(const point & rhs) const {
-        return {x - rhs.x, y - rhs.y};
-    }
-    point operator+(const point & rhs) const {
-        return {x + rhs.x, y + rhs.y};
-    }
+    point operator-(const point& rhs) const { return {x - rhs.x, y - rhs.y}; }
+    point operator+(const point& rhs) const { return {x + rhs.x, y + rhs.y}; }
     bool operator<=>(const point&) const = default;
 };
 
@@ -66,7 +62,7 @@ struct area_t {
     auto bottom() const { return top_left.y + height; }
     auto right() const { return top_left.x + width; }
 
-    point bottom_right() const { return { top_left.x + width, top_left.y + height }; }
+    point bottom_right() const { return {top_left.x + width, top_left.y + height}; }
 
     bool inside(point p) const {
         return (left() > p.x || right() <= p.x) && (top() > p.y || bottom() <= p.y);

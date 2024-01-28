@@ -577,8 +577,8 @@ static screen_output_t screen_get_randr_output(lua_State* L,
     output.mm_width = it->data->width_in_millimeters;
     output.mm_height = it->data->height_in_millimeters;
 
-    name_c = xcb_get_atom_name_unchecked(getGlobals().connection, it->data->name);
-    name_r = xcb_get_atom_name_reply(getGlobals().connection, name_c, NULL);
+    name_c = xcb_get_atom_name_unchecked(getGlobals().x.connection, it->data->name);
+    name_r = xcb_get_atom_name_reply(getGlobals().x.connection, name_c, NULL);
 
     if (name_r) {
         const char* name = xcb_get_atom_name_name(name_r);
@@ -600,9 +600,9 @@ static screen_output_t screen_get_randr_output(lua_State* L,
 
 static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* screens) {
     xcb_randr_get_monitors_cookie_t monitors_c =
-      xcb_randr_get_monitors(getGlobals().connection, getGlobals().screen->root, 1);
+      xcb_randr_get_monitors(getGlobals().x.connection, getGlobals().screen->root, 1);
     xcb_randr_get_monitors_reply_t* monitors_r =
-      xcb_randr_get_monitors_reply(getGlobals().connection, monitors_c, NULL);
+      xcb_randr_get_monitors_reply(getGlobals().x.connection, monitors_c, NULL);
     xcb_randr_monitor_info_iterator_t monitor_iter;
 
     if (monitors_r == NULL) {
@@ -625,7 +625,7 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
 
         viewport->outputs.push_back(output);
 
-        if (getGlobals().ignore_screens) {
+        if (getGlobals().startup.ignore_screens) {
             continue;
         }
 
@@ -652,9 +652,9 @@ static void screen_get_randr_crtcs_outputs(lua_State* L,
 
     for (int j = 0; j < xcb_randr_get_crtc_info_outputs_length(crtc_info_r); j++) {
         xcb_randr_get_output_info_cookie_t output_info_c =
-          xcb_randr_get_output_info(getGlobals().connection, randr_outputs[j], XCB_CURRENT_TIME);
+          xcb_randr_get_output_info(getGlobals().x.connection, randr_outputs[j], XCB_CURRENT_TIME);
         xcb_randr_get_output_info_reply_t* output_info_r =
-          xcb_randr_get_output_info_reply(getGlobals().connection, output_info_c, NULL);
+          xcb_randr_get_output_info_reply(getGlobals().x.connection, output_info_c, NULL);
         screen_output_t output;
 
         if (!output_info_r) {
@@ -681,13 +681,13 @@ static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
     uint32_t minor_version;
 
     /* Check for extension before checking for XRandR */
-    extension_reply = xcb_get_extension_data(getGlobals().connection, &xcb_randr_id);
+    extension_reply = xcb_get_extension_data(getGlobals().x.connection, &xcb_randr_id);
     if (!extension_reply || !extension_reply->present) {
         return;
     }
 
     version_reply = xcb_randr_query_version_reply(
-      getGlobals().connection, xcb_randr_query_version(getGlobals().connection, 1, 5), 0);
+      getGlobals().x.connection, xcb_randr_query_version(getGlobals().x.connection, 1, 5), 0);
     if (!version_reply) {
         return;
     }
@@ -703,13 +703,13 @@ static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
 
     /* We want to know when something changes */
     xcb_randr_select_input(
-      getGlobals().connection, getGlobals().screen->root, XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
+      getGlobals().x.connection, getGlobals().screen->root, XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
 
     screen_scan_randr_monitors(L, screens);
 
-    if (screens->size() == 0 && !getGlobals().ignore_screens) {
+    if (screens->size() == 0 && !getGlobals().startup.ignore_screens) {
         /* Scanning failed, disable randr again */
-        xcb_randr_select_input(getGlobals().connection, getGlobals().screen->root, 0);
+        xcb_randr_select_input(getGlobals().x.connection, getGlobals().screen->root, 0);
         log_fatal("screen scan failed (found 0 screens)");
     }
 }
@@ -723,13 +723,13 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
     int xinerama_screen_number;
 
     /* Check for extension before checking for Xinerama */
-    extension_reply = xcb_get_extension_data(getGlobals().connection, &xcb_xinerama_id);
+    extension_reply = xcb_get_extension_data(getGlobals().x.connection, &xcb_xinerama_id);
     if (!extension_reply || !extension_reply->present) {
         return;
     }
 
     xia = xcb_xinerama_is_active_reply(
-      getGlobals().connection, xcb_xinerama_is_active(getGlobals().connection), NULL);
+      getGlobals().x.connection, xcb_xinerama_is_active(getGlobals().x.connection), NULL);
     xinerama_is_active = xia && xia->state;
     p_delete(&xia);
     if (!xinerama_is_active) {
@@ -737,7 +737,9 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
     }
 
     xsq = xcb_xinerama_query_screens_reply(
-      getGlobals().connection, xcb_xinerama_query_screens_unchecked(getGlobals().connection), NULL);
+      getGlobals().x.connection,
+      xcb_xinerama_query_screens_unchecked(getGlobals().x.connection),
+      NULL);
 
     if (!xsq) {
         log_warn("Xinerama QueryScreens failed; this should not be possible");
@@ -755,7 +757,7 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
             xsi[screen].width, xsi[screen].height
         });
 
-        if (getGlobals().ignore_screens) {
+        if (getGlobals().startup.ignore_screens) {
             continue;
         }
 
@@ -775,9 +777,13 @@ static void screen_scan_x11(lua_State* L, std::vector<screen_t*>* screens) {
     xcb_screen_t* xcb_screen = getGlobals().screen;
 
     viewport_t* viewport =
-      viewport_add(L, area_t{{0, 0}, xcb_screen->width_in_pixels, xcb_screen->height_in_pixels});
+      viewport_add(L,
+                   area_t{
+                     {0, 0},
+                     xcb_screen->width_in_pixels, xcb_screen->height_in_pixels
+    });
 
-    if (getGlobals().ignore_screens) {
+    if (getGlobals().startup.ignore_screens) {
         return;
     }
 
@@ -823,7 +829,7 @@ static void screen_scan_common(bool quiet) {
         screen_scan_x11(L, &getGlobals().screens);
     }
 
-    awsm_check(getGlobals().screens.size() > 0 || getGlobals().ignore_screens);
+    awsm_check(getGlobals().screens.size() > 0 || getGlobals().startup.ignore_screens);
 
     screen_deduplicate(L, &getGlobals().screens);
 
@@ -923,7 +929,7 @@ static void screen_modified(screen_t* existing_screen, screen_t* other_screen) {
 }
 
 static gboolean screen_refresh(gpointer unused) {
-    getGlobals().screen_refresh_pending = false;
+    getGlobals().x.screen_refresh_pending = false;
 
     monitor_unmark();
 
@@ -1012,11 +1018,11 @@ static gboolean screen_refresh(gpointer unused) {
 }
 
 void screen_schedule_refresh(void) {
-    if (getGlobals().screen_refresh_pending) {
+    if (getGlobals().x.screen_refresh_pending) {
         return;
     }
 
-    getGlobals().screen_refresh_pending = true;
+    getGlobals().x.screen_refresh_pending = true;
     g_idle_add_full(G_PRIORITY_LOW, screen_refresh, NULL, NULL);
 }
 
@@ -1083,40 +1089,44 @@ screen_t* screen_getbycoord(point p) {
  * \return True if there is any overlap between the geometry and a given screen.
  */
 bool screen_area_in_screen(screen_t* s, area_t geom) {
-    return (geom.top_left.x < s->geometry.top_left.x + s->geometry.width) && (geom.top_left.x + geom.width > s->geometry.top_left.x) &&
-           (geom.top_left.y < s->geometry.top_left.y + s->geometry.height) && (geom.top_left.y + geom.height > s->geometry.top_left.y);
+    return (geom.top_left.x < s->geometry.top_left.x + s->geometry.width) &&
+           (geom.top_left.x + geom.width > s->geometry.top_left.x) &&
+           (geom.top_left.y < s->geometry.top_left.y + s->geometry.height) &&
+           (geom.top_left.y + geom.height > s->geometry.top_left.y);
 }
 
 void screen_update_workarea(screen_t* screen) {
     area_t area = screen->geometry;
     uint16_t top = 0, bottom = 0, left = 0, right = 0;
 
-#define COMPUTE_STRUT(o)                                                                 \
-    {                                                                                    \
-        if ((o)->strut.top_start_x || (o)->strut.top_end_x || (o)->strut.top) {          \
-            if ((o)->strut.top)                                                          \
-                top = MAX(top, (o)->strut.top);                                          \
-            else                                                                         \
-                top = MAX(top, ((o)->geometry.top_left.y - area.top_left.y) + (o)->geometry.height);       \
-        }                                                                                \
-        if ((o)->strut.bottom_start_x || (o)->strut.bottom_end_x || (o)->strut.bottom) { \
-            if ((o)->strut.bottom)                                                       \
-                bottom = MAX(bottom, (o)->strut.bottom);                                 \
-            else                                                                         \
-                bottom = MAX(bottom, (area.top_left.y + area.height) - (o)->geometry.top_left.y);          \
-        }                                                                                \
-        if ((o)->strut.left_start_y || (o)->strut.left_end_y || (o)->strut.left) {       \
-            if ((o)->strut.left)                                                         \
-                left = MAX(left, (o)->strut.left);                                       \
-            else                                                                         \
-                left = MAX(left, ((o)->geometry.top_left.x - area.top_left.x) + (o)->geometry.width);      \
-        }                                                                                \
-        if ((o)->strut.right_start_y || (o)->strut.right_end_y || (o)->strut.right) {    \
-            if ((o)->strut.right)                                                        \
-                right = MAX(right, (o)->strut.right);                                    \
-            else                                                                         \
-                right = MAX(right, (area.top_left.x + area.width) - (o)->geometry.top_left.x);             \
-        }                                                                                \
+#define COMPUTE_STRUT(o)                                                                          \
+    {                                                                                             \
+        if ((o)->strut.top_start_x || (o)->strut.top_end_x || (o)->strut.top) {                   \
+            if ((o)->strut.top)                                                                   \
+                top = MAX(top, (o)->strut.top);                                                   \
+            else                                                                                  \
+                top =                                                                             \
+                  MAX(top, ((o)->geometry.top_left.y - area.top_left.y) + (o)->geometry.height);  \
+        }                                                                                         \
+        if ((o)->strut.bottom_start_x || (o)->strut.bottom_end_x || (o)->strut.bottom) {          \
+            if ((o)->strut.bottom)                                                                \
+                bottom = MAX(bottom, (o)->strut.bottom);                                          \
+            else                                                                                  \
+                bottom = MAX(bottom, (area.top_left.y + area.height) - (o)->geometry.top_left.y); \
+        }                                                                                         \
+        if ((o)->strut.left_start_y || (o)->strut.left_end_y || (o)->strut.left) {                \
+            if ((o)->strut.left)                                                                  \
+                left = MAX(left, (o)->strut.left);                                                \
+            else                                                                                  \
+                left =                                                                            \
+                  MAX(left, ((o)->geometry.top_left.x - area.top_left.x) + (o)->geometry.width);  \
+        }                                                                                         \
+        if ((o)->strut.right_start_y || (o)->strut.right_end_y || (o)->strut.right) {             \
+            if ((o)->strut.right)                                                                 \
+                right = MAX(right, (o)->strut.right);                                             \
+            else                                                                                  \
+                right = MAX(right, (area.top_left.x + area.width) - (o)->geometry.top_left.x);    \
+        }                                                                                         \
     }
 
     for (auto* c : getGlobals().clients) {
@@ -1244,8 +1254,8 @@ int screen_get_index(lua_object_t* s) {
 void screen_update_primary(void) {
     screen_t* primary_screen = NULL;
     xcb_randr_get_output_primary_reply_t* primary = xcb_randr_get_output_primary_reply(
-      getGlobals().connection,
-      xcb_randr_get_output_primary(getGlobals().connection, getGlobals().screen->root),
+      getGlobals().x.connection,
+      xcb_randr_get_output_primary(getGlobals().x.connection, getGlobals().screen->root),
       NULL);
 
     if (!primary) {
@@ -1311,7 +1321,7 @@ static int luaA_screen_module_index(lua_State* L) {
     if (name == "primary") {
         return luaA_object_push(L, screen_get_primary());
     } else if (name == "automatic_factory") {
-        lua_pushboolean(L, !getGlobals().ignore_screens);
+        lua_pushboolean(L, !getGlobals().startup.ignore_screens);
         return 1;
     }
 
@@ -1336,12 +1346,12 @@ static int luaA_screen_module_newindex(lua_State* L) {
     auto buf = Lua::checkstring(L, 2);
 
     if (buf == "automatic_factory") {
-        getGlobals().ignore_screens = !Lua::checkboolean(L, 3);
+        getGlobals().startup.ignore_screens = !Lua::checkboolean(L, 3);
 
         /* It *can* be useful if screens are added/removed later, but generally,
          * setting this should be done before screens are added
          */
-        if (getGlobals().ignore_screens && !getGlobals().no_auto_screen) {
+        if (getGlobals().startup.ignore_screens && !getGlobals().startup.no_auto_screen) {
             Lua::warn(L,
                       "Setting automatic_factory only makes sense when AwesomeWM is"
                       " started with `--screen off`");
@@ -1618,19 +1628,12 @@ void screen_class_setup(lua_State* L) {
 
     screen_class.setup(L, methods.data(), meta.data());
 
-    screen_class.add_property(
-      "geometry", NULL, exportProp<&screen_t::geometry>(), NULL);
+    screen_class.add_property("geometry", NULL, exportProp<&screen_t::geometry>(), NULL);
     screen_class.add_property("index", NULL, luaA_screen_get_index, NULL);
-    screen_class.add_property(
-      "_outputs", NULL, luaA_screen_get_outputs, NULL);
-    screen_class.add_property(
-      "_managed", NULL, luaA_screen_get_managed, NULL);
-    screen_class.add_property(
-      "workarea", NULL, exportProp<&screen_t::workarea>(), NULL);
-    screen_class.add_property("name",
-                              set_name,
-                              get_name,
-                              set_name);
+    screen_class.add_property("_outputs", NULL, luaA_screen_get_outputs, NULL);
+    screen_class.add_property("_managed", NULL, luaA_screen_get_managed, NULL);
+    screen_class.add_property("workarea", NULL, exportProp<&screen_t::workarea>(), NULL);
+    screen_class.add_property("name", set_name, get_name, set_name);
 }
 
 /* @DOC_cobject_COMMON@ */

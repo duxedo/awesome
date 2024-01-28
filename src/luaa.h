@@ -243,7 +243,7 @@ static inline int pusharea(lua_State* L, area_t geometry) {
     return 1;
 }
 
-template<>
+template <>
 struct Pusher<area_t> {
     int push(State& L, area_t geometry) {
         lua_createtable(L.L, 0, 4);

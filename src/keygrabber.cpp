@@ -42,8 +42,8 @@ static bool keygrabber_grab(void) {
     xcb_grab_keyboard_reply_t* xgb;
 
     for (i = 1000; i; i--) {
-        if ((xgb = xcb_grab_keyboard_reply(getGlobals().connection,
-                                           xcb_grab_keyboard(getGlobals().connection,
+        if ((xgb = xcb_grab_keyboard_reply(getGlobals().x.connection,
+                                           xcb_grab_keyboard(getGlobals().x.connection,
                                                              true,
                                                              getGlobals().screen->root,
                                                              XCB_CURRENT_TIME,
@@ -82,7 +82,7 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
 
     if (is_control(buf)) {
         /* Use text names for control characters, ignoring all modifiers. */
-        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().keysyms, e->detail, 0);
+        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(getGlobals().input.keysyms, e->detail, 0);
         xkb_keysym_get_name(keysym, buf, std::size(buf));
     }
 
@@ -122,7 +122,7 @@ static int luaA_keygrabber_run(lua_State* L) {
  * @deprecated keygrabber.stop
  */
 int luaA_keygrabber_stop(lua_State* L) {
-    xcb_ungrab_keyboard(getGlobals().connection, XCB_CURRENT_TIME);
+    xcb_ungrab_keyboard(getGlobals().x.connection, XCB_CURRENT_TIME);
     Lua::unregister(L, &getGlobals().keygrabber);
     return 0;
 }

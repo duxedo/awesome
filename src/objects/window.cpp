@@ -252,7 +252,7 @@ int Pusher<window_type_t>::push(State& L, const window_type_t t) {
     }
     return 1;
 }
-}
+} // namespace Lua
 /** Set the window type.
  * \param L The Lua VM state.
  * \param window The window object.
@@ -322,7 +322,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
     const xproperty* prop = luaA_find_xproperty(L, prop_idx);
 
     if (lua_isnil(L, value_idx)) {
-        xcb_delete_property(getGlobals().connection, window, prop->atom);
+        xcb_delete_property(getGlobals().x.connection, window, prop->atom);
         return 0;
     }
     if (prop->type == xproperty::PROP_STRING) {
@@ -349,11 +349,11 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
 
     type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
-    reply =
-      xcb_get_property_reply(getGlobals().connection,
-                             xcb_get_property_unchecked(
-                               getGlobals().connection, false, window, prop->atom, type, 0, length),
-                             NULL);
+    reply = xcb_get_property_reply(
+      getGlobals().x.connection,
+      xcb_get_property_unchecked(
+        getGlobals().x.connection, false, window, prop->atom, type, 0, length),
+      NULL);
     if (!reply) {
         return 0;
     }
@@ -428,7 +428,6 @@ static int luaA_window_set_border_width(lua_State* L, lua_object_t*) {
     return 0;
 }
 
-
 void window_class_setup(lua_State* L) {
     static const struct luaL_Reg window_methods[] = {
       {NULL, NULL}
@@ -445,10 +444,8 @@ void window_class_setup(lua_State* L) {
     window_class.setup(L, window_methods, window_meta);
 
     window_class.add_property("window", nullptr, exportProp<&window_t::window>(), nullptr);
-    window_class.add_property("_opacity",
-                              luaA_window_set_opacity,
-                              luaA_window_get_opacity,
-                              luaA_window_set_opacity);
+    window_class.add_property(
+      "_opacity", luaA_window_set_opacity, luaA_window_get_opacity, luaA_window_set_opacity);
     window_class.add_property("_border_color",
                               luaA_window_set_border_color,
                               exportProp<&window_t::border_color>(),
