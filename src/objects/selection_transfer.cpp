@@ -66,8 +66,10 @@ static lua_class_t selection_transfer_class{
   "selection_transfer",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(newobj<selection_transfer_t, selection_transfer_class>(state)); },
-    destroyObject<selection_transfer_t>,
+    [](auto* state) {
+    return static_cast<lua_object_t*>(
+    newobj<selection_transfer_t, selection_transfer_class>(state));
+    }, destroyObject<selection_transfer_t>,
     [](auto* obj) { return selection_transfer_checker(static_cast<selection_transfer_t*>(obj)); },
     Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
@@ -75,7 +77,7 @@ static lua_class_t selection_transfer_class{
 };
 
 static size_t max_property_length(void) {
-    uint32_t max_request_length = xcb_get_maximum_request_length(getGlobals().connection);
+    uint32_t max_request_length = xcb_get_maximum_request_length(getGlobals().x.connection);
     max_request_length = MIN(max_request_length, (1 << 16) - 1);
     return max_request_length * 4 - sizeof(xcb_change_property_request_t);
 }
@@ -95,7 +97,8 @@ static void selection_transfer_notify(xcb_window_t requestor,
     ev.property = property;
     ev.time = time;
 
-    xcb_send_event(getGlobals().connection, false, requestor, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
+    xcb_send_event(
+      getGlobals().x.connection, false, requestor, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 
 void selection_transfer_reject(xcb_window_t requestor,
@@ -184,8 +187,10 @@ void selection_transfer_begin(lua_State* L,
     lua_pop(L, 1);
 
     /* Get the atom name */
-    xcb_get_atom_name_reply_t* reply = xcb_get_atom_name_reply(
-      getGlobals().connection, xcb_get_atom_name_unchecked(getGlobals().connection, target), NULL);
+    xcb_get_atom_name_reply_t* reply =
+      xcb_get_atom_name_reply(getGlobals().x.connection,
+                              xcb_get_atom_name_unchecked(getGlobals().x.connection, target),
+                              NULL);
     if (reply) {
         lua_pushlstring(L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
         p_delete(&reply);
@@ -278,11 +283,11 @@ static int luaA_selection_transfer_send(lua_State* L) {
         auto* atoms = p_alloca(xcb_atom_t, len);
         for (size_t i = 0; i < len; i++) {
             cookies[i] = xcb_intern_atom_unchecked(
-              getGlobals().connection, false, atom_lengths[i], atom_strings[i]);
+              getGlobals().x.connection, false, atom_lengths[i], atom_strings[i]);
         }
         for (size_t i = 0; i < len; i++) {
             xcb_intern_atom_reply_t* reply =
-              xcb_intern_atom_reply(getGlobals().connection, cookies[i], NULL);
+              xcb_intern_atom_reply(getGlobals().x.connection, cookies[i], NULL);
             atoms[i] = reply ? reply->atom : XCB_NONE;
             p_delete(&reply);
         }
