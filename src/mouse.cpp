@@ -103,8 +103,8 @@ bool mouse_query_pointer(
     xcb_query_pointer_cookie_t query_ptr_c;
     xcb_query_pointer_reply_t* query_ptr_r;
 
-    query_ptr_c = xcb_query_pointer_unchecked(getGlobals().connection, window);
-    query_ptr_r = xcb_query_pointer_reply(getGlobals().connection, query_ptr_c, NULL);
+    query_ptr_c = xcb_query_pointer_unchecked(getGlobals().x.connection, window);
+    query_ptr_r = xcb_query_pointer_reply(getGlobals().x.connection, query_ptr_c, NULL);
 
     if (!query_ptr_r || !query_ptr_r->same_screen) {
         p_delete(&query_ptr_r);
@@ -145,7 +145,7 @@ static bool mouse_query_pointer_root(int16_t* x, int16_t* y, xcb_window_t* child
  * \param y Y-coordinate inside window.
  */
 static inline void mouse_warp_pointer(xcb_window_t window, point p) {
-    xcb_warp_pointer(getGlobals().connection, XCB_NONE, window, 0, 0, 0, 0, p.x, p.y);
+    xcb_warp_pointer(getGlobals().x.connection, XCB_NONE, window, 0, 0, 0, 0, p.x, p.y);
 }
 
 /** Mouse library.

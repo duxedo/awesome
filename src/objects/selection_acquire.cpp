@@ -46,8 +46,10 @@ static lua_class_t selection_acquire_class{
   "selection_acquire",
   NULL,
   {
-    [](auto* state) { return static_cast<lua_object_t*>(newobj<selection_acquire_t, selection_acquire_class>(state)); },
-    destroyObject<selection_acquire_t>,
+    [](auto* state) {
+    return static_cast<lua_object_t*>(
+    newobj<selection_acquire_t, selection_acquire_class>(state));
+    }, destroyObject<selection_acquire_t>,
     [](auto* obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
     Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
@@ -87,7 +89,7 @@ static void selection_release(lua_State* L, int ud) {
     luaA_object_emit_signal(L, ud, "release", 0);
 
     /* Destroy the window, this also releases the selection in X11 */
-    xcb_destroy_window(getGlobals().connection, selection->window);
+    xcb_destroy_window(getGlobals().x.connection, selection->window);
     selection->window = XCB_NONE;
 
     /* Unreference the object, it's now dead */
@@ -147,8 +149,8 @@ static int luaA_selection_acquire_new(lua_State* L) {
 
     /* Get the atom identifying the selection */
     reply = xcb_intern_atom_reply(
-      getGlobals().connection,
-      xcb_intern_atom_unchecked(getGlobals().connection, false, name_length, name),
+      getGlobals().x.connection,
+      xcb_intern_atom_unchecked(getGlobals().x.connection, false, name_length, name),
       NULL);
     name_atom = reply ? reply->atom : XCB_NONE;
     p_delete(&reply);
@@ -156,9 +158,9 @@ static int luaA_selection_acquire_new(lua_State* L) {
     /* Create a selection object */
     selection = (selection_acquire_t*)selection_acquire_class.alloc_object(L);
     selection->selection = name_atom;
-    selection->timestamp = getGlobals().get_timestamp();
+    selection->timestamp = getGlobals().x.get_timestamp();
     selection->window = getConnection().generate_id();
-    xcb_create_window(getGlobals().connection,
+    xcb_create_window(getGlobals().x.connection,
                       getGlobals().screen->root_depth,
                       selection->window,
                       getGlobals().screen->root,
@@ -174,14 +176,16 @@ static int luaA_selection_acquire_new(lua_State* L) {
 
     /* Try to acquire the selection */
     xcb_set_selection_owner(
-      getGlobals().connection, selection->window, name_atom, selection->timestamp);
-    selection_reply = xcb_get_selection_owner_reply(
-      getGlobals().connection, xcb_get_selection_owner(getGlobals().connection, name_atom), NULL);
+      getGlobals().x.connection, selection->window, name_atom, selection->timestamp);
+    selection_reply =
+      xcb_get_selection_owner_reply(getGlobals().x.connection,
+                                    xcb_get_selection_owner(getGlobals().x.connection, name_atom),
+                                    NULL);
     if (selection_reply == NULL || selection_reply->owner != selection->window) {
         /* Acquiring the selection failed, return nothing */
         p_delete(&selection_reply);
 
-        xcb_destroy_window(getGlobals().connection, selection->window);
+        xcb_destroy_window(getGlobals().x.connection, selection->window);
         selection->window = XCB_NONE;
         return 0;
     }

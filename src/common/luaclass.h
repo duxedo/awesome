@@ -114,33 +114,35 @@ struct lua_class_property_t {
 
     template <typename ObjectT>
     lua_class_property_t(std::string_view name,
-                         std::function<int (lua_State*, ObjectT*)> lua_class_newobj,
-                         std::function<int (lua_State*, ObjectT*)> lua_class_index,
-                         std::function<int (lua_State*, ObjectT*)> lua_class_newindex)
+                         std::function<int(lua_State*, ObjectT*)> lua_class_newobj,
+                         std::function<int(lua_State*, ObjectT*)> lua_class_index,
+                         std::function<int(lua_State*, ObjectT*)> lua_class_newindex)
         : name(name) {
         if (lua_class_newobj) {
-            newobj = [lua_class_newobj = std::move(lua_class_newobj)](lua_State* state, lua_object_t* obj) {
+            newobj = [lua_class_newobj = std::move(lua_class_newobj)](lua_State* state,
+                                                                      lua_object_t* obj) {
                 return lua_class_newobj(state, static_cast<ObjectT*>(obj));
             };
         }
         if (lua_class_index) {
-            index = [lua_class_index = std::move(lua_class_index)](lua_State* state, lua_object_t* obj) {
+            index = [lua_class_index = std::move(lua_class_index)](lua_State* state,
+                                                                   lua_object_t* obj) {
                 return lua_class_index(state, static_cast<ObjectT*>(obj));
             };
         }
         if (lua_class_newindex) {
-            newindex = [lua_class_newindex = std::move(lua_class_newindex)](lua_State* state, lua_object_t* obj) {
+            newindex = [lua_class_newindex = std::move(lua_class_newindex)](lua_State* state,
+                                                                            lua_object_t* obj) {
                 return lua_class_newindex(state, static_cast<ObjectT*>(obj));
             };
         }
     }
     template <typename ObjectT>
     static lua_class_property_t make(std::string_view name,
-                         int (*lua_class_newobj)(lua_State*, ObjectT*),
-                         int (*lua_class_index)(lua_State*, ObjectT*),
-                         int (*lua_class_newindex)(lua_State*, ObjectT*))
-    {
-        return lua_class_property_t { name , lua_class_newobj, lua_class_index, lua_class_newindex };
+                                     int (*lua_class_newobj)(lua_State*, ObjectT*),
+                                     int (*lua_class_index)(lua_State*, ObjectT*),
+                                     int (*lua_class_newindex)(lua_State*, ObjectT*)) {
+        return lua_class_property_t{name, lua_class_newobj, lua_class_index, lua_class_newindex};
     }
     lua_class_property_t(std::string_view name,
                          lua_class_propfunc_t newobj,

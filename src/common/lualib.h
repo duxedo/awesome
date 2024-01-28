@@ -45,20 +45,20 @@ inline std::optional<std::string_view> tostring(lua_State* L, int numArg) {
     const char* str = lua_tolstring(L, numArg, &length);
     return std::string_view{str, length};
 }
-template<typename T>
+template <typename T>
 struct Pusher;
 
 struct State;
 
-template<typename T>
-concept Pushable = requires (T x) {
-    {Pusher<std::decay_t<T>>{}.push(std::declval<State&>(), x)} -> std::same_as<int>;
+template <typename T>
+concept Pushable = requires(T x) {
+    { Pusher<std::decay_t<T>>{}.push(std::declval<State&>(), x) } -> std::same_as<int>;
 };
 
 struct State {
     lua_State* L;
     int push(const std::string& str);
-    template<size_t N>
+    template <size_t N>
     int push(const char (&arr)[N]) {
         return push(std::string_view(arr));
     }
@@ -69,19 +69,19 @@ struct State {
     int push(bool);
     int push(lua_object_t*);
 
-    template<Pushable T>
-    int push(T && val) {
+    template <Pushable T>
+    int push(T&& val) {
         return Pusher<std::decay_t<T>>{}.push(*this, std::forward<T>(val));
     }
 
-    template<typename T>
+    template <typename T>
     requires(std::is_base_of_v<lua_object_t, T>)
-    int push(T * val) {
+    int push(T* val) {
         return push(static_cast<lua_object_t*>(val));
     }
 };
 
-template<typename T>
+template <typename T>
 void pushstring(lua_State* s, T&& str) {
     State{s}.push(std::forward<T>(str));
 }

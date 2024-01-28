@@ -318,7 +318,6 @@ void tag_unref_simplified(tag_t* tag) {
     luaA_object_unref(L, tag);
 }
 
-
 /** View or unview a tag.
  * \param L The Lua VM state.
  * \param udx The index of the tag on the stack.
@@ -571,18 +570,12 @@ void tag_class_setup(lua_State* L) {
     });
 
     tag_class.setup(L, methods.data(), meta.data());
-    tag_class.add_property("name",
-                           luaA_tag_set_name,
-                           exportProp<&tag_t::name>(),
-                           luaA_tag_set_name);
-    tag_class.add_property("selected",
-                           luaA_tag_set_selected,
-                           exportProp<&tag_t::selected>(),
-                           luaA_tag_set_selected);
-    tag_class.add_property("activated",
-                           luaA_tag_set_activated,
-                           exportProp<&tag_t::activated>(),
-                           luaA_tag_set_activated);
+    tag_class.add_property(
+      "name", luaA_tag_set_name, exportProp<&tag_t::name>(), luaA_tag_set_name);
+    tag_class.add_property(
+      "selected", luaA_tag_set_selected, exportProp<&tag_t::selected>(), luaA_tag_set_selected);
+    tag_class.add_property(
+      "activated", luaA_tag_set_activated, exportProp<&tag_t::activated>(), luaA_tag_set_activated);
 }
 
 /* @DOC_cobject_COMMON@ */

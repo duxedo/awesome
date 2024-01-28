@@ -189,14 +189,14 @@ static bool composite_manager_running(void) {
     char* atom_name;
     bool result;
 
-    if (!(atom_name = xcb_atom_name_by_screen("_NET_WM_CM", getGlobals().default_screen))) {
+    if (!(atom_name = xcb_atom_name_by_screen("_NET_WM_CM", getGlobals().x.default_screen))) {
         log_warn("error getting composite manager atom");
         return false;
     }
 
     atom_r = xcb_intern_atom_reply(
-      getGlobals().connection,
-      xcb_intern_atom_unchecked(getGlobals().connection, false, strlen(atom_name), atom_name),
+      getGlobals().x.connection,
+      xcb_intern_atom_unchecked(getGlobals().x.connection, false, strlen(atom_name), atom_name),
       NULL);
     p_delete(&atom_name);
     if (!atom_r) {
@@ -204,8 +204,8 @@ static bool composite_manager_running(void) {
     }
 
     selection_r = xcb_get_selection_owner_reply(
-      getGlobals().connection,
-      xcb_get_selection_owner_unchecked(getGlobals().connection, atom_r->atom),
+      getGlobals().x.connection,
+      xcb_get_selection_owner_unchecked(getGlobals().x.connection, atom_r->atom),
       NULL);
     p_delete(&atom_r);
 
@@ -278,7 +278,7 @@ static int kill(lua_State* L) {
  * @noreturn
  */
 static int sync(lua_State* L) {
-    xcb_aux_sync(getGlobals().connection);
+    xcb_aux_sync(getGlobals().x.connection);
     return 0;
 }
 
@@ -446,7 +446,7 @@ static int get_key_name(lua_State* L) {
     {
         int keycode_from_hash = atoi(input + 1);
         // We discard keycodes with invalid values:
-        const xcb_setup_t* setup = xcb_get_setup(getGlobals().connection);
+        const xcb_setup_t* setup = xcb_get_setup(getGlobals().x.connection);
         if (keycode_from_hash < setup->min_keycode || keycode_from_hash > setup->max_keycode) {
             return 0;
         }
@@ -531,7 +531,7 @@ static int get_key_name(lua_State* L) {
  */
 static int get_modifiers(lua_State* L) {
     xcb_get_modifier_mapping_reply_t* mods = xcb_get_modifier_mapping_reply(
-      getGlobals().connection, xcb_get_modifier_mapping(getGlobals().connection), NULL);
+      getGlobals().x.connection, xcb_get_modifier_mapping(getGlobals().x.connection), NULL);
     if (!mods) {
         return 0;
     }

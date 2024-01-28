@@ -133,9 +133,8 @@ int luaA_button_array_get(lua_State* L, int oidx, const std::vector<button_t*>& 
     return 1;
 }
 
-
 void button_t::grab(xcb_window_t win) {
-    xcb_grab_button(getGlobals().connection,
+    xcb_grab_button(getGlobals().x.connection,
                     false,
                     win,
                     (XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE),
@@ -165,10 +164,19 @@ void button_class_setup(lua_State* L) {
         luaA_object_emit_signal(L, -3, "property::modifiers", 0);
         return 0;
     };
-    button_class.add_property(
-      lua_class_property_t::make<button_t>("button", setBtn, [](lua_State * L, button_t * btn) { lua_pushinteger(L, btn->button()); return 1;}, setBtn));
-    button_class.add_property(
-      lua_class_property_t::make<button_t>("modifiers", setMod, [](lua_State * L, button_t * btn) { return luaA_pushmodifiers(L, btn->modifiers()); }, setMod));
+    button_class.add_property(lua_class_property_t::make<button_t>(
+      "button",
+      setBtn,
+      [](lua_State* L, button_t* btn) {
+          lua_pushinteger(L, btn->button());
+          return 1;
+      },
+      setBtn));
+    button_class.add_property(lua_class_property_t::make<button_t>(
+      "modifiers",
+      setMod,
+      [](lua_State* L, button_t* btn) { return luaA_pushmodifiers(L, btn->modifiers()); },
+      setMod));
 }
 
 /* @DOC_cobject_COMMON@ */

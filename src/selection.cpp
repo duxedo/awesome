@@ -59,7 +59,7 @@ static int luaA_selection_get(lua_State* L) {
 
         selection_window = getConnection().generate_id();
 
-        xcb_create_window(getGlobals().connection,
+        xcb_create_window(getGlobals().x.connection,
                           screen->root_depth,
                           selection_window,
                           screen->root,
@@ -76,18 +76,18 @@ static int luaA_selection_get(lua_State* L) {
         xwindow_set_name_static(selection_window, "Awesome selection window");
     }
 
-    xcb_convert_selection(getGlobals().connection,
+    xcb_convert_selection(getGlobals().x.connection,
                           selection_window,
                           XCB_ATOM_PRIMARY,
                           UTF8_STRING,
                           XSEL_DATA,
-                          getGlobals().get_timestamp());
-    xcb_flush(getGlobals().connection);
+                          getGlobals().x.get_timestamp());
+    xcb_flush(getGlobals().x.connection);
 
     xcb_generic_event_t* event;
 
     while (true) {
-        event = xcb_wait_for_event(getGlobals().connection);
+        event = xcb_wait_for_event(getGlobals().x.connection);
 
         if (!event) {
             return 0;
@@ -113,15 +113,15 @@ static int luaA_selection_get(lua_State* L) {
         if (event_notify->selection == XCB_ATOM_PRIMARY && event_notify->property != XCB_NONE) {
             xcb_icccm_get_text_property_reply_t prop;
             xcb_get_property_cookie_t cookie = xcb_icccm_get_text_property(
-              getGlobals().connection, event_notify->requestor, event_notify->property);
+              getGlobals().x.connection, event_notify->requestor, event_notify->property);
 
-            if (xcb_icccm_get_text_property_reply(getGlobals().connection, cookie, &prop, NULL)) {
+            if (xcb_icccm_get_text_property_reply(getGlobals().x.connection, cookie, &prop, NULL)) {
                 lua_pushlstring(L, prop.name, prop.name_len);
 
                 xcb_icccm_get_text_property_reply_wipe(&prop);
 
                 xcb_delete_property(
-                  getGlobals().connection, event_notify->requestor, event_notify->property);
+                  getGlobals().x.connection, event_notify->requestor, event_notify->property);
 
                 p_delete(&event);
 

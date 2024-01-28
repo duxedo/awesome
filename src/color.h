@@ -44,9 +44,8 @@ typedef struct {
 color_init_request_t color_init_unchecked(color_t*, const char*, ssize_t, xcb_visualtype_t* visual);
 bool color_init_reply(color_init_request_t);
 
-
 namespace Lua {
-template<>
+template <>
 struct Pusher<color_t> {
     int push(State& L, const color_t c);
 };

@@ -85,7 +85,7 @@ void xwindow_configure(xcb_window_t win, area_t geometry, int border) {
     ce.above_sibling = XCB_NONE;
     ce.override_redirect = false;
     xcb_send_event(
-      getGlobals().connection, false, win, XCB_EVENT_MASK_STRUCTURE_NOTIFY, (char*)&ce);
+      getGlobals().x.connection, false, win, XCB_EVENT_MASK_STRUCTURE_NOTIFY, (char*)&ce);
 }
 
 /** Grab or ungrab buttons on a window.
@@ -98,7 +98,7 @@ void xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& button
     }
 
     /* Ungrab everything first */
-    xcb_ungrab_button(getGlobals().connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
+    xcb_ungrab_button(getGlobals().x.connection, XCB_BUTTON_INDEX_ANY, win, XCB_BUTTON_MASK_ANY);
 
     for (auto each : buttons) {
         each->grab(win);
@@ -111,7 +111,7 @@ void xwindow_buttons_grab(xcb_window_t win, const std::vector<button_t*>& button
  */
 static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
     if (k->keycode) {
-        xcb_grab_key(getGlobals().connection,
+        xcb_grab_key(getGlobals().x.connection,
                      true,
                      win,
                      k->modifiers,
@@ -119,10 +119,11 @@ static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
                      XCB_GRAB_MODE_ASYNC,
                      XCB_GRAB_MODE_ASYNC);
     } else if (k->keysym) {
-        xcb_keycode_t* keycodes = xcb_key_symbols_get_keycode(getGlobals().keysyms, k->keysym);
+        xcb_keycode_t* keycodes =
+          xcb_key_symbols_get_keycode(getGlobals().input.keysyms, k->keysym);
         if (keycodes) {
             for (xcb_keycode_t* kc = keycodes; *kc; kc++) {
-                xcb_grab_key(getGlobals().connection,
+                xcb_grab_key(getGlobals().x.connection,
                              true,
                              win,
                              k->modifiers,
@@ -137,7 +138,7 @@ static void xwindow_grabkey(xcb_window_t win, const keyb_t* k) {
 
 void xwindow_grabkeys(xcb_window_t win, const std::vector<keyb_t*>& keys) {
     /* Ungrab everything first */
-    xcb_ungrab_key(getGlobals().connection, XCB_GRAB_ANY, win, XCB_BUTTON_MASK_ANY);
+    xcb_ungrab_key(getGlobals().x.connection, XCB_GRAB_ANY, win, XCB_BUTTON_MASK_ANY);
 
     for (auto k : keys) {
         xwindow_grabkey(win, k);
@@ -150,7 +151,7 @@ void xwindow_grabkeys(xcb_window_t win, const std::vector<keyb_t*>& keys) {
  */
 xcb_get_property_cookie_t xwindow_get_opacity_unchecked(xcb_window_t win) {
     return xcb_get_property_unchecked(
-      getGlobals().connection, false, win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 0L, 1L);
+      getGlobals().x.connection, false, win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 0L, 1L);
 }
 
 /** Get the opacity of a window.
@@ -168,7 +169,7 @@ double xwindow_get_opacity(xcb_window_t win) {
  */
 double xwindow_get_opacity_from_cookie(xcb_get_property_cookie_t cookie) {
     xcb_get_property_reply_t* prop_r =
-      xcb_get_property_reply(getGlobals().connection, cookie, NULL);
+      xcb_get_property_reply(getGlobals().x.connection, cookie, NULL);
 
     if (prop_r && prop_r->value_len && prop_r->format == 32) {
         uint32_t value = *(uint32_t*)xcb_get_property_value(prop_r);
@@ -191,7 +192,7 @@ void xwindow_set_opacity(xcb_window_t win, double opacity) {
             getConnection().replace_property(
               win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
         } else {
-            xcb_delete_property(getGlobals().connection, win, _NET_WM_WINDOW_OPACITY);
+            xcb_delete_property(getGlobals().x.connection, win, _NET_WM_WINDOW_OPACITY);
         }
     }
 }
@@ -208,11 +209,11 @@ void xwindow_takefocus(xcb_window_t win) {
     ev.response_type = XCB_CLIENT_MESSAGE;
     ev.window = win;
     ev.format = 32;
-    ev.data.data32[1] = getGlobals().get_timestamp();
+    ev.data.data32[1] = getGlobals().x.get_timestamp();
     ev.type = WM_PROTOCOLS;
     ev.data.data32[0] = WM_TAKE_FOCUS;
 
-    xcb_send_event(getGlobals().connection, false, win, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
+    xcb_send_event(getGlobals().x.connection, false, win, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 
 /** Set window cursor.
@@ -236,23 +237,23 @@ void xwindow_set_border_color(xcb_window_t w, color_t* color) {
 
 /** Get one of a window's shapes as a cairo surface */
 cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
-    if (!getGlobals().have_shape) {
+    if (!getGlobals().x.caps.have_shape) {
         return NULL;
     }
-    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape) {
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().x.caps.have_input_shape) {
         return NULL;
     }
 
     int16_t x, y;
     uint16_t width, height;
     xcb_shape_get_rectangles_cookie_t rcookie =
-      xcb_shape_get_rectangles(getGlobals().connection, win, kind);
+      xcb_shape_get_rectangles(getGlobals().x.connection, win, kind);
     if (kind == XCB_SHAPE_SK_INPUT) {
         /* We cannot query the size/existence of an input shape... */
         xcb_get_geometry_reply_t* geom = xcb_get_geometry_reply(
-          getGlobals().connection, xcb_get_geometry(getGlobals().connection, win), NULL);
+          getGlobals().x.connection, xcb_get_geometry(getGlobals().x.connection, win), NULL);
         if (!geom) {
-            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().x.connection, rcookie.sequence);
             /* Create a cairo surface in an error state */
             return cairo_image_surface_create(CAIRO_FORMAT_INVALID, -1, -1);
         }
@@ -262,13 +263,13 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
         height = geom->height;
     } else {
         xcb_shape_query_extents_cookie_t ecookie =
-          xcb_shape_query_extents(getGlobals().connection, win);
+          xcb_shape_query_extents(getGlobals().x.connection, win);
         xcb_shape_query_extents_reply_t* extents =
-          xcb_shape_query_extents_reply(getGlobals().connection, ecookie, NULL);
+          xcb_shape_query_extents_reply(getGlobals().x.connection, ecookie, NULL);
         bool shaped;
 
         if (!extents) {
-            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().x.connection, rcookie.sequence);
             /* Create a cairo surface in an error state */
             return cairo_image_surface_create(CAIRO_FORMAT_INVALID, -1, -1);
         }
@@ -290,13 +291,13 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
         p_delete(&extents);
 
         if (!shaped) {
-            xcb_discard_reply(getGlobals().connection, rcookie.sequence);
+            xcb_discard_reply(getGlobals().x.connection, rcookie.sequence);
             return NULL;
         }
     }
 
     xcb_shape_get_rectangles_reply_t* rects_reply =
-      xcb_shape_get_rectangles_reply(getGlobals().connection, rcookie, NULL);
+      xcb_shape_get_rectangles_reply(getGlobals().x.connection, rcookie, NULL);
     if (!rects_reply) {
         /* Create a cairo surface in an error state */
         return cairo_image_surface_create(CAIRO_FORMAT_INVALID, -1, -1);
@@ -330,9 +331,10 @@ static xcb_pixmap_t xwindow_shape_pixmap(int width, int height, cairo_surface_t*
         return XCB_NONE;
     }
 
-    xcb_create_pixmap(getGlobals().connection, 1, pixmap, getGlobals().screen->root, width, height);
+    xcb_create_pixmap(
+      getGlobals().x.connection, 1, pixmap, getGlobals().screen->root, width, height);
     dest = cairo_xcb_surface_create_for_bitmap(
-      getGlobals().connection, getGlobals().screen, pixmap, width, height);
+      getGlobals().x.connection, getGlobals().screen, pixmap, width, height);
 
     cr = cairo_create(dest);
     cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
@@ -354,10 +356,10 @@ void xwindow_set_shape(xcb_window_t win,
                        enum xcb_shape_sk_t kind,
                        cairo_surface_t* surf,
                        int offset) {
-    if (!getGlobals().have_shape) {
+    if (!getGlobals().x.caps.have_shape) {
         return;
     }
-    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().have_input_shape) {
+    if (kind == XCB_SHAPE_SK_INPUT && !getGlobals().x.caps.have_input_shape) {
         return;
     }
 
@@ -366,10 +368,10 @@ void xwindow_set_shape(xcb_window_t win,
         pixmap = xwindow_shape_pixmap(width, height, surf);
     }
 
-    xcb_shape_mask(getGlobals().connection, XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
+    xcb_shape_mask(getGlobals().x.connection, XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
 
     if (pixmap != XCB_NONE) {
-        xcb_free_pixmap(getGlobals().connection, pixmap);
+        xcb_free_pixmap(getGlobals().x.connection, pixmap);
     }
 }
 

@@ -381,8 +381,7 @@ int luaA_class_newindex(lua_State* L) {
         return Lua::call_handler(L, cls->newindex_miss_handler());
     }
     if (cls->newindex_miss_property()) {
-        return cls->newindex_miss_property()(
-          L, cls->checkudata<lua_object_t>(L, 1));
+        return cls->newindex_miss_property()(L, cls->checkudata<lua_object_t>(L, 1));
     }
 
     return 0;

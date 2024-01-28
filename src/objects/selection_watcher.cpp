@@ -42,8 +42,10 @@ struct selection_watcher_t: public lua_object_t {
 static lua_class_t selection_watcher_class{
   "selection_watcher",
   NULL,
-  {[](auto* state) { return static_cast<lua_object_t*>(newobj<selection_watcher_t, selection_watcher_class>(state)); },
-    destroyObject<selection_watcher_t>,
+  {[](auto* state) {
+return static_cast<lua_object_t*>(
+newobj<selection_watcher_t, selection_watcher_class>(state));
+}, destroyObject<selection_watcher_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property},
 };
@@ -90,8 +92,8 @@ static int luaA_selection_watcher_new(lua_State* L) {
 
     /* Get the atom identifying the selection to watch */
     reply = xcb_intern_atom_reply(
-      getGlobals().connection,
-      xcb_intern_atom_unchecked(getGlobals().connection, false, name_length, name),
+      getGlobals().x.connection,
+      xcb_intern_atom_unchecked(getGlobals().x.connection, false, name_length, name),
       NULL);
     if (reply) {
         selection->selection = reply->atom;
@@ -112,7 +114,7 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
             if (selection->window == XCB_NONE) {
                 selection->window = getConnection().generate_id();
             }
-            xcb_create_window(getGlobals().connection,
+            xcb_create_window(getGlobals().x.connection,
                               getGlobals().screen->root_depth,
                               selection->window,
                               getGlobals().screen->root,
@@ -127,9 +129,9 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
                               NULL);
 
             /* Start watching for selection changes */
-            if (getGlobals().have_xfixes) {
+            if (getGlobals().x.caps.have_xfixes) {
                 xcb_xfixes_select_selection_input(
-                  getGlobals().connection,
+                  getGlobals().x.connection,
                   selection->window,
                   selection->selection,
                   XCB_XFIXES_SELECTION_EVENT_MASK_SET_SELECTION_OWNER |
@@ -153,11 +155,11 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
             lua_pop(L, 1);
         } else {
             /* Stop watching and destroy the window */
-            if (getGlobals().have_xfixes) {
+            if (getGlobals().x.caps.have_xfixes) {
                 xcb_xfixes_select_selection_input(
-                  getGlobals().connection, selection->window, selection->selection, 0);
+                  getGlobals().x.connection, selection->window, selection->selection, 0);
             }
-            xcb_destroy_window(getGlobals().connection, selection->window);
+            xcb_destroy_window(getGlobals().x.connection, selection->window);
 
             /* Unreference the selection object */
             lua_pushliteral(L, REGISTRY_WATCHER_TABLE_INDEX);

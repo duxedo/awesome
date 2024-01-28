@@ -27,7 +27,7 @@
 #include <vector>
 
 struct LuaFunction {
-    const void * fcn;
+    const void* fcn;
     bool operator<=>(const LuaFunction&) const = default;
 };
 struct signal_t {
@@ -54,7 +54,7 @@ struct Signals: public std::unordered_map<std::string, signal_t, SignalHash, Sig
      * \param name The signal name.
      * \param ref The reference to add.
      */
-    void connect(const std::string_view& name, LuaFunction  ref) {
+    void connect(const std::string_view& name, LuaFunction ref) {
         auto it = this->find(name);
         if (it == this->end()) {
             std::string nm(name.begin(), name.end());

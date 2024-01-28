@@ -83,7 +83,7 @@ int window_set_xproperty(lua_State*, xcb_window_t, int, int);
 int window_get_xproperty(lua_State*, xcb_window_t, int);
 
 namespace Lua {
-template<>
+template <>
 struct Pusher<window_type_t> {
     int push(State& L, const window_type_t t);
 };
