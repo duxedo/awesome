@@ -328,7 +328,7 @@ static void tag_view(lua_State* L, int udx, bool view) {
     if (tag->selected != view) {
         tag->selected = view;
         banning_need_update();
-        for (auto* screen : getGlobals().screens) {
+        for (auto* screen : Manager::get().screens) {
             screen_update_workarea(screen);
         }
 
@@ -414,16 +414,16 @@ int tags_get_current_or_first_selected_index(void) {
      * basically a tag user actively interacts with.
      * If no focused windows are present, fallback to first selected.
      */
-    if (getGlobals().focus.client) {
-        for (int i = 0; i < (int)getGlobals().tags.size(); i++) {
-            auto& tag = getGlobals().tags[i];
-            if (tag->selected && is_client_tagged(getGlobals().focus.client, tag.get())) {
+    if (Manager::get().focus.client) {
+        for (int i = 0; i < (int)Manager::get().tags.size(); i++) {
+            auto& tag = Manager::get().tags[i];
+            if (tag->selected && is_client_tagged(Manager::get().focus.client, tag.get())) {
                 return i;
             }
         }
     }
-    for (int i = 0; i < (int)getGlobals().tags.size(); i++) {
-        auto& tag = getGlobals().tags[i];
+    for (int i = 0; i < (int)Manager::get().tags.size(); i++) {
+        auto& tag = Manager::get().tags[i];
         if (tag->selected) {
             return i;
         }
@@ -534,14 +534,14 @@ static int luaA_tag_set_activated(lua_State* L, lua_object_t* o) {
     tag->activated = activated;
     if (activated) {
         lua_pushvalue(L, -3);
-        getGlobals().tags.emplace_back((tag_t*)luaA_object_ref_class(L, -1, &tag_class));
+        Manager::get().tags.emplace_back((tag_t*)luaA_object_ref_class(L, -1, &tag_class));
     } else {
-        auto it = std::ranges::find_if(getGlobals().tags,
+        auto it = std::ranges::find_if(Manager::get().tags,
                                        [tag](const auto& tagptr) { return tagptr.get() == tag; });
-        if (it != getGlobals().tags.end()) {
+        if (it != Manager::get().tags.end()) {
             auto tmp = std::move(*it);
             (void)tmp.release();
-            getGlobals().tags.erase(it);
+            Manager::get().tags.erase(it);
         }
 
         if (tag->selected) {

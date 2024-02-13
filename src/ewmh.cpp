@@ -86,27 +86,27 @@ static int ewmh_client_update_hints(lua_State* L) {
 static int ewmh_update_net_active_window(lua_State* L) {
     xcb_window_t win;
 
-    if (getGlobals().focus.client) {
-        win = getGlobals().focus.client->window;
+    if (Manager::get().focus.client) {
+        win = Manager::get().focus.client->window;
     } else {
         win = XCB_NONE;
     }
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
+      Manager::get().screen->root, _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
     return 0;
 }
 
 static int ewmh_update_net_client_list(lua_State* L) {
-    xcb_window_t* wins = p_alloca(xcb_window_t, getGlobals().clients.size());
+    xcb_window_t* wins = p_alloca(xcb_window_t, Manager::get().clients.size());
 
     int n = 0;
-    for (auto* client : getGlobals().clients) {
+    for (auto* client : Manager::get().clients) {
         wins[n++] = (client)->window;
     }
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
+      Manager::get().screen->root, _NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
 
     return 0;
 }
@@ -171,14 +171,14 @@ void ewmh_init(void) {
                          _NET_WM_STATE_HIDDEN,
                          _NET_WM_STATE_DEMANDS_ATTENTION};
 
-    xcb_screen_t* xscreen = getGlobals().screen;
+    xcb_screen_t* xscreen = Manager::get().screen;
 
     getConnection().replace_property(xscreen->root, _NET_SUPPORTED, XCB_ATOM_ATOM, atom);
 
     /* create our own window */
     xcb_window_t father = getConnection().generate_id();
 
-    xcb_create_window(getGlobals().x.connection,
+    xcb_create_window(Manager::get().x.connection,
                       xscreen->root_depth,
                       father,
                       xscreen->root,
@@ -265,41 +265,41 @@ void ewmh_init_lua(void) {
  */
 void ewmh_update_net_client_list_stacking(void) {
     size_t n = 0;
-    std::vector<xcb_window_t> wins(getGlobals().getStack().size());
+    std::vector<xcb_window_t> wins(Manager::get().getStack().size());
 
-    for (auto* client : getGlobals().getStack()) {
+    for (auto* client : Manager::get().getStack()) {
         wins[n++] = (client)->window;
     }
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins});
+      Manager::get().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins});
 }
 
 void ewmh_update_net_numbers_of_desktop(void) {
-    uint32_t count = getGlobals().tags.size();
+    uint32_t count = Manager::get().tags.size();
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
+      Manager::get().screen->root, _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
 }
 
 int ewmh_update_net_current_desktop(lua_State* L) {
     uint32_t idx = tags_get_current_or_first_selected_index();
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, idx);
+      Manager::get().screen->root, _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, idx);
     return 0;
 }
 
 void ewmh_update_net_desktop_names(void) {
     std::vector<char> buf;
 
-    for (const auto& tag : getGlobals().tags) {
+    for (const auto& tag : Manager::get().tags) {
         auto tagname = tag.get()->name;
         buf.insert(buf.begin() + buf.size(), tagname.data(), tagname.data() + (tagname.size()) + 1);
     }
 
     getConnection().replace_property(
-      getGlobals().screen->root, _NET_DESKTOP_NAMES, UTF8_STRING, buf);
+      Manager::get().screen->root, _NET_DESKTOP_NAMES, UTF8_STRING, buf);
 }
 
 static void ewmh_process_state_atom(client* c, xcb_atom_t state, int set) {
@@ -407,9 +407,9 @@ static void ewmh_process_desktop(client* c, uint32_t desktop) {
         luaA_object_emit_signal(L, -2, "request::tag", 1);
         /* Pop the client, arguments are already popped */
         lua_pop(L, 1);
-    } else if (idx >= 0 && idx < (int)getGlobals().tags.size()) {
+    } else if (idx >= 0 && idx < (int)Manager::get().tags.size()) {
         luaA_object_push(L, c);
-        luaA_object_push(L, getGlobals().tags[idx].get());
+        luaA_object_push(L, Manager::get().tags[idx].get());
         /*TODO v5: Move the context argument to arg1 */
         luaA_object_emit_signal(L, -2, "request::tag", 1);
         /* Pop the client, arguments are already popped */
@@ -422,9 +422,9 @@ int ewmh_process_client_message(xcb_client_message_event_t* ev) {
 
     if (ev->type == _NET_CURRENT_DESKTOP) {
         int idx = ev->data.data32[0];
-        if (idx >= 0 && idx < (int)getGlobals().tags.size()) {
+        if (idx >= 0 && idx < (int)Manager::get().tags.size()) {
             lua_State* L = globalconf_get_lua_State();
-            luaA_object_push(L, getGlobals().tags[idx].get());
+            luaA_object_push(L, Manager::get().tags[idx].get());
             lua_pushstring(L, "ewmh");
             luaA_object_emit_signal(L, -2, "request::select", 1);
             lua_pop(L, 1);
@@ -477,14 +477,14 @@ void ewmh_client_update_desktop(client* c) {
         getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
         return;
     }
-    for (i = 0; i < (size_t)getGlobals().tags.size(); i++) {
-        if (is_client_tagged(c, getGlobals().tags[i].get())) {
+    for (i = 0; i < (size_t)Manager::get().tags.size(); i++) {
+        if (is_client_tagged(c, Manager::get().tags[i].get())) {
             getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
             return;
         }
     }
     /* It doesn't have any tags, remove the property */
-    xcb_delete_property(getGlobals().x.connection, c->window, _NET_WM_DESKTOP);
+    xcb_delete_property(Manager::get().x.connection, c->window, _NET_WM_DESKTOP);
 }
 
 /** Update the client struts.
@@ -527,7 +527,7 @@ void ewmh_client_check_hints(client* c) {
     bool is_v_max = false;
 
     /* Send the GetProperty requests which will be processed later */
-    c0 = xcb_get_property_unchecked(getGlobals().x.connection,
+    c0 = xcb_get_property_unchecked(Manager::get().x.connection,
                                     false,
                                     c->window,
                                     _NET_WM_DESKTOP,
@@ -536,9 +536,9 @@ void ewmh_client_check_hints(client* c) {
                                     1);
 
     c1 = xcb_get_property_unchecked(
-      getGlobals().x.connection, false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+      Manager::get().x.connection, false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
-    c2 = xcb_get_property_unchecked(getGlobals().x.connection,
+    c2 = xcb_get_property_unchecked(Manager::get().x.connection,
                                     false,
                                     c->window,
                                     _NET_WM_WINDOW_TYPE,
@@ -546,14 +546,14 @@ void ewmh_client_check_hints(client* c) {
                                     0,
                                     UINT32_MAX);
 
-    reply = xcb_get_property_reply(getGlobals().x.connection, c0, NULL);
+    reply = xcb_get_property_reply(Manager::get().x.connection, c0, NULL);
     if (reply && reply->value_len && (data = xcb_get_property_value(reply))) {
         ewmh_process_desktop(c, *(uint32_t*)data);
     }
 
     p_delete(&reply);
 
-    reply = xcb_get_property_reply(getGlobals().x.connection, c1, NULL);
+    reply = xcb_get_property_reply(Manager::get().x.connection, c1, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         state = (xcb_atom_t*)data;
         for (int i = 0; i < xcb_get_property_value_length(reply) / (int)sizeof(xcb_atom_t); i++) {
@@ -587,7 +587,7 @@ void ewmh_client_check_hints(client* c) {
 
     p_delete(&reply);
 
-    reply = xcb_get_property_reply(getGlobals().x.connection, c2, NULL);
+    reply = xcb_get_property_reply(Manager::get().x.connection, c2, NULL);
     if (reply && (data = xcb_get_property_value(reply))) {
         c->has_NET_WM_WINDOW_TYPE = true;
         state = (xcb_atom_t*)data;
@@ -623,8 +623,8 @@ void ewmh_process_client_strut(client* c) {
     xcb_get_property_reply_t* strut_r;
 
     xcb_get_property_cookie_t strut_q = xcb_get_property_unchecked(
-      getGlobals().x.connection, false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
-    strut_r = xcb_get_property_reply(getGlobals().x.connection, strut_q, NULL);
+      Manager::get().x.connection, false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
+    strut_r = xcb_get_property_reply(Manager::get().x.connection, strut_q, NULL);
 
     if (strut_r && strut_r->value_len && (data = xcb_get_property_value(strut_r))) {
         auto strut = (uint32_t*)data;
@@ -664,7 +664,7 @@ void ewmh_process_client_strut(client* c) {
  */
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t w) {
     return xcb_get_property_unchecked(
-      getGlobals().x.connection, false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
+      Manager::get().x.connection, false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
 }
 
 static cairo_surface_t* ewmh_window_icon_from_reply_next(uint32_t** data, uint32_t* data_end) {
@@ -717,7 +717,7 @@ static std::vector<cairo_surface_handle> ewmh_window_icon_from_reply(xcb_get_pro
  * \return An array of icons.
  */
 std::vector<cairo_surface_handle> ewmh_window_icon_get_reply(xcb_get_property_cookie_t cookie) {
-    xcb_get_property_reply_t* r = xcb_get_property_reply(getGlobals().x.connection, cookie, NULL);
+    xcb_get_property_reply_t* r = xcb_get_property_reply(Manager::get().x.connection, cookie, NULL);
     std::vector<cairo_surface_handle> result = ewmh_window_icon_from_reply(r);
     p_delete(&r);
     return result;

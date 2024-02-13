@@ -115,7 +115,7 @@ static int luaA_window_struts(lua_State* L) {
         ewmh_update_strut(window->window, &window->strut);
         luaA_object_emit_signal(L, 1, "property::struts", 0);
         /* We don't know the correct screen, update them all */
-        for (auto* s : getGlobals().screens) {
+        for (auto* s : Manager::get().screens) {
             screen_update_workarea(s);
         }
     }
@@ -194,7 +194,7 @@ static int luaA_window_set_border_color(lua_State* L, lua_object_t* o) {
     const char* color_name = luaL_checklstring(L, -1, &len);
 
     if (color_name && color_init_reply(color_init_unchecked(
-                        &window->border_color, color_name, len, getGlobals().visual))) {
+                        &window->border_color, color_name, len, Manager::get().visual))) {
         window->border_need_update = true;
         luaA_object_emit_signal(L, -3, "property::border_color", 0);
     }
@@ -309,9 +309,9 @@ int luaA_window_set_type(lua_State* L, window_t* w) {
 static const xproperty* luaA_find_xproperty(lua_State* L, int idx) {
     const char* name = luaL_checkstring(L, idx);
 
-    auto it = std::ranges::find_if(getGlobals().xproperties,
+    auto it = std::ranges::find_if(Manager::get().xproperties,
                                    [name](const auto& prop) { return prop.name == name; });
-    if (it != getGlobals().xproperties.end()) {
+    if (it != Manager::get().xproperties.end()) {
         return &(*it);
     }
     luaL_argerror(L, idx, "Unknown xproperty");
@@ -322,7 +322,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
     const xproperty* prop = luaA_find_xproperty(L, prop_idx);
 
     if (lua_isnil(L, value_idx)) {
-        xcb_delete_property(getGlobals().x.connection, window, prop->atom);
+        xcb_delete_property(Manager::get().x.connection, window, prop->atom);
         return 0;
     }
     if (prop->type == xproperty::PROP_STRING) {
@@ -350,9 +350,9 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
     type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
     reply = xcb_get_property_reply(
-      getGlobals().x.connection,
+      Manager::get().x.connection,
       xcb_get_property_unchecked(
-        getGlobals().x.connection, false, window, prop->atom, type, 0, length),
+        Manager::get().x.connection, false, window, prop->atom, type, 0, length),
       NULL);
     if (!reply) {
         return 0;

@@ -46,7 +46,7 @@ static inline int awesome_refresh(void) {
     banning_refresh();
     stack_refresh();
     client_destroy_later();
-    return xcb_flush(getGlobals().x.connection);
+    return xcb_flush(Manager::get().x.connection);
 }
 
 void event_init(void);
