@@ -131,7 +131,7 @@ struct StartupConfig {
 };
 
 /** Main configuration structure */
-class Globals {
+class Manager {
   public:
     XOrg x;
     Input input;
@@ -246,16 +246,17 @@ class Globals {
     int exit_code = EXIT_SUCCESS;
     /** The Global API level */
     int api_level = 0;
+
+    static Manager& get();
 };
 
-Globals& getGlobals();
 XCB::Connection& getConnection();
 
 /** You should always use this as lua_State *L = globalconf_get_lua_State().
  * That way it becomes harder to introduce coroutine-related problems.
  */
 static inline lua_State* globalconf_get_lua_State(void) {
-    return getGlobals().L.real_L_dont_use_directly;
+    return Manager::get().L.real_L_dont_use_directly;
 }
 
 /* Defined in root.c */

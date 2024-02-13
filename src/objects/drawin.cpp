@@ -169,17 +169,17 @@ lua_class_t drawin_class{
 /** Kick out systray windows.
  */
 static void drawin_systray_kickout(drawin_t* w) {
-    if (getGlobals().systray.parent == w) {
+    if (Manager::get().systray.parent == w) {
         /* Who! Check that we're not deleting a drawin with a systray, because it
          * may be its parent. If so, we reparent to root before, otherwise it will
          * hurt very much. */
-        xcb_reparent_window(getGlobals().x.connection,
-                            getGlobals().systray.window,
-                            getGlobals().screen->root,
+        xcb_reparent_window(Manager::get().x.connection,
+                            Manager::get().systray.window,
+                            Manager::get().screen->root,
                             -512,
                             -512);
 
-        getGlobals().systray.parent = NULL;
+        Manager::get().systray.parent = NULL;
     }
 }
 
@@ -193,7 +193,7 @@ drawin_t::~drawin_t() {
     if (window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(this);
-        xcb_destroy_window(getGlobals().x.connection, window);
+        xcb_destroy_window(Manager::get().x.connection, window);
     }
     /* No unref needed because we are being garbage collected */
     drawable = NULL;
@@ -232,7 +232,7 @@ static void drawin_apply_moveresize(drawin_t* w) {
 }
 
 void drawin_refresh(void) {
-    for (auto* item : getGlobals().drawins) {
+    for (auto* item : Manager::get().drawins) {
         drawin_apply_moveresize(item);
         window_border_refresh((window_t*)item);
     }
@@ -247,7 +247,7 @@ static int luaA_drawin_get(lua_State* L) {
 
     lua_newtable(L);
 
-    for (auto* d : getGlobals().drawins) {
+    for (auto* d : Manager::get().drawins) {
         luaA_object_push(L, d);
         lua_rawseti(L, -2, i++);
     }
@@ -316,10 +316,10 @@ void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint1
 
     /* Make cairo do all pending drawing */
     cairo_surface_flush(drawin->drawable->surface);
-    xcb_copy_area(getGlobals().x.connection,
+    xcb_copy_area(Manager::get().x.connection,
                   drawin->drawable->pixmap,
                   drawin->window,
-                  getGlobals().gc,
+                  Manager::get().gc,
                   x,
                   y,
                   x,
@@ -335,13 +335,13 @@ static void drawin_map(lua_State* L, int widx) {
     /* Activate BMA */
     client_ignore_enterleave_events();
     /* Map the drawin */
-    xcb_map_window(getGlobals().x.connection, drawin->window);
+    xcb_map_window(Manager::get().x.connection, drawin->window);
     /* Deactivate BMA */
     client_restore_enterleave_events();
     /* Stack this drawin correctly */
     stack_windows();
     /* Add it to the list of visible drawins */
-    getGlobals().drawins.push_back(drawin);
+    Manager::get().drawins.push_back(drawin);
     /* Make sure it has a surface */
     if (drawin->drawable->surface == NULL) {
         drawin_update_drawing(L, widx);
@@ -349,10 +349,10 @@ static void drawin_map(lua_State* L, int widx) {
 }
 
 static void drawin_unmap(drawin_t* drawin) {
-    xcb_unmap_window(getGlobals().x.connection, drawin->window);
-    auto it = std::ranges::find(getGlobals().drawins, drawin);
-    if (it != getGlobals().drawins.end()) {
-        getGlobals().drawins.erase(it);
+    xcb_unmap_window(Manager::get().x.connection, drawin->window);
+    auto it = std::ranges::find(Manager::get().drawins, drawin);
+    if (it != Manager::get().drawins.end()) {
+        Manager::get().drawins.erase(it);
     }
 }
 
@@ -361,9 +361,9 @@ static void drawin_unmap(drawin_t* drawin) {
  * \return A drawin if found, NULL otherwise.
  */
 drawin_t* drawin_getbywin(xcb_window_t win) {
-    auto it = std::ranges::find_if(getGlobals().drawins,
+    auto it = std::ranges::find_if(Manager::get().drawins,
                                    [win](auto* drawin) { return drawin->window == win; });
-    return it != getGlobals().drawins.end() ? *it : nullptr;
+    return it != Manager::get().drawins.end() ? *it : nullptr;
 }
 
 /** Set a drawin visible or not.
@@ -401,7 +401,7 @@ static void drawin_set_visible(lua_State* L, int udx, bool v) {
 }
 
 drawin_t* drawin_allocator(lua_State* L) {
-    xcb_screen_t* s = getGlobals().screen;
+    xcb_screen_t* s = Manager::get().screen;
     auto w = newobj<drawin_t, drawin_class>(L);
 
     w->visible = false;
@@ -426,10 +426,10 @@ drawin_t* drawin_allocator(lua_State* L) {
         XCB_EVENT_MASK_STRUCTURE_NOTIFY | XCB_EVENT_MASK_POINTER_MOTION |
         XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE | XCB_EVENT_MASK_EXPOSURE |
         XCB_EVENT_MASK_PROPERTY_CHANGE,
-      getGlobals().default_cmap,
-      xcursor_new(getGlobals().x.cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
-    xcb_create_window(getGlobals().x.connection,
-                      getGlobals().default_depth,
+      Manager::get().default_cmap,
+      xcursor_new(Manager::get().x.cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
+    xcb_create_window(Manager::get().x.connection,
+                      Manager::get().default_depth,
                       w->window,
                       s->root,
                       w->geometry.top_left.x,
@@ -438,7 +438,7 @@ drawin_t* drawin_allocator(lua_State* L) {
                       w->geometry.height,
                       w->border_width,
                       XCB_COPY_FROM_PARENT,
-                      getGlobals().visual->visual_id,
+                      Manager::get().visual->visual_id,
                       XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_OVERRIDE_REDIRECT |
                         XCB_CW_EVENT_MASK | XCB_CW_COLORMAP | XCB_CW_CURSOR,
                       values);
@@ -571,7 +571,7 @@ static int luaA_drawin_set_cursor(lua_State* L, drawin_t* drawin) {
     auto buf = Lua::checkstring(L, -1);
     uint16_t cursor_font = xcursor_font_fromstr(buf->data());
     if (cursor_font) {
-        xcb_cursor_t cursor = xcursor_new(getGlobals().x.cursor_ctx, cursor_font);
+        xcb_cursor_t cursor = xcursor_new(Manager::get().x.cursor_ctx, cursor_font);
         drawin->cursor = buf ? buf.value() : "";
         xwindow_set_cursor(drawin->window, cursor);
         luaA_object_emit_signal(L, -3, "property::cursor", 0);
