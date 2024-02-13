@@ -89,7 +89,7 @@ static void selection_release(lua_State* L, int ud) {
     luaA_object_emit_signal(L, ud, "release", 0);
 
     /* Destroy the window, this also releases the selection in X11 */
-    xcb_destroy_window(getGlobals().x.connection, selection->window);
+    xcb_destroy_window(Manager::get().x.connection, selection->window);
     selection->window = XCB_NONE;
 
     /* Unreference the object, it's now dead */
@@ -149,8 +149,8 @@ static int luaA_selection_acquire_new(lua_State* L) {
 
     /* Get the atom identifying the selection */
     reply = xcb_intern_atom_reply(
-      getGlobals().x.connection,
-      xcb_intern_atom_unchecked(getGlobals().x.connection, false, name_length, name),
+      Manager::get().x.connection,
+      xcb_intern_atom_unchecked(Manager::get().x.connection, false, name_length, name),
       NULL);
     name_atom = reply ? reply->atom : XCB_NONE;
     p_delete(&reply);
@@ -158,34 +158,34 @@ static int luaA_selection_acquire_new(lua_State* L) {
     /* Create a selection object */
     selection = (selection_acquire_t*)selection_acquire_class.alloc_object(L);
     selection->selection = name_atom;
-    selection->timestamp = getGlobals().x.get_timestamp();
+    selection->timestamp = Manager::get().x.get_timestamp();
     selection->window = getConnection().generate_id();
-    xcb_create_window(getGlobals().x.connection,
-                      getGlobals().screen->root_depth,
+    xcb_create_window(Manager::get().x.connection,
+                      Manager::get().screen->root_depth,
                       selection->window,
-                      getGlobals().screen->root,
+                      Manager::get().screen->root,
                       -1,
                       -1,
                       1,
                       1,
                       0,
                       XCB_COPY_FROM_PARENT,
-                      getGlobals().screen->root_visual,
+                      Manager::get().screen->root_visual,
                       0,
                       NULL);
 
     /* Try to acquire the selection */
     xcb_set_selection_owner(
-      getGlobals().x.connection, selection->window, name_atom, selection->timestamp);
+      Manager::get().x.connection, selection->window, name_atom, selection->timestamp);
     selection_reply =
-      xcb_get_selection_owner_reply(getGlobals().x.connection,
-                                    xcb_get_selection_owner(getGlobals().x.connection, name_atom),
+      xcb_get_selection_owner_reply(Manager::get().x.connection,
+                                    xcb_get_selection_owner(Manager::get().x.connection, name_atom),
                                     NULL);
     if (selection_reply == NULL || selection_reply->owner != selection->window) {
         /* Acquiring the selection failed, return nothing */
         p_delete(&selection_reply);
 
-        xcb_destroy_window(getGlobals().x.connection, selection->window);
+        xcb_destroy_window(Manager::get().x.connection, selection->window);
         selection->window = XCB_NONE;
         return 0;
     }

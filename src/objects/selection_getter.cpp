@@ -35,7 +35,7 @@ struct selection_getter_t: public lua_object_t {
     /** Window used for the transfer */
     xcb_window_t window;
 
-    ~selection_getter_t() { xcb_destroy_window(getGlobals().x.connection, window); }
+    ~selection_getter_t() { xcb_destroy_window(Manager::get().x.connection, window); }
 };
 
 static lua_class_t selection_getter_class{
@@ -68,17 +68,17 @@ static int luaA_selection_getter_new(lua_State* L) {
     /* Create a selection object */
     selection = reinterpret_cast<selection_getter_t*>(selection_getter_class.alloc_object(L));
     selection->window = getConnection().generate_id();
-    xcb_create_window(getGlobals().x.connection,
-                      getGlobals().screen->root_depth,
+    xcb_create_window(Manager::get().x.connection,
+                      Manager::get().screen->root_depth,
                       selection->window,
-                      getGlobals().screen->root,
+                      Manager::get().screen->root,
                       -1,
                       -1,
                       1,
                       1,
                       0,
                       XCB_COPY_FROM_PARENT,
-                      getGlobals().screen->root_visual,
+                      Manager::get().screen->root_visual,
                       0,
                       NULL);
 
@@ -90,23 +90,23 @@ static int luaA_selection_getter_new(lua_State* L) {
     lua_pop(L, 1);
 
     /* Get the atoms identifying the request */
-    cookies[0] = xcb_intern_atom_unchecked(getGlobals().x.connection, false, name_length, name);
-    cookies[1] = xcb_intern_atom_unchecked(getGlobals().x.connection, false, target_length, target);
+    cookies[0] = xcb_intern_atom_unchecked(Manager::get().x.connection, false, name_length, name);
+    cookies[1] = xcb_intern_atom_unchecked(Manager::get().x.connection, false, target_length, target);
 
-    reply = xcb_intern_atom_reply(getGlobals().x.connection, cookies[0], NULL);
+    reply = xcb_intern_atom_reply(Manager::get().x.connection, cookies[0], NULL);
     name_atom = reply ? reply->atom : XCB_NONE;
     p_delete(&reply);
 
-    reply = xcb_intern_atom_reply(getGlobals().x.connection, cookies[1], NULL);
+    reply = xcb_intern_atom_reply(Manager::get().x.connection, cookies[1], NULL);
     target_atom = reply ? reply->atom : XCB_NONE;
     p_delete(&reply);
 
-    xcb_convert_selection(getGlobals().x.connection,
+    xcb_convert_selection(Manager::get().x.connection,
                           selection->window,
                           name_atom,
                           target_atom,
                           AWESOME_SELECTION_ATOM,
-                          getGlobals().x.get_timestamp());
+                          Manager::get().x.get_timestamp());
 
     return 1;
 }
@@ -132,13 +132,13 @@ static void selection_push_data(lua_State* L, xcb_get_property_reply_t* property
         xcb_get_atom_name_cookie_t cookies[num_atoms];
 
         for (size_t i = 0; i < num_atoms; i++) {
-            cookies[i] = xcb_get_atom_name_unchecked(getGlobals().x.connection, atoms[i]);
+            cookies[i] = xcb_get_atom_name_unchecked(Manager::get().x.connection, atoms[i]);
         }
 
         lua_newtable(L);
         for (size_t i = 0; i < num_atoms; i++) {
             xcb_get_atom_name_reply_t* reply =
-              xcb_get_atom_name_reply(getGlobals().x.connection, cookies[i], NULL);
+              xcb_get_atom_name_reply(Manager::get().x.connection, cookies[i], NULL);
             if (reply) {
                 lua_pushlstring(
                   L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
@@ -168,8 +168,8 @@ static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t pr
       selection->window, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
 
     xcb_get_property_reply_t* property_r =
-      xcb_get_property_reply(getGlobals().x.connection,
-                             xcb_get_property(getGlobals().x.connection,
+      xcb_get_property_reply(Manager::get().x.connection,
+                             xcb_get_property(Manager::get().x.connection,
                                               true,
                                               selection->window,
                                               AWESOME_SELECTION_ATOM,
@@ -237,8 +237,8 @@ void property_handle_awesome_selection_atom(uint8_t state, xcb_window_t window) 
     selection_getter_t* selection = (selection_getter_t*)lua_touserdata(L, -1);
 
     xcb_get_property_reply_t* property_r =
-      xcb_get_property_reply(getGlobals().x.connection,
-                             xcb_get_property(getGlobals().x.connection,
+      xcb_get_property_reply(Manager::get().x.connection,
+                             xcb_get_property(Manager::get().x.connection,
                                               true,
                                               selection->window,
                                               AWESOME_SELECTION_ATOM,

@@ -189,14 +189,14 @@ static bool composite_manager_running(void) {
     char* atom_name;
     bool result;
 
-    if (!(atom_name = xcb_atom_name_by_screen("_NET_WM_CM", getGlobals().x.default_screen))) {
+    if (!(atom_name = xcb_atom_name_by_screen("_NET_WM_CM", Manager::get().x.default_screen))) {
         log_warn("error getting composite manager atom");
         return false;
     }
 
     atom_r = xcb_intern_atom_reply(
-      getGlobals().x.connection,
-      xcb_intern_atom_unchecked(getGlobals().x.connection, false, strlen(atom_name), atom_name),
+      Manager::get().x.connection,
+      xcb_intern_atom_unchecked(Manager::get().x.connection, false, strlen(atom_name), atom_name),
       NULL);
     p_delete(&atom_name);
     if (!atom_r) {
@@ -204,8 +204,8 @@ static bool composite_manager_running(void) {
     }
 
     selection_r = xcb_get_selection_owner_reply(
-      getGlobals().x.connection,
-      xcb_get_selection_owner_unchecked(getGlobals().x.connection, atom_r->atom),
+      Manager::get().x.connection,
+      xcb_get_selection_owner_unchecked(Manager::get().x.connection, atom_r->atom),
       NULL);
     p_delete(&atom_r);
 
@@ -221,12 +221,12 @@ static bool composite_manager_running(void) {
  */
 static int quit(lua_State* L) {
     if (!lua_isnoneornil(L, 1)) {
-        getGlobals().exit_code = luaL_checkinteger(L, 1);
+        Manager::get().exit_code = luaL_checkinteger(L, 1);
     }
-    if (getGlobals().loop == NULL) {
-        getGlobals().loop = g_main_loop_new(NULL, FALSE);
+    if (Manager::get().loop == NULL) {
+        Manager::get().loop = g_main_loop_new(NULL, FALSE);
     }
-    g_main_loop_quit(getGlobals().loop);
+    g_main_loop_quit(Manager::get().loop);
     return 0;
 }
 
@@ -278,7 +278,7 @@ static int kill(lua_State* L) {
  * @noreturn
  */
 static int sync(lua_State* L) {
-    xcb_aux_sync(getGlobals().x.connection);
+    xcb_aux_sync(Manager::get().x.connection);
     return 0;
 }
 
@@ -335,7 +335,7 @@ static int load_image(lua_State* L) {
  * @noreturn
  */
 static int set_preferred_icon_size(lua_State* L) {
-    getGlobals().preferred_icon_size = Lua::checkinteger_range(L, 1, 0, UINT32_MAX);
+    Manager::get().preferred_icon_size = Lua::checkinteger_range(L, 1, 0, UINT32_MAX);
     return 0;
 }
 
@@ -446,12 +446,12 @@ static int get_key_name(lua_State* L) {
     {
         int keycode_from_hash = atoi(input + 1);
         // We discard keycodes with invalid values:
-        const xcb_setup_t* setup = xcb_get_setup(getGlobals().x.connection);
+        const xcb_setup_t* setup = xcb_get_setup(Manager::get().x.connection);
         if (keycode_from_hash < setup->min_keycode || keycode_from_hash > setup->max_keycode) {
             return 0;
         }
         xkb_keycode_t keycode = (xkb_keycode_t)keycode_from_hash;
-        struct xkb_keymap* keymap = xkb_state_get_keymap(getGlobals().xkb_state);
+        struct xkb_keymap* keymap = xkb_state_get_keymap(Manager::get().xkb_state);
         xkb_keymap_key_get_syms_by_level(keymap, keycode, 0, 0, &keysyms);
         keysym = keysyms[0];
     } else if ((ucs = one_utf8_to_utf32(input, length)) > 0) { // syntax #2
@@ -531,13 +531,13 @@ static int get_key_name(lua_State* L) {
  */
 static int get_modifiers(lua_State* L) {
     xcb_get_modifier_mapping_reply_t* mods = xcb_get_modifier_mapping_reply(
-      getGlobals().x.connection, xcb_get_modifier_mapping(getGlobals().x.connection), NULL);
+      Manager::get().x.connection, xcb_get_modifier_mapping(Manager::get().x.connection), NULL);
     if (!mods) {
         return 0;
     }
 
     xcb_keycode_t* mappings = xcb_get_modifier_mapping_keycodes(mods);
-    struct xkb_keymap* keymap = xkb_state_get_keymap(getGlobals().xkb_state);
+    struct xkb_keymap* keymap = xkb_state_get_keymap(Manager::get().xkb_state);
 
     lua_newtable(L);
 
@@ -592,7 +592,7 @@ static int get_active_modifiers(lua_State* L) {
 
     for (int i = XCB_MAP_INDEX_SHIFT; i <= XCB_MAP_INDEX_5; i++) {
         const int active = xkb_state_mod_index_is_active(
-          getGlobals().xkb_state,
+          Manager::get().xkb_state,
           i,
           (enum xkb_state_component)(XKB_STATE_MODS_DEPRESSED | XKB_STATE_MODS_EFFECTIVE));
 
@@ -706,12 +706,12 @@ static int awesome_index(lua_State* L) {
     }
 
     if (buf == "api_level") {
-        lua_pushinteger(L, getGlobals().api_level);
+        lua_pushinteger(L, Manager::get().api_level);
         return 1;
     }
 
     if (buf == "startup") {
-        lua_pushboolean(L, getGlobals().loop == NULL);
+        lua_pushboolean(L, Manager::get().loop == NULL);
         return 1;
     }
 
@@ -726,10 +726,10 @@ static int awesome_index(lua_State* L) {
     }
 
     if (buf == "startup_errors") {
-        if (getGlobals().startup_errors.size() == 0) {
+        if (Manager::get().startup_errors.size() == 0) {
             return 0;
         }
-        lua_pushstring(L, getGlobals().startup_errors.c_str());
+        lua_pushstring(L, Manager::get().startup_errors.c_str());
         return 1;
     }
 
@@ -1038,7 +1038,7 @@ void init(xdgHandle* xdg, const Paths& searchpath) {
       {                     NULL,                           NULL}
     };
 
-    L = getGlobals().L.real_L_dont_use_directly = luaL_newstate();
+    L = Manager::get().L.real_L_dont_use_directly = luaL_newstate();
 
     /* Set panic function */
     lua_atpanic(L, Lua::panic);
@@ -1133,11 +1133,11 @@ void init(xdgHandle* xdg, const Paths& searchpath) {
 }
 
 static void startup_error(const char* err) {
-    if (getGlobals().startup_errors.size() > 0) {
-        getGlobals().startup_errors += "\n\n";
+    if (Manager::get().startup_errors.size() > 0) {
+        Manager::get().startup_errors += "\n\n";
     }
 
-    getGlobals().startup_errors += std::format("Startup:{}", err);
+    Manager::get().startup_errors += std::format("Startup:{}", err);
 }
 
 static bool loadrc(const std::filesystem::path& path) {
