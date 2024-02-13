@@ -79,15 +79,15 @@ void eprint_version(void) {
       /* release      */ AWESOME_RELEASE,
       /* Lua linked   */ LUA_RELEASE,
       /* Lua runtime  */ lua_tostring(L, -2),
-      /* API Level    */ getGlobals().api_level,
+      /* API Level    */ Manager::get().api_level,
       /* DBus         */ has_dbus,
       /* XCB Error    */ has_xcb_errors,
       /* Execinfo     */ has_execinfo,
       /* XRandR major */ XCB_RANDR_MAJOR_VERSION,
       /* XRandR minor */ XCB_RANDR_MINOR_VERSION,
       /* LGI version  */ lua_tostring(L, -1),
-      /* ARGB support */ getGlobals().had_overriden_depth ? "no" : "yes",
-      /* Search path  */ getGlobals().startup.have_searchpaths ? "yes" : "no");
+      /* ARGB support */ Manager::get().had_overriden_depth ? "no" : "yes",
+      /* Search path  */ Manager::get().startup.have_searchpaths ? "yes" : "no");
     lua_close(L);
 
     exit(EXIT_SUCCESS);

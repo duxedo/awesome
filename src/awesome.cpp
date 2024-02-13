@@ -42,13 +42,13 @@
 #include <sys/time.h>
 #include <uv.h>
 
-static Globals* gGlobals = nullptr;
-Globals& getGlobals() {
+static Manager* gGlobals = nullptr;
+Manager& Manager::get() {
     assert(gGlobals != nullptr);
     return *gGlobals;
 }
 
-XCB::Connection& getConnection() { return getGlobals().x._connection; }
+XCB::Connection& getConnection() { return Manager::get().x._connection; }
 
 /** argv used to run awesome */
 static char** awesome_argv;
@@ -100,20 +100,20 @@ void awesome_atexit(bool restart) {
     signal_object_emit(L, &Lua::global_signals, "exit", 1);
 
     /* Move clients where we want them to be and keep the stacking order intact */
-    for (auto* c : getGlobals().getStack()) {
+    for (auto* c : Manager::get().getStack()) {
         area_t geometry = client_get_undecorated_geometry(c);
         getConnection().reparent_window(
-          c->window, getGlobals().screen->root, geometry.left(), geometry.top());
+          c->window, Manager::get().screen->root, geometry.left(), geometry.top());
     }
 
     /* Save the client order.  This is useful also for "hard" restarts. */
-    xcb_window_t* wins = p_alloca(xcb_window_t, getGlobals().clients.size());
-    std::ranges::transform(getGlobals().clients, wins, [](auto& cli) { return cli->window; });
+    xcb_window_t* wins = p_alloca(xcb_window_t, Manager::get().clients.size());
+    std::ranges::transform(Manager::get().clients, wins, [](auto& cli) { return cli->window; });
 
-    getConnection().replace_property(getGlobals().screen->root,
+    getConnection().replace_property(Manager::get().screen->root,
                                      AWESOME_CLIENT_ORDER,
                                      XCB_ATOM_WINDOW,
-                                     std::span{wins, getGlobals().clients.size()});
+                                     std::span{wins, Manager::get().clients.size()});
 
     a_dbus_cleanup();
 
@@ -130,20 +130,20 @@ void awesome_atexit(bool restart) {
      * Immediately afterwards, this parent is destroyed and the focus is gone.
      * Work around this by placing the focus where we like it to be.
      */
-    xcb_set_input_focus(getGlobals().x.connection,
+    xcb_set_input_focus(Manager::get().x.connection,
                         XCB_INPUT_FOCUS_POINTER_ROOT,
                         XCB_NONE,
-                        getGlobals().x.get_timestamp());
-    xcb_aux_sync(getGlobals().x.connection);
+                        Manager::get().x.get_timestamp());
+    xcb_aux_sync(Manager::get().x.connection);
 
     xkb_free();
 
     /* Disconnect *after* closing lua */
-    xcb_cursor_context_free(getGlobals().x.cursor_ctx);
+    xcb_cursor_context_free(Manager::get().x.cursor_ctx);
 #ifdef WITH_XCB_ERRORS
-    xcb_errors_context_free(getGlobals().x.errors_ctx);
+    xcb_errors_context_free(Manager::get().x.errors_ctx);
 #endif
-    xcb_disconnect(getGlobals().x.connection);
+    xcb_disconnect(Manager::get().x.connection);
 
     close(sigchld_pipe[0]);
     close(sigchld_pipe[1]);
@@ -163,9 +163,9 @@ static void restore_client_order(xcb_get_property_cookie_t prop_cookie) {
 
     for (uint32_t i = 0; i < reply->value_len; i++) {
         //   Find windows[i] and swap it to where it belongs
-        for (auto*& c : getGlobals().clients) {
+        for (auto*& c : Manager::get().clients) {
             if (c->window == windows[i]) {
-                std::swap(c, getGlobals().clients[client_idx]);
+                std::swap(c, Manager::get().clients[client_idx]);
                 client_idx++;
             }
         }
@@ -185,7 +185,7 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
 
     /* This gets the property and deletes it */
     auto prop_cookie = conn.get_property_unchecked(
-      true, getGlobals().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 0, UINT_MAX);
+      true, Manager::get().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 0, UINT_MAX);
     auto wins = conn.query_tree_children(tree_r);
     /* Get the tree of the children windows of the current root window */
     if (!wins) {
@@ -228,46 +228,46 @@ static void acquire_WM_Sn(bool replace) {
     xcb_get_selection_owner_reply_t* get_sel_reply;
 
     /* Get the WM_Sn atom */
-    getGlobals().x.selection_owner_window = getConnection().generate_id();
-    xcb_create_window(getGlobals().x.connection,
-                      getGlobals().screen->root_depth,
-                      getGlobals().x.selection_owner_window,
-                      getGlobals().screen->root,
+    Manager::get().x.selection_owner_window = getConnection().generate_id();
+    xcb_create_window(Manager::get().x.connection,
+                      Manager::get().screen->root_depth,
+                      Manager::get().x.selection_owner_window,
+                      Manager::get().screen->root,
                       -1,
                       -1,
                       1,
                       1,
                       0,
                       XCB_COPY_FROM_PARENT,
-                      getGlobals().screen->root_visual,
+                      Manager::get().screen->root_visual,
                       0,
                       NULL);
-    xwindow_set_class_instance(getGlobals().x.selection_owner_window);
-    xwindow_set_name_static(getGlobals().x.selection_owner_window,
+    xwindow_set_class_instance(Manager::get().x.selection_owner_window);
+    xwindow_set_name_static(Manager::get().x.selection_owner_window,
                             "Awesome WM_Sn selection owner window");
 
-    auto atom_name = xcb_atom_name_by_screen("WM_S", getGlobals().x.default_screen);
+    auto atom_name = xcb_atom_name_by_screen("WM_S", Manager::get().x.default_screen);
     if (!atom_name) {
         log_fatal("error getting WM_Sn atom name");
     }
 
     atom_q =
-      xcb_intern_atom_unchecked(getGlobals().x.connection, false, strlen(atom_name), atom_name);
+      xcb_intern_atom_unchecked(Manager::get().x.connection, false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
-    atom_r = xcb_intern_atom_reply(getGlobals().x.connection, atom_q, NULL);
+    atom_r = xcb_intern_atom_reply(Manager::get().x.connection, atom_q, NULL);
     if (!atom_r) {
         log_fatal("error getting WM_Sn atom");
     }
 
-    getGlobals().x.selection_atom = atom_r->atom;
+    Manager::get().x.selection_atom = atom_r->atom;
     p_delete(&atom_r);
 
     /* Is the selection already owned? */
     get_sel_reply = xcb_get_selection_owner_reply(
-      getGlobals().x.connection,
-      xcb_get_selection_owner(getGlobals().x.connection, getGlobals().x.selection_atom),
+      Manager::get().x.connection,
+      xcb_get_selection_owner(Manager::get().x.connection, Manager::get().x.selection_atom),
       NULL);
     if (!get_sel_reply) {
         log_fatal("GetSelectionOwner for WM_Sn failed");
@@ -277,18 +277,18 @@ static void acquire_WM_Sn(bool replace) {
     }
 
     /* Acquire the selection */
-    xcb_set_selection_owner(getGlobals().x.connection,
-                            getGlobals().x.selection_owner_window,
-                            getGlobals().x.selection_atom,
-                            getGlobals().x.get_timestamp());
+    xcb_set_selection_owner(Manager::get().x.connection,
+                            Manager::get().x.selection_owner_window,
+                            Manager::get().x.selection_atom,
+                            Manager::get().x.get_timestamp());
     if (get_sel_reply->owner != XCB_NONE) {
         /* Wait for the old owner to go away */
         xcb_get_geometry_reply_t* geom_reply = NULL;
         do {
             p_delete(&geom_reply);
             geom_reply = xcb_get_geometry_reply(
-              getGlobals().x.connection,
-              xcb_get_geometry(getGlobals().x.connection, get_sel_reply->owner),
+              Manager::get().x.connection,
+              xcb_get_geometry(Manager::get().x.connection, get_sel_reply->owner),
               NULL);
         } while (geom_reply != NULL);
     }
@@ -298,16 +298,16 @@ static void acquire_WM_Sn(bool replace) {
     xcb_client_message_event_t ev{.response_type = XCB_CLIENT_MESSAGE,
                                   .format = 32,
                                   .sequence = 0,
-                                  .window = getGlobals().screen->root,
+                                  .window = Manager::get().screen->root,
                                   .type = MANAGER,
-                                  .data{.data32 = {getGlobals().x.get_timestamp(),
-                                                   getGlobals().x.selection_atom,
-                                                   getGlobals().x.selection_owner_window,
+                                  .data{.data32 = {Manager::get().x.get_timestamp(),
+                                                   Manager::get().x.selection_atom,
+                                                   Manager::get().x.selection_owner_window,
                                                    0,
                                                    0}}};
 
     xcb_send_event(
-      getGlobals().x.connection, false, getGlobals().screen->root, 0xFFFFFF, (char*)&ev);
+      Manager::get().x.connection, false, Manager::get().screen->root, 0xFFFFFF, (char*)&ev);
 }
 
 static void acquire_timestamp(void) {
@@ -315,44 +315,44 @@ static void acquire_timestamp(void) {
      * append to a property, so let's do that.
      */
     xcb_generic_event_t* event;
-    xcb_window_t win = getGlobals().screen->root;
+    xcb_window_t win = Manager::get().screen->root;
     xcb_atom_t atom = XCB_ATOM_RESOURCE_MANAGER; /* Just something random */
     xcb_atom_t type = XCB_ATOM_STRING;           /* Equally random */
 
-    xcb_grab_server(getGlobals().x.connection);
+    xcb_grab_server(Manager::get().x.connection);
     getConnection().change_attributes(
       win, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
     getConnection().append_property(win, atom, type, std::span{"", 0});
     getConnection().clear_attributes(win, XCB_CW_EVENT_MASK);
-    xutil_ungrab_server(getGlobals().x.connection);
+    xutil_ungrab_server(Manager::get().x.connection);
 
     /* Now wait for the event */
-    while ((event = xcb_wait_for_event(getGlobals().x.connection))) {
+    while ((event = xcb_wait_for_event(Manager::get().x.connection))) {
         /* Is it the event we are waiting for? */
         if (XCB_EVENT_RESPONSE_TYPE(event) == XCB_PROPERTY_NOTIFY) {
             xcb_property_notify_event_t* ev = (xcb_property_notify_event_t*)event;
-            getGlobals().x.update_timestamp(ev);
+            Manager::get().x.update_timestamp(ev);
             p_delete(&event);
             break;
         }
 
         /* Hm, not the right event. */
-        if (getGlobals().pending_event != NULL) {
-            event_handle(getGlobals().pending_event);
-            p_delete(&getGlobals().pending_event);
+        if (Manager::get().pending_event != NULL) {
+            event_handle(Manager::get().pending_event);
+            p_delete(&Manager::get().pending_event);
         }
-        getGlobals().pending_event = event;
+        Manager::get().pending_event = event;
     }
 }
 
 static xcb_generic_event_t* poll_for_event(void) {
-    if (getGlobals().pending_event) {
-        xcb_generic_event_t* event = getGlobals().pending_event;
-        getGlobals().pending_event = NULL;
+    if (Manager::get().pending_event) {
+        xcb_generic_event_t* event = Manager::get().pending_event;
+        Manager::get().pending_event = NULL;
         return event;
     }
 
-    return xcb_poll_for_event(getGlobals().x.connection);
+    return xcb_poll_for_event(Manager::get().x.connection);
 }
 
 static void a_xcb_check(void) {
@@ -389,9 +389,9 @@ static void a_xcb_check(void) {
 static gboolean a_xcb_io_cb(GIOChannel* source, GIOCondition cond, gpointer data) {
     /* a_xcb_check() already handled all events */
 
-    if (xcb_connection_has_error(getGlobals().x.connection)) {
+    if (xcb_connection_has_error(Manager::get().x.connection)) {
         log_fatal("X server connection broke (error {})",
-                  xcb_connection_has_error(getGlobals().x.connection));
+                  xcb_connection_has_error(Manager::get().x.connection));
     }
 
     return TRUE;
@@ -415,9 +415,9 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
     }
 
     /* Don't sleep if there is a pending event */
-    assert(!getGlobals().pending_event);
-    getGlobals().pending_event = xcb_poll_for_event(getGlobals().x.connection);
-    if (getGlobals().pending_event) {
+    assert(!Manager::get().pending_event);
+    Manager::get().pending_event = xcb_poll_for_event(Manager::get().x.connection);
+    if (Manager::get().pending_event) {
         timeout = 0;
     }
 
@@ -479,7 +479,7 @@ static gboolean reap_children(GIOChannel* channel, GIOCondition condition, gpoin
  * \param data currently unused
  */
 static gboolean exit_on_signal(gpointer data) {
-    g_main_loop_quit(getGlobals().loop);
+    g_main_loop_quit(Manager::get().loop);
     return TRUE;
 }
 void awesome_restart(void) {
@@ -531,13 +531,13 @@ int main(int argc, char** argv) {
     }
 
     /* clear the globalconf structure */
-    gGlobals = new Globals;
-    getGlobals().api_level = opts.api_level ? opts.api_level.value() : awesome_default_api_level();
-    getGlobals().startup.have_searchpaths = opts.have_searchpaths;
-    getGlobals().had_overriden_depth = opts.had_overriden_depth;
+    gGlobals = new Manager;
+    Manager::get().api_level = opts.api_level ? opts.api_level.value() : awesome_default_api_level();
+    Manager::get().startup.have_searchpaths = opts.have_searchpaths;
+    Manager::get().had_overriden_depth = opts.had_overriden_depth;
 
     if (opts.no_auto_screen.has_value()) {
-        getGlobals().startup.no_auto_screen = opts.no_auto_screen.value();
+        Manager::get().startup.no_auto_screen = opts.no_auto_screen.value();
     }
 
     /* Check the configfile syntax and exit */
@@ -610,43 +610,43 @@ int main(int argc, char** argv) {
     sigaction(SIGCHLD, &sa, 0);
 
     /* We have no clue where the input focus is right now */
-    getGlobals().focus.need_update = true;
+    Manager::get().focus.need_update = true;
 
     /* set the default preferred icon size */
-    getGlobals().preferred_icon_size = 0;
+    Manager::get().preferred_icon_size = 0;
 
     /* X stuff */
-    getGlobals().x.connection = xcb_connect(NULL, &getGlobals().x.default_screen);
+    Manager::get().x.connection = xcb_connect(NULL, &Manager::get().x.default_screen);
 
-    if (xcb_connection_has_error(getGlobals().x.connection)) {
+    if (xcb_connection_has_error(Manager::get().x.connection)) {
         log_fatal("cannot open display (error {})",
-                  xcb_connection_has_error(getGlobals().x.connection));
+                  xcb_connection_has_error(Manager::get().x.connection));
     }
 
-    getGlobals().screen =
-      xcb_aux_get_screen(getGlobals().x.connection, getGlobals().x.default_screen);
-    getGlobals().default_visual = draw_default_visual(getGlobals().screen);
+    Manager::get().screen =
+      xcb_aux_get_screen(Manager::get().x.connection, Manager::get().x.default_screen);
+    Manager::get().default_visual = draw_default_visual(Manager::get().screen);
     if (default_init_flags & Options::INIT_FLAG_ARGB) {
-        getGlobals().visual = draw_argb_visual(getGlobals().screen);
+        Manager::get().visual = draw_argb_visual(Manager::get().screen);
     }
-    if (!getGlobals().visual) {
-        getGlobals().visual = getGlobals().default_visual;
+    if (!Manager::get().visual) {
+        Manager::get().visual = Manager::get().default_visual;
     }
-    getGlobals().default_depth =
-      draw_visual_depth(getGlobals().screen, getGlobals().visual->visual_id);
-    getGlobals().default_cmap = getGlobals().screen->default_colormap;
-    if (getGlobals().default_depth != getGlobals().screen->root_depth) {
+    Manager::get().default_depth =
+      draw_visual_depth(Manager::get().screen, Manager::get().visual->visual_id);
+    Manager::get().default_cmap = Manager::get().screen->default_colormap;
+    if (Manager::get().default_depth != Manager::get().screen->root_depth) {
         // We need our own color map if we aren't using the default depth
-        getGlobals().default_cmap = getConnection().generate_id();
-        xcb_create_colormap(getGlobals().x.connection,
+        Manager::get().default_cmap = getConnection().generate_id();
+        xcb_create_colormap(Manager::get().x.connection,
                             XCB_COLORMAP_ALLOC_NONE,
-                            getGlobals().default_cmap,
-                            getGlobals().screen->root,
-                            getGlobals().visual->visual_id);
+                            Manager::get().default_cmap,
+                            Manager::get().screen->root,
+                            Manager::get().visual->visual_id);
     }
 
 #ifdef WITH_XCB_ERRORS
-    if (xcb_errors_context_new(getGlobals().x.connection, &getGlobals().x.errors_ctx) < 0) {
+    if (xcb_errors_context_new(Manager::get().x.connection, &Manager::get().x.errors_ctx) < 0) {
         log_fatal("Failed to initialize xcb-errors");
     }
 #endif
@@ -655,22 +655,22 @@ int main(int argc, char** argv) {
     acquire_timestamp();
 
     /* Prefetch all the extensions we might need */
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_big_requests_id);
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_test_id);
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_randr_id);
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_xinerama_id);
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_shape_id);
-    xcb_prefetch_extension_data(getGlobals().x.connection, &xcb_xfixes_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_big_requests_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_test_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_randr_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_xinerama_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_shape_id);
+    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_xfixes_id);
 
     if (xcb_cursor_context_new(
-          getGlobals().x.connection, getGlobals().screen, &getGlobals().x.cursor_ctx) < 0) {
+          Manager::get().x.connection, Manager::get().screen, &Manager::get().x.cursor_ctx) < 0) {
         log_fatal("Failed to initialize xcb-cursor");
     }
-    getGlobals().x.xrmdb = xcb_xrm_database_from_default(getGlobals().x.connection);
-    if (getGlobals().x.xrmdb == NULL) {
-        getGlobals().x.xrmdb = xcb_xrm_database_from_string("");
+    Manager::get().x.xrmdb = xcb_xrm_database_from_default(Manager::get().x.connection);
+    if (Manager::get().x.xrmdb == NULL) {
+        Manager::get().x.xrmdb = xcb_xrm_database_from_string("");
     }
-    if (getGlobals().x.xrmdb == NULL) {
+    if (Manager::get().x.xrmdb == NULL) {
         log_fatal("Failed to initialize xcb-xrm");
     }
 
@@ -684,66 +684,66 @@ int main(int argc, char** argv) {
     a_dbus_init();
 
     /* Get the file descriptor corresponding to the X connection */
-    int xfd = xcb_get_file_descriptor(getGlobals().x.connection);
+    int xfd = xcb_get_file_descriptor(Manager::get().x.connection);
     GIOChannel* channel = g_io_channel_unix_new(xfd);
     g_io_add_watch(channel, G_IO_IN, a_xcb_io_cb, NULL);
     g_io_channel_unref(channel);
 
     /* Grab server */
-    xcb_grab_server(getGlobals().x.connection);
+    xcb_grab_server(Manager::get().x.connection);
 
     {
         const uint32_t select_input_val = XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT;
         xcb_void_cookie_t cookie;
 
         /* This causes an error if some other window manager is running */
-        cookie = xcb_change_window_attributes_checked(getGlobals().x.connection,
-                                                      getGlobals().screen->root,
+        cookie = xcb_change_window_attributes_checked(Manager::get().x.connection,
+                                                      Manager::get().screen->root,
                                                       XCB_CW_EVENT_MASK,
                                                       &select_input_val);
-        if (xcb_request_check(getGlobals().x.connection, cookie)) {
+        if (xcb_request_check(Manager::get().x.connection, cookie)) {
             log_fatal(
               "another window manager is already running (can't select SubstructureRedirect)");
         }
     }
 
     /* Prefetch the maximum request length */
-    xcb_prefetch_maximum_request_length(getGlobals().x.connection);
+    xcb_prefetch_maximum_request_length(Manager::get().x.connection);
 
     /* check for xtest extension */
     const xcb_query_extension_reply_t* query;
-    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_test_id);
-    getGlobals().x.caps.have_xtest = query && query->present;
+    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_test_id);
+    Manager::get().x.caps.have_xtest = query && query->present;
 
     /* check for shape extension */
-    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_shape_id);
-    getGlobals().x.caps.have_shape = query && query->present;
-    if (getGlobals().x.caps.have_shape) {
+    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_shape_id);
+    Manager::get().x.caps.have_shape = query && query->present;
+    if (Manager::get().x.caps.have_shape) {
         xcb_shape_query_version_reply_t* reply = xcb_shape_query_version_reply(
-          getGlobals().x.connection,
-          xcb_shape_query_version_unchecked(getGlobals().x.connection),
+          Manager::get().x.connection,
+          xcb_shape_query_version_unchecked(Manager::get().x.connection),
           NULL);
-        getGlobals().x.caps.have_input_shape =
+        Manager::get().x.caps.have_input_shape =
           reply &&
           (reply->major_version > 1 || (reply->major_version == 1 && reply->minor_version >= 1));
         p_delete(&reply);
     }
 
     /* check for xfixes extension */
-    query = xcb_get_extension_data(getGlobals().x.connection, &xcb_xfixes_id);
-    getGlobals().x.caps.have_xfixes = query && query->present;
-    if (getGlobals().x.caps.have_xfixes) {
-        xcb_discard_reply(getGlobals().x.connection,
-                          xcb_xfixes_query_version(getGlobals().x.connection, 1, 0).sequence);
+    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_xfixes_id);
+    Manager::get().x.caps.have_xfixes = query && query->present;
+    if (Manager::get().x.caps.have_xfixes) {
+        xcb_discard_reply(Manager::get().x.connection,
+                          xcb_xfixes_query_version(Manager::get().x.connection, 1, 0).sequence);
     }
 
     event_init();
 
     /* Allocate the key symbols */
-    getGlobals().input.keysyms = xcb_key_symbols_alloc(getGlobals().x.connection);
+    Manager::get().input.keysyms = xcb_key_symbols_alloc(Manager::get().x.connection);
 
     /* init atom cache */
-    atoms_init(getGlobals().x.connection);
+    atoms_init(Manager::get().x.connection);
 
     ewmh_init();
     systray_init();
@@ -757,48 +757,48 @@ int main(int argc, char** argv) {
     /* The default GC is just a newly created associated with a window with
      * depth globalconf.default_depth.
      * The window_no_focus is used for "nothing has the input focus". */
-    getGlobals().focus.window_no_focus = getConnection().generate_id();
-    getGlobals().gc = getConnection().generate_id();
+    Manager::get().focus.window_no_focus = getConnection().generate_id();
+    Manager::get().gc = getConnection().generate_id();
 
-    uint32_t create_window_values[] = {getGlobals().screen->black_pixel,
-                                       getGlobals().screen->black_pixel,
+    uint32_t create_window_values[] = {Manager::get().screen->black_pixel,
+                                       Manager::get().screen->black_pixel,
                                        1,
-                                       getGlobals().default_cmap};
+                                       Manager::get().default_cmap};
 
-    xcb_create_window(getGlobals().x.connection,
-                      getGlobals().default_depth,
-                      getGlobals().focus.window_no_focus,
-                      getGlobals().screen->root,
+    xcb_create_window(Manager::get().x.connection,
+                      Manager::get().default_depth,
+                      Manager::get().focus.window_no_focus,
+                      Manager::get().screen->root,
                       -1,
                       -1,
                       1,
                       1,
                       0,
                       XCB_COPY_FROM_PARENT,
-                      getGlobals().visual->visual_id,
+                      Manager::get().visual->visual_id,
                       XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT |
                         XCB_CW_COLORMAP,
                       create_window_values);
-    xwindow_set_class_instance(getGlobals().focus.window_no_focus);
-    xwindow_set_name_static(getGlobals().focus.window_no_focus, "Awesome no input window");
-    xcb_map_window(getGlobals().x.connection, getGlobals().focus.window_no_focus);
-    uint32_t create_gc_flags[] = {getGlobals().screen->black_pixel,
-                                  getGlobals().screen->white_pixel};
-    xcb_create_gc(getGlobals().x.connection,
-                  getGlobals().gc,
-                  getGlobals().focus.window_no_focus,
+    xwindow_set_class_instance(Manager::get().focus.window_no_focus);
+    xwindow_set_name_static(Manager::get().focus.window_no_focus, "Awesome no input window");
+    xcb_map_window(Manager::get().x.connection, Manager::get().focus.window_no_focus);
+    uint32_t create_gc_flags[] = {Manager::get().screen->black_pixel,
+                                  Manager::get().screen->white_pixel};
+    xcb_create_gc(Manager::get().x.connection,
+                  Manager::get().gc,
+                  Manager::get().focus.window_no_focus,
                   XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
                   create_gc_flags);
 
     /* Get the window tree associated to this screen */
     xcb_query_tree_cookie_t tree_c =
-      getConnection().query_tree_unchecked(getGlobals().screen->root);
+      getConnection().query_tree_unchecked(Manager::get().screen->root);
 
     getConnection().change_attributes(
-      getGlobals().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
+      Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
 
     /* we will receive events, stop grabbing server */
-    xutil_ungrab_server(getGlobals().x.connection);
+    xutil_ungrab_server(Manager::get().x.connection);
 
     /* get the current wallpaper, from now on we are informed when it changes */
     root_update_wallpaper();
@@ -811,9 +811,9 @@ int main(int argc, char** argv) {
     ewmh_init_lua();
 
     /* Parse and run configuration file before adding the screens */
-    if (getGlobals().startup.no_auto_screen) {
+    if (Manager::get().startup.no_auto_screen) {
         /* Disable automatic screen creation, awful.screen has a fallback */
-        getGlobals().startup.ignore_screens = true;
+        Manager::get().startup.ignore_screens = true;
 
         if (!opts.configPath || !Lua::parserc(&xdg, opts.configPath->c_str())) {
             log_fatal("couldn't find any rc file");
@@ -824,7 +824,7 @@ int main(int argc, char** argv) {
     screen_scan();
 
     /* Parse and run configuration file after adding the screens */
-    if (((!getGlobals().startup.no_auto_screen) && !Lua::parserc(&xdg, opts.configPath))) {
+    if (((!Manager::get().startup.no_auto_screen) && !Lua::parserc(&xdg, opts.configPath))) {
         log_fatal("couldn't find any rc file");
     }
 
@@ -835,7 +835,7 @@ int main(int argc, char** argv) {
     screen_emit_scanned();
 
     /* Exit if the user doesn't read the instructions properly */
-    if (getGlobals().startup.no_auto_screen && !getGlobals().screens.size()) {
+    if (Manager::get().startup.no_auto_screen && !Manager::get().screens.size()) {
         log_fatal(
           "When -m/--screen is set to \"off\", you **must** create a "
           "screen object before or inside the screen \"scanned\" "
@@ -856,16 +856,16 @@ int main(int argc, char** argv) {
     gettimeofday(&last_wakeup, NULL);
 
     /* main event loop (if not NULL, awesome.quit() was already called) */
-    if (getGlobals().loop == NULL) {
-        getGlobals().loop = g_main_loop_new(NULL, FALSE);
-        g_main_loop_run(getGlobals().loop);
+    if (Manager::get().loop == NULL) {
+        Manager::get().loop = g_main_loop_new(NULL, FALSE);
+        g_main_loop_run(Manager::get().loop);
     }
-    g_main_loop_unref(getGlobals().loop);
-    getGlobals().loop = NULL;
+    g_main_loop_unref(Manager::get().loop);
+    Manager::get().loop = NULL;
 
     awesome_atexit(false);
 
-    return getGlobals().exit_code;
+    return Manager::get().exit_code;
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

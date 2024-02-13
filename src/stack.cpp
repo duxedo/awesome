@@ -31,11 +31,11 @@
 
 void stack_client_remove(client* c) {
     auto it =
-      std::ranges::find_if(getGlobals().getStack(), [c](auto client) { return c == client; });
-    if (it == getGlobals().getStack().end()) {
+      std::ranges::find_if(Manager::get().getStack(), [c](auto client) { return c == client; });
+    if (it == Manager::get().getStack().end()) {
         return;
     }
-    getGlobals().refStack().erase(it);
+    Manager::get().refStack().erase(it);
     ewmh_update_net_client_list_stacking();
     stack_windows();
 }
@@ -45,7 +45,7 @@ void stack_client_remove(client* c) {
  */
 void stack_client_push(client* c) {
     stack_client_remove(c);
-    getGlobals().refStack().insert(getGlobals().getStack().begin(), c);
+    Manager::get().refStack().insert(Manager::get().getStack().begin(), c);
     ewmh_update_net_client_list_stacking();
     stack_windows();
 }
@@ -55,7 +55,7 @@ void stack_client_push(client* c) {
  */
 void stack_client_append(client* c) {
     stack_client_remove(c);
-    getGlobals().refStack().push_back(c);
+    Manager::get().refStack().push_back(c);
     ewmh_update_net_client_list_stacking();
     stack_windows();
 }
@@ -91,7 +91,7 @@ static xcb_window_t stack_client_above(client* c, xcb_window_t previous) {
     previous = c->frame_window;
 
     /* stack transient window on top of their parents */
-    for (auto* node : getGlobals().getStack()) {
+    for (auto* node : Manager::get().getStack()) {
         if (node->transient_for == c) {
             previous = stack_client_above(node, previous);
         }
@@ -124,7 +124,7 @@ static window_layer_t client_layer_translator(client* c) {
         return WINDOW_LAYER_ONTOP;
     }
     /* Fullscreen windows only get their own layer when they have the focus */
-    else if (c->fullscreen && getGlobals().focus.client == c) {
+    else if (c->fullscreen && Manager::get().focus.client == c) {
         return WINDOW_LAYER_FULLSCREEN;
     } else if (c->above) {
         return WINDOW_LAYER_ABOVE;
@@ -158,7 +158,7 @@ void stack_refresh() {
 
     /* stack desktop windows */
     for (int layer = WINDOW_LAYER_DESKTOP; layer < WINDOW_LAYER_BELOW; layer++) {
-        for (auto* node : getGlobals().getStack()) {
+        for (auto* node : Manager::get().getStack()) {
             if (client_layer_translator(node) == layer) {
                 next = stack_client_above(node, next);
             }
@@ -166,7 +166,7 @@ void stack_refresh() {
     }
 
     /* first stack not ontop drawin window */
-    for (auto drawin : getGlobals().drawins) {
+    for (auto drawin : Manager::get().drawins) {
         if (!drawin->ontop) {
             stack_window_above(drawin->window, next);
             next = drawin->window;
@@ -175,7 +175,7 @@ void stack_refresh() {
 
     /* then stack clients */
     for (int layer = WINDOW_LAYER_BELOW; layer < WINDOW_LAYER_COUNT; layer++) {
-        for (auto* node : getGlobals().getStack()) {
+        for (auto* node : Manager::get().getStack()) {
             if (client_layer_translator(node) == layer) {
                 next = stack_client_above(node, next);
             }
@@ -183,7 +183,7 @@ void stack_refresh() {
     }
 
     /* then stack ontop drawin window */
-    for (auto* drawin : getGlobals().drawins) {
+    for (auto* drawin : Manager::get().drawins) {
         if (drawin->ontop) {
             stack_window_above(drawin->window, next);
             next = drawin->window;

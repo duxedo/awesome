@@ -248,10 +248,10 @@ void spawn_start_notify(client* c, const char* startup_id) {
 /** Initialize program spawner.
  */
 void spawn_init(void) {
-    getGlobals().sndisplay = sn_xcb_display_new(getGlobals().x.connection, NULL, NULL);
+    Manager::get().sndisplay = sn_xcb_display_new(Manager::get().x.connection, NULL, NULL);
 
-    getGlobals().snmonitor = sn_monitor_context_new(
-      getGlobals().sndisplay, getGlobals().x.default_screen, spawn_monitor_event, NULL, NULL);
+    Manager::get().snmonitor = sn_monitor_context_new(
+      Manager::get().sndisplay, Manager::get().x.default_screen, spawn_monitor_event, NULL, NULL);
 }
 
 static gboolean spawn_launchee_timeout(gpointer context) {
@@ -508,11 +508,11 @@ int luaA_spawn(lua_State* L) {
 
     SnLauncherContext* context = NULL;
     if (use_sn) {
-        context = sn_launcher_context_new(getGlobals().sndisplay, getGlobals().x.default_screen);
+        context = sn_launcher_context_new(Manager::get().sndisplay, Manager::get().x.default_screen);
         sn_launcher_context_set_name(context, "awesome");
         sn_launcher_context_set_description(context, "awesome spawn");
         sn_launcher_context_set_binary_name(context, argv[0]);
-        sn_launcher_context_initiate(context, "awesome", argv[0], getGlobals().x.get_timestamp());
+        sn_launcher_context_initiate(context, "awesome", argv[0], Manager::get().x.get_timestamp());
 
         /* app will have AWESOME_SPAWN_TIMEOUT seconds to complete,
          * or the timeout function will terminate the launch sequence anyway */
