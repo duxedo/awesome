@@ -93,7 +93,7 @@ void mousegrabber_handleevent(lua_State* L, int x, int y, uint16_t mask) {
  * @staticfct run
  */
 static int luaA_mousegrabber_run(lua_State* L) {
-    if (Manager::get().mousegrabber != LUA_REFNIL) {
+    if (Manager::get().mousegrabber) {
         luaL_error(L, "mousegrabber already running");
     }
 
@@ -112,7 +112,7 @@ static int luaA_mousegrabber_run(lua_State* L) {
     Lua::registerfct(L, 1, &(Manager::get().mousegrabber));
 
     if (!mousegrabber_grab(cursor)) {
-        Lua::unregister(L, &(Manager::get().mousegrabber));
+        Lua::unregister(L, &(Manager::get().mousegrabber.idx));
         luaL_error(L, "unable to grab mouse pointer");
     }
 
@@ -136,7 +136,7 @@ int luaA_mousegrabber_stop(lua_State* L) {
  * @staticfct isrunning
  */
 static int luaA_mousegrabber_isrunning(lua_State* L) {
-    lua_pushboolean(L, Manager::get().mousegrabber != LUA_REFNIL);
+    lua_pushboolean(L, Manager::get().mousegrabber.hasRef());
     return 1;
 }
 

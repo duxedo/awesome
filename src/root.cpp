@@ -35,6 +35,7 @@
  */
 
 #include "common/atoms.h"
+#include "common/lualib.h"
 #include "common/xcursor.h"
 #include "common/xutil.h"
 #include "globalconf.h"
@@ -51,9 +52,9 @@
 #include <xcb/xtest.h>
 #include <xkbcommon/xkbcommon.h>
 
-static int miss_index_handler = LUA_REFNIL;
-static int miss_newindex_handler = LUA_REFNIL;
-static int miss_call_handler = LUA_REFNIL;
+static Lua::FunctionRegistryIdx miss_index_handler;
+static Lua::FunctionRegistryIdx miss_newindex_handler;
+static Lua::FunctionRegistryIdx miss_call_handler;
 
 static void root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p) {
     xcb_get_property_cookie_t prop_c;
@@ -576,7 +577,7 @@ static int luaA_root_set_newindex_miss_handler(lua_State* L) {
  * \luastack
  */
 static int luaA_root_index(lua_State* L) {
-    if (miss_index_handler != LUA_REFNIL) {
+    if (miss_index_handler) {
         return Lua::call_handler(L, miss_index_handler);
     }
 
@@ -589,7 +590,7 @@ static int luaA_root_index(lua_State* L) {
  */
 static int luaA_root_newindex(lua_State* L) {
     /* Call the lua root property handler */
-    if (miss_newindex_handler != LUA_REFNIL) {
+    if (miss_newindex_handler) {
         return Lua::call_handler(L, miss_newindex_handler);
     }
 

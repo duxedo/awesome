@@ -53,6 +53,7 @@
 
 #include "spawn.h"
 
+#include "common/lualib.h"
 #include "common/util.h"
 #include "glibconfig.h"
 #include "libsn/sn-monitor.h"
@@ -82,7 +83,7 @@ std::vector<StartupSequenceHandle> sn_waits;
 
 struct running_child_t {
     GPid pid;
-    int exit_callback;
+    Lua::FunctionRegistryIdx exit_callback;
     auto operator<=>(const running_child_t& c) { return pid <=> c.pid; }
     auto operator<=>(GPid pid) { return this->pid <=> pid; }
 };
@@ -334,7 +335,7 @@ static gchar** parse_command(lua_State* L, int idx, GError** error) {
 
 /** Callback for when a spawned process exits. */
 void spawn_child_exited(pid_t pid, int status) {
-    int exit_callback;
+    Lua::FunctionRegistryIdx exit_callback;
     lua_State* L = globalconf_get_lua_State();
 
     auto it = running_children.find(GPid(pid));
@@ -358,7 +359,7 @@ void spawn_child_exited(pid_t pid, int status) {
         lua_pushinteger(L, WTERMSIG(status));
     }
 
-    lua_rawgeti(L, LUA_REGISTRYINDEX, exit_callback);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, exit_callback.idx.idx);
     Lua::dofunction(L, 2, 0);
     Lua::unregister(L, &exit_callback);
 }
@@ -544,7 +545,7 @@ int luaA_spawn(lua_State* L) {
 
     if (flags & G_SPAWN_DO_NOT_REAP_CHILD) {
         /* Only do this down here to avoid leaks in case of errors */
-        running_child_t child = {.pid = pid, .exit_callback = LUA_REFNIL};
+        running_child_t child = {.pid = pid, .exit_callback = {}};
         Lua::registerfct(L, 6, &child.exit_callback);
         running_children.insert(child);
     }

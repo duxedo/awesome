@@ -258,6 +258,8 @@ struct Pusher<area_t> {
         return 1;
     }
 };
+
+
 /** Register an Lua object.
  * \param L The Lua stack.
  * \param idx Index of the object in the stack.
@@ -266,22 +268,22 @@ struct Pusher<area_t> {
  * be unregistered.
  * \return Always 0.
  */
-static inline int lregister(lua_State* L, int idx, int* ref) {
+static inline int lregister(lua_State* L, int idx, RegistryIdx* ref) {
     lua_pushvalue(L, idx);
-    if (*ref != LUA_REFNIL) {
-        luaL_unref(L, LUA_REGISTRYINDEX, *ref);
+    if (ref->idx != LUA_REFNIL) {
+        luaL_unref(L, LUA_REGISTRYINDEX, ref->idx);
     }
-    *ref = luaL_ref(L, LUA_REGISTRYINDEX);
+    ref->idx = luaL_ref(L, LUA_REGISTRYINDEX);
     return 0;
 }
 
 /** Unregister a Lua object.
  * \param L The Lua stack.
- * \param ref A reference to an Lua object.
+ * \param ref A reference to a Lua object.
  */
-static inline void unregister(lua_State* L, int* ref) {
-    luaL_unref(L, LUA_REGISTRYINDEX, *ref);
-    *ref = LUA_REFNIL;
+static inline void unregister(lua_State* L, RegistryIdx* ref) {
+    luaL_unref(L, LUA_REGISTRYINDEX, ref->idx);
+    ref->idx = LUA_REFNIL;
 }
 
 /** Register a function.
@@ -290,13 +292,20 @@ static inline void unregister(lua_State* L, int* ref) {
  * \param fct A int address: it will be filled with the int
  * registered. If the address points to an already registered function, it will
  * be unregistered.
- * \return luaA_register value.
+ * \return lregister value.
  */
-static inline int registerfct(lua_State* L, int idx, int* fct) {
+static inline int registerfct(lua_State* L, int idx, FunctionRegistryIdx* fct) {
     Lua::checkfunction(L, idx);
-    return lregister(L, idx, fct);
+    return lregister(L, idx, &fct->idx);
 }
 
+/** Unregister a Function.
+ * \param L The Lua stack.
+ * \param ref A reference to a Lua object.
+ */
+static inline void unregister(lua_State* L, FunctionRegistryIdx* ref) {
+    unregister(L, &ref->idx);
+}
 using config_callback = bool(const std::filesystem::path&);
 
 extern Signals global_signals;
