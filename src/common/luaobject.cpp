@@ -31,9 +31,11 @@
 
 #include "common/backtrace.h"
 #include "common/luaclass.h"
+#include "common/lualib.h"
 #include "common/signal.h"
+#include "lua.h"
 
-#include <fmt/format.h>
+#include <format>
 
 /** Setup the object system at startup.
  * \param L The Lua VM state.
@@ -292,36 +294,40 @@ void luaA_object_emit_signal(lua_State* L, int oud, const char* name, int nargs)
     luaA_class_get(L, -nargs - 1)->emit_signal(L, name, nargs + 1);
 }
 
-int luaA_object_tostring(lua_State* L) {
-    lua_class_t* lua_class = luaA_class_get(L, 1);
-    auto object = lua_class->checkudata<lua_object_t>(L, 1);
+int luaA_object_tostring(lua_State* state) {
+    Lua::State L{state};
+
+    lua_class_t* lua_class = luaA_class_get(L.L, 1);
+    auto object = lua_class->checkudata<lua_object_t>(L.L, 1);
     int offset = 0;
 
     for (; lua_class; lua_class = lua_class->parent()) {
         if (offset) {
-            lua_pushliteral(L, "/");
-            lua_insert(L, -++offset);
+            L.push("/");
+            L.insert(-++offset);
         }
-        Lua::pushstring(L, lua_class->name());
-        lua_insert(L, -++offset);
+        L.push(lua_class->name());
+        L.insert(-++offset);
 
         if (lua_class->has_tostring()) {
             int k, n;
 
-            lua_pushliteral(L, "(");
-            n = 2 + lua_class->tostring(L, object);
-            lua_pushliteral(L, ")");
+            L.push("(");
+            n = 2 + lua_class->tostring(L.L, object);
+            L.push(")");
 
             for (k = 0; k < n; k++) {
-                lua_insert(L, -offset);
+                L.insert(-offset);
             }
             offset += n;
         }
     }
 
-    lua_pushfstring(L, ": %p", object);
+    L.push(std::format(": {}", static_cast<const void*>(object)));
 
-    lua_concat(L, offset + 1);
+    lua_pushfstring(L.L, ": %p", object);
+
+    L.concat(offset + 1);
 
     return 1;
 }
