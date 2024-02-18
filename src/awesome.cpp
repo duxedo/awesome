@@ -532,7 +532,8 @@ int main(int argc, char** argv) {
 
     /* clear the globalconf structure */
     gGlobals = new Manager;
-    Manager::get().api_level = opts.api_level ? opts.api_level.value() : awesome_default_api_level();
+    Manager::get().api_level =
+      opts.api_level ? opts.api_level.value() : awesome_default_api_level();
     Manager::get().startup.have_searchpaths = opts.have_searchpaths;
     Manager::get().had_overriden_depth = opts.had_overriden_depth;
 
