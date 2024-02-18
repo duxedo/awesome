@@ -88,6 +88,7 @@ int State::push(lua_object_t* val) {
     luaA_object_push(L, val);
     return 1;
 };
+
 int call_handler(lua_State* L, Lua::FunctionRegistryIdx handlerIdx) {
     /* This is based on luaA_dofunction, but allows multiple return values */
     auto handler = handlerIdx.idx.idx;
