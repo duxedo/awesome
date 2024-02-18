@@ -37,23 +37,15 @@ namespace Lua {
 
 struct RegistryIdx {
     int idx = LUA_REFNIL;
-    explicit operator bool() const {
-        return idx != LUA_REFNIL;
-    }
-    bool hasRef() const {
-        return static_cast<bool>(*this);
-    }
+    explicit operator bool() const { return idx != LUA_REFNIL; }
+    bool hasRef() const { return static_cast<bool>(*this); }
 };
 
 struct FunctionRegistryIdx {
     RegistryIdx idx;
 
-    explicit operator bool() const {
-        return static_cast<bool>(idx);
-    }
-    bool hasRef() {
-        return static_cast<bool>(*this);
-    }
+    explicit operator bool() const { return static_cast<bool>(idx); }
+    bool hasRef() { return static_cast<bool>(*this); }
 };
 
 inline std::optional<std::string_view> checkstring(lua_State* L, int numArg) {
@@ -77,8 +69,14 @@ concept Pushable = requires(T x) {
     { Pusher<std::decay_t<T>>{}.push(std::declval<State&>(), x) } -> std::same_as<int>;
 };
 
+template <typename T>
+concept ObjectLike = std::is_base_of_v<lua_object_t, T>;
+
 struct State {
     lua_State* L;
+
+    void concat(int idx) { lua_concat(L, idx); }
+
     int push(const std::string& str);
     template <size_t N>
     int push(const char (&arr)[N]) {
@@ -91,22 +89,18 @@ struct State {
     int push(bool);
     int push(lua_object_t*);
 
+    void insert(int idx) { lua_insert(L, idx); }
+
     template <Pushable T>
     int push(T&& val) {
         return Pusher<std::decay_t<T>>{}.push(*this, std::forward<T>(val));
     }
 
-    template <typename T>
-    requires(std::is_base_of_v<lua_object_t, T>)
+    template <ObjectLike T>
     int push(T* val) {
         return push(static_cast<lua_object_t*>(val));
     }
 };
-
-template <typename T>
-void pushstring(lua_State* s, T&& str) {
-    State{s}.push(std::forward<T>(str));
-}
 
 /** Lua function to call on dofunction() error */
 extern lua_CFunction lualib_dofunction_on_error;
