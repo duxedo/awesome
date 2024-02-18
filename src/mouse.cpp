@@ -73,8 +73,8 @@
 #include "objects/drawin.h"
 #include "objects/screen.h"
 
-static int miss_index_handler = LUA_REFNIL;
-static int miss_newindex_handler = LUA_REFNIL;
+static Lua::FunctionRegistryIdx miss_index_handler;
+static Lua::FunctionRegistryIdx miss_newindex_handler;
 
 /**
  * The `screen` under the cursor
@@ -161,7 +161,7 @@ static int luaA_mouse_index(lua_State* L) {
 
     /* attr is not "screen"?! */
     if (attr != "screen") {
-        if (miss_index_handler != LUA_REFNIL) {
+        if (miss_index_handler) {
             return Lua::call_handler(L, miss_index_handler);
         } else {
             return Lua::default_index(L);
@@ -194,7 +194,7 @@ static int luaA_mouse_newindex(lua_State* L) {
 
     if (attr != "screen") {
         /* Call the lua mouse property handler */
-        if (miss_newindex_handler != LUA_REFNIL) {
+        if (miss_newindex_handler) {
             return Lua::call_handler(L, miss_newindex_handler);
         } else {
             return Lua::default_newindex(L);
