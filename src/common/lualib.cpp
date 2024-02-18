@@ -88,5 +88,31 @@ int State::push(lua_object_t* val) {
     luaA_object_push(L, val);
     return 1;
 };
+int call_handler(lua_State* L, Lua::FunctionRegistryIdx handlerIdx) {
+    /* This is based on luaA_dofunction, but allows multiple return values */
+    auto handler = handlerIdx.idx.idx;
+    assert(handler != LUA_REFNIL);
+
+    int nargs = lua_gettop(L);
+
+    /* Push error handling function and move it before args */
+    lua_pushcfunction(L, dofunction_error);
+    lua_insert(L, -nargs - 1);
+    int error_func_pos = 1;
+
+    /* push function and move it before args */
+    lua_rawgeti(L, LUA_REGISTRYINDEX, handler);
+    lua_insert(L, -nargs - 1);
+
+    if (lua_pcall(L, nargs, LUA_MULTRET, error_func_pos)) {
+        log_warn("{}", lua_tostring(L, -1));
+        /* Remove error function and error string */
+        lua_pop(L, 2);
+        return 0;
+    }
+    /* Remove error function */
+    lua_remove(L, error_func_pos);
+    return lua_gettop(L);
+}
 } // namespace Lua
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

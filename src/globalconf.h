@@ -20,6 +20,7 @@
  */
 #pragma once
 
+#include "common/lualib.h"
 #include <cstdlib>
 #include <xcb/xproto.h>
 #define SN_API_NOT_YET_FROZEN
@@ -170,9 +171,9 @@ class Manager {
     /** main loop that awesome is running on */
     GMainLoop* loop = nullptr;
     /** The key grabber function */
-    int keygrabber = LUA_REFNIL;
+    Lua::FunctionRegistryIdx keygrabber;
     /** The mouse pointer grabber function */
-    int mousegrabber = LUA_REFNIL;
+    Lua::FunctionRegistryIdx mousegrabber;
     /** The drawable that currently contains the pointer */
     drawable_t* drawable_under_mouse = nullptr;
     /** Input focus information */

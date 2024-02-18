@@ -34,6 +34,28 @@
 struct lua_object_t;
 
 namespace Lua {
+
+struct RegistryIdx {
+    int idx = LUA_REFNIL;
+    explicit operator bool() const {
+        return idx != LUA_REFNIL;
+    }
+    bool hasRef() const {
+        return static_cast<bool>(*this);
+    }
+};
+
+struct FunctionRegistryIdx {
+    RegistryIdx idx;
+
+    explicit operator bool() const {
+        return static_cast<bool>(idx);
+    }
+    bool hasRef() {
+        return static_cast<bool>(*this);
+    }
+};
+
 inline std::optional<std::string_view> checkstring(lua_State* L, int numArg) {
     size_t length(0);
     const char* str = luaL_checklstring(L, numArg, &length);
@@ -137,37 +159,12 @@ static inline bool dofunction(lua_State* L, int nargs, int nret) {
     lua_remove(L, error_func_pos);
     return true;
 }
-
 /** Call a registered function. Its arguments are the complete stack contents.
  * \param L The Lua VM state.
  * \param handler The function to call.
  * \return The number of elements pushed on stack.
  */
-static inline int call_handler(lua_State* L, int handler) {
-    /* This is based on luaA_dofunction, but allows multiple return values */
-    assert(handler != LUA_REFNIL);
-
-    int nargs = lua_gettop(L);
-
-    /* Push error handling function and move it before args */
-    lua_pushcfunction(L, dofunction_error);
-    lua_insert(L, -nargs - 1);
-    int error_func_pos = 1;
-
-    /* push function and move it before args */
-    lua_rawgeti(L, LUA_REGISTRYINDEX, handler);
-    lua_insert(L, -nargs - 1);
-
-    if (lua_pcall(L, nargs, LUA_MULTRET, error_func_pos)) {
-        log_warn("{}", lua_tostring(L, -1));
-        /* Remove error function and error string */
-        lua_pop(L, 2);
-        return 0;
-    }
-    /* Remove error function */
-    lua_remove(L, error_func_pos);
-    return lua_gettop(L);
-}
+int call_handler(lua_State* L, Lua::FunctionRegistryIdx handlerIdx);
 } // namespace Lua
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

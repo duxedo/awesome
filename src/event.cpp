@@ -121,10 +121,10 @@ DO_EVENT_HOOK_CALLBACK(keyb_t, key, XCB_KEY, std::vector<keyb_t*>, event_key_mat
  * \return True if the event was handled.
  */
 static bool event_handle_mousegrabber(int x, int y, uint16_t mask) {
-    if (Manager::get().mousegrabber != LUA_REFNIL) {
+    if (Manager::get().mousegrabber) {
         lua_State* L = globalconf_get_lua_State();
         mousegrabber_handleevent(L, x, y, mask);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, Manager::get().mousegrabber);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, Manager::get().mousegrabber.idx.idx);
         if (!Lua::dofunction(L, 1, 1)) {
             log_warn("Stopping mousegrabber.");
             luaA_mousegrabber_stop(L);
@@ -707,9 +707,9 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
     lua_State* L = globalconf_get_lua_State();
     Manager::get().x.update_timestamp(ev);
 
-    if (Manager::get().keygrabber != LUA_REFNIL) {
+    if (Manager::get().keygrabber) {
         if (keygrabber_handlekpress(L, ev)) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, Manager::get().keygrabber);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, Manager::get().keygrabber.idx.idx);
 
             if (!Lua::dofunction(L, 3, 0)) {
                 log_warn("Stopping keygrabber.");

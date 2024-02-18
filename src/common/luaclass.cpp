@@ -346,7 +346,7 @@ int luaA_class_index(lua_State* L) {
         return 0;
     }
 
-    if (cls->index_miss_handler() != LUA_REFNIL) {
+    if (cls->index_miss_handler()) {
         return Lua::call_handler(L, cls->index_miss_handler());
     }
 
@@ -377,7 +377,7 @@ int luaA_class_newindex(lua_State* L) {
         return 0;
     }
 
-    if (cls->newindex_miss_handler() != LUA_REFNIL) {
+    if (cls->newindex_miss_handler()) {
         return Lua::call_handler(L, cls->newindex_miss_handler());
     }
     if (cls->newindex_miss_property()) {

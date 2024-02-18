@@ -104,14 +104,14 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
  * @deprecated keygrabber.run
  */
 static int luaA_keygrabber_run(lua_State* L) {
-    if (Manager::get().keygrabber != LUA_REFNIL) {
+    if (Manager::get().keygrabber) {
         luaL_error(L, "keygrabber already running");
     }
 
     Lua::registerfct(L, 1, &Manager::get().keygrabber);
 
     if (!keygrabber_grab()) {
-        Lua::unregister(L, &Manager::get().keygrabber);
+        Lua::unregister(L, &Manager::get().keygrabber.idx);
         luaL_error(L, "unable to grab keyboard");
     }
 
@@ -123,7 +123,7 @@ static int luaA_keygrabber_run(lua_State* L) {
  */
 int luaA_keygrabber_stop(lua_State* L) {
     xcb_ungrab_keyboard(Manager::get().x.connection, XCB_CURRENT_TIME);
-    Lua::unregister(L, &Manager::get().keygrabber);
+    Lua::unregister(L, &Manager::get().keygrabber.idx);
     return 0;
 }
 
@@ -133,7 +133,7 @@ int luaA_keygrabber_stop(lua_State* L) {
  * @see keygrabber.is_running
  */
 static int luaA_keygrabber_isrunning(lua_State* L) {
-    lua_pushboolean(L, Manager::get().keygrabber != LUA_REFNIL);
+    lua_pushboolean(L, Manager::get().keygrabber.hasRef());
     return 1;
 }
 

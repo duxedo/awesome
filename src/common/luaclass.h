@@ -225,9 +225,9 @@ class lua_class_t {
     /** Class tostring method */
     lua_class_propfunc_t _tostring = nullptr;
     /** Function to call on index misses */
-    int _index_miss_handler = LUA_REFNIL;
+    Lua::FunctionRegistryIdx _index_miss_handler;
     /** Function to call on newindex misses */
-    int _newindex_miss_handler = LUA_REFNIL;
+    Lua::FunctionRegistryIdx _newindex_miss_handler;
 
   public:
     lua_class_t(std::string name, lua_class_t* parent, ClassInterface iface)
@@ -258,8 +258,8 @@ class lua_class_t {
     void ref() { ++_instances; }
     void deref() { --_instances; }
 
-    int& index_miss_handler() { return _index_miss_handler; }
-    int& newindex_miss_handler() { return _newindex_miss_handler; }
+    auto& index_miss_handler() { return _index_miss_handler; }
+    auto& newindex_miss_handler() { return _newindex_miss_handler; }
 
     bool check(lua_object_t* obj) {
         if (_checker) {
@@ -360,7 +360,7 @@ inline constexpr auto LuaClassMethods = std::array<luaL_Reg, 6>
 }};
 // clang-format on
 
-inline constexpr std::array<luaL_Reg, 2> LuaClassMeta = std::array<luaL_Reg, 2>{
+inline constexpr std::array<luaL_Reg, 2> LuaClassMeta = {
   luaL_Reg{   "__index",    luaA_class_index},
   {"__newindex", luaA_class_newindex}
 };
