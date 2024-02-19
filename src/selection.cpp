@@ -33,6 +33,8 @@
 #include "globalconf.h"
 #include "xwindow.h"
 
+#include <array>
+#include <cstdint>
 #include <xcb/xcb_atom.h>
 #include <xcb/xcb_event.h>
 
@@ -55,39 +57,30 @@ static int luaA_selection_get(lua_State* L) {
     if (selection_window == XCB_NONE) {
         xcb_screen_t* screen = Manager::get().screen;
         uint32_t mask = XCB_CW_BACK_PIXEL | XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK;
-        uint32_t values[] = {screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE};
 
         selection_window = getConnection().generate_id();
 
-        xcb_create_window(Manager::get().x.connection,
-                          screen->root_depth,
-                          selection_window,
-                          screen->root,
-                          0,
-                          0,
-                          1,
-                          1,
-                          0,
-                          XCB_COPY_FROM_PARENT,
-                          screen->root_visual,
-                          mask,
-                          values);
+        getConnection().create_window(
+          screen->root_depth,
+          selection_window,
+          screen->root,
+          {0, 0, 1, 1},
+          0,
+          XCB_COPY_FROM_PARENT,
+          screen->root_visual,
+          mask,
+          std::array<uint32_t, 3>{screen->black_pixel, 1, XCB_EVENT_MASK_PROPERTY_CHANGE});
         xwindow_set_class_instance(selection_window);
         xwindow_set_name_static(selection_window, "Awesome selection window");
     }
 
-    xcb_convert_selection(Manager::get().x.connection,
-                          selection_window,
-                          XCB_ATOM_PRIMARY,
-                          UTF8_STRING,
-                          XSEL_DATA,
-                          Manager::get().x.get_timestamp());
-    xcb_flush(Manager::get().x.connection);
+    getConnection().convert_selection(
+      selection_window, XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, Manager::get().x.get_timestamp());
 
-    xcb_generic_event_t* event;
+    getConnection().flush();
 
     while (true) {
-        event = xcb_wait_for_event(Manager::get().x.connection);
+        auto event = getConnection().wait_for_event();
 
         if (!event) {
             return 0;
@@ -102,28 +95,26 @@ static int luaA_selection_get(lua_State* L) {
              * Anyway that's still brakes the socket or D-Bus, so maybe using
              * ev_loop() would be even better.
              */
-            event_handle(event);
-            p_delete(&event);
+            event_handle(event.get());
+            event = nullptr;
             awesome_refresh();
             continue;
         }
 
-        xcb_selection_notify_event_t* event_notify = (xcb_selection_notify_event_t*)event;
+        xcb_selection_notify_event_t* event_notify = (xcb_selection_notify_event_t*)event.get();
 
         if (event_notify->selection == XCB_ATOM_PRIMARY && event_notify->property != XCB_NONE) {
             xcb_icccm_get_text_property_reply_t prop;
-            xcb_get_property_cookie_t cookie = xcb_icccm_get_text_property(
-              Manager::get().x.connection, event_notify->requestor, event_notify->property);
+            auto cookie = getConnection().icccm_get_text_property(event_notify->requestor,
+                                                                  event_notify->property);
 
-            if (xcb_icccm_get_text_property_reply(Manager::get().x.connection, cookie, &prop, NULL)) {
+            if (xcb_icccm_get_text_property_reply(
+                  getConnection().getConnection(), cookie, &prop, NULL)) {
                 lua_pushlstring(L, prop.name, prop.name_len);
 
                 xcb_icccm_get_text_property_reply_wipe(&prop);
 
-                xcb_delete_property(
-                  Manager::get().x.connection, event_notify->requestor, event_notify->property);
-
-                p_delete(&event);
+                getConnection().delete_property(event_notify->requestor, event_notify->property);
 
                 return 1;
             } else {
@@ -132,7 +123,6 @@ static int luaA_selection_get(lua_State* L) {
         }
     }
 
-    p_delete(&event);
     return 0;
 }
 

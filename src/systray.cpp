@@ -26,6 +26,7 @@
 #include "common/xutil.h"
 #include "globalconf.h"
 #include "objects/drawin.h"
+#include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
 #include <algorithm>
@@ -40,26 +41,20 @@
 /** Initialize systray information in X.
  */
 void systray_init(void) {
-    xcb_intern_atom_cookie_t atom_systray_q;
-    xcb_intern_atom_reply_t* atom_systray_r;
     xcb_screen_t* xscreen = Manager::get().screen;
 
     Manager::get().systray.window = getConnection().generate_id();
     Manager::get().systray.background_pixel = xscreen->black_pixel;
-    const uint32_t values[] = {xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT};
-    xcb_create_window(Manager::get().x.connection,
-                      xscreen->root_depth,
-                      Manager::get().systray.window,
-                      xscreen->root,
-                      -1,
-                      -1,
-                      1,
-                      1,
-                      0,
-                      XCB_COPY_FROM_PARENT,
-                      xscreen->root_visual,
-                      XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
-                      values);
+    getConnection().create_window(
+      xscreen->root_depth,
+      Manager::get().systray.window,
+      xscreen->root,
+      {-1, -1, 1, 1},
+      0,
+      XCB_COPY_FROM_PARENT,
+      xscreen->root_visual,
+      XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
+      std::array<uint32_t, 2>{xscreen->black_pixel, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT});
     xwindow_set_class_instance(Manager::get().systray.window);
     xwindow_set_name_static(Manager::get().systray.window, "Awesome systray window");
 
@@ -67,25 +62,22 @@ void systray_init(void) {
     if (!atom_name) {
         log_fatal("error getting systray atom name");
     }
-
-    atom_systray_q =
-      xcb_intern_atom_unchecked(Manager::get().x.connection, false, strlen(atom_name), atom_name);
+    auto atom_systray_q =
+      getConnection().intern_atom_unchecked(false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
-    atom_systray_r = xcb_intern_atom_reply(Manager::get().x.connection, atom_systray_q, NULL);
+    auto atom_systray_r = getConnection().intern_atom_reply(atom_systray_q);
     if (!atom_systray_r) {
         log_fatal("error getting systray atom");
     }
 
     Manager::get().systray.atom = atom_systray_r->atom;
-    p_delete(&atom_systray_r);
 }
 
 /** Register systray in X.
  */
 static void systray_register(void) {
-    xcb_client_message_event_t ev;
 
     xcb_screen_t* xscreen = Manager::get().screen;
 
@@ -95,27 +87,20 @@ static void systray_register(void) {
 
     Manager::get().systray.registered = true;
 
-    /* Fill event */
-    p_clear(&ev, 1);
-    ev.response_type = XCB_CLIENT_MESSAGE;
-    ev.window = xscreen->root;
-    ev.format = 32;
-    ev.type = MANAGER;
-    ev.data.data32[0] = Manager::get().x.get_timestamp();
-    ev.data.data32[1] = Manager::get().systray.atom;
-    ev.data.data32[2] = Manager::get().systray.window;
-    ev.data.data32[3] = ev.data.data32[4] = 0;
+    xcb_client_message_event_t ev{.response_type = XCB_CLIENT_MESSAGE,
+                                  .format = 32,
+                                  .sequence = 0,
+                                  .window = xscreen->root,
+                                  .type = MANAGER,
+                                  .data = {.data32 = {Manager::get().x.get_timestamp(),
+                                                      Manager::get().systray.atom,
+                                                      Manager::get().systray.window,
+                                                      0,
+                                                      0}}};
+    getConnection().set_selection_owner(
+      Manager::get().systray.window, Manager::get().systray.atom, Manager::get().x.get_timestamp());
 
-    xcb_set_selection_owner(Manager::get().x.connection,
-                            Manager::get().systray.window,
-                            Manager::get().systray.atom,
-                            Manager::get().x.get_timestamp());
-
-    xcb_send_event(Manager::get().x.connection,
-                   false,
-                   xscreen->root,
-                   0xFFFFFF,
-                   reinterpret_cast<const char*>(&ev));
+    getConnection().send_event(false, xscreen->root, 0xFFFFFF, reinterpret_cast<const char*>(&ev));
 }
 
 /** Remove systray information in X.
@@ -127,12 +112,10 @@ void systray_cleanup(void) {
 
     Manager::get().systray.registered = false;
 
-    xcb_set_selection_owner(Manager::get().x.connection,
-                            XCB_NONE,
-                            Manager::get().systray.atom,
-                            Manager::get().x.get_timestamp());
+    getConnection().set_selection_owner(
+      XCB_NONE, Manager::get().systray.atom, Manager::get().x.get_timestamp());
 
-    xcb_unmap_window(Manager::get().x.connection, Manager::get().systray.window);
+    getConnection().unmap_window(Manager::get().systray.window);
 }
 
 /** Handle a systray request.
@@ -157,15 +140,13 @@ int systray_request_handle(xcb_window_t embed_win) {
     p_clear(&em_cookie, 1);
 
     em_cookie = XEmbed::info_get_unchecked(&getConnection(), embed_win);
-
-    xcb_change_window_attributes(
-      Manager::get().x.connection, embed_win, XCB_CW_EVENT_MASK, select_input_val);
+    getConnection().change_attributes(embed_win, XCB_CW_EVENT_MASK, select_input_val);
 
     /* we grab the window, but also make sure it's automatically reparented back
      * to the root window if we should die.
      */
-    xcb_change_save_set(Manager::get().x.connection, XCB_SET_MODE_INSERT, embed_win);
-    xcb_reparent_window(Manager::get().x.connection, embed_win, Manager::get().systray.window, 0, 0);
+    getConnection().change_save_set(XCB_SET_MODE_INSERT, embed_win);
+    getConnection().reparent_window(embed_win, Manager::get().systray.window, 0, 0);
 
     em.win = embed_win;
 
@@ -175,7 +156,7 @@ int systray_request_handle(xcb_window_t embed_win) {
                                .flags = static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED)});
     em.info = info;
 
-    XEmbed::xembed_embedded_notify(Manager::get().x.connection,
+    XEmbed::xembed_embedded_notify(getConnection(),
                                    em.win,
                                    Manager::get().x.get_timestamp(),
                                    Manager::get().systray.window,
@@ -192,27 +173,21 @@ int systray_request_handle(xcb_window_t embed_win) {
  * \return 0 on no error.
  */
 int systray_process_client_message(xcb_client_message_event_t* ev) {
-    int ret = 0;
-    xcb_get_geometry_cookie_t geom_c;
-    xcb_get_geometry_reply_t* geom_r;
+    if (ev->data.data32[1] != SYSTEM_TRAY_REQUEST_DOCK) {
+        return 0;
+    }
+    auto geom_c = getConnection().get_geometry_unchecked(ev->window);
+    auto geom_r = getConnection().get_geometry_reply(geom_c);
 
-    switch (ev->data.data32[1]) {
-    case SYSTEM_TRAY_REQUEST_DOCK:
-        geom_c = xcb_get_geometry_unchecked(Manager::get().x.connection, ev->window);
-
-        if (!(geom_r = xcb_get_geometry_reply(Manager::get().x.connection, geom_c, NULL))) {
-            return -1;
-        }
-
-        if (Manager::get().screen->root == geom_r->root) {
-            ret = systray_request_handle(ev->data.data32[2]);
-        }
-
-        p_delete(&geom_r);
-        break;
+    if (!geom_r) {
+        return -1;
     }
 
-    return ret;
+    if (Manager::get().screen->root != geom_r->root) {
+        return 0;
+    }
+
+    return systray_request_handle(ev->data.data32[2]);
 }
 
 /** Check if a window is a KDE tray.
@@ -220,28 +195,16 @@ int systray_process_client_message(xcb_client_message_event_t* ev) {
  * \return True if it is, false otherwise.
  */
 bool systray_iskdedockapp(xcb_window_t w) {
-    xcb_get_property_cookie_t kde_check_q;
-    xcb_get_property_reply_t* kde_check;
-    bool ret;
-
     /* Check if that is a KDE tray because it does not respect fdo standards,
      * thanks KDE. */
-    kde_check_q = xcb_get_property_unchecked(Manager::get().x.connection,
-                                             false,
-                                             w,
-                                             _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR,
-                                             XCB_ATOM_WINDOW,
-                                             0,
-                                             1);
 
-    kde_check = xcb_get_property_reply(Manager::get().x.connection, kde_check_q, NULL);
+    auto kde_check_q = getConnection().get_property_unchecked(
+      false, w, _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR, XCB_ATOM_WINDOW, 0, 1);
+
+    auto kde_check = getConnection().get_property_reply(kde_check_q);
 
     /* it's a KDE systray ?*/
-    ret = (kde_check && kde_check->value_len);
-
-    p_delete(&kde_check);
-
-    return ret;
+    return (kde_check && kde_check->value_len);
 }
 
 /** Handle xembed client message.
@@ -251,7 +214,7 @@ bool systray_iskdedockapp(xcb_window_t w) {
 int xembed_process_client_message(xcb_client_message_event_t* ev) {
     switch (XEmbed::from_native(ev->data.data32[1])) {
     case XEmbed::Message::REQUEST_FOCUS:
-        xembed_focus_in(Manager::get().x.connection,
+        xembed_focus_in(getConnection(),
                         ev->window,
                         Manager::get().x.get_timestamp(),
                         XEmbed::Focus::CURRENT);
@@ -274,7 +237,7 @@ void systray_invalidate(void) {
 
     /* Unmap now if the systray became empty */
     if (systray_num_visible_entries() == 0) {
-        xcb_unmap_window(Manager::get().x.connection, Manager::get().systray.window);
+        getConnection().unmap_window(Manager::get().systray.window);
     }
 }
 }
@@ -295,8 +258,9 @@ static void systray_update(
         config_vals[0] = base_size * rows + spacing * (rows - 1);
         config_vals[1] = base_size * cols + spacing * (cols - 1);
     }
-    getConnection().configure_window(
-      Manager::get().systray.window, XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT, config_vals);
+    getConnection().configure_window(Manager::get().systray.window,
+                                     XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
+                                     config_vals);
 
     /* Now resize each embedded window */
     config_vals[0] = config_vals[1] = 0;
@@ -311,7 +275,7 @@ static void systray_update(
         }
 
         if (!(em->info.flags & static_cast<uint32_t>(XEmbed::InfoFlags::MAPPED))) {
-            xcb_unmap_window(Manager::get().x.connection, em->win);
+            getConnection().unmap_window(em->win);
             continue;
         }
 
@@ -319,9 +283,10 @@ static void systray_update(
                                          XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
                                            XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT,
                                          config_vals);
-        xcb_map_window(Manager::get().x.connection, em->win);
+        getConnection().map_window(em->win);
+
         if (force_redraw) {
-            xcb_clear_area(Manager::get().x.connection, 1, em->win, 0, 0, 0, 0);
+            getConnection().clear_area(1, em->win);
         }
         if (int(i % rows) == rows - 1) {
             if (horizontal) {
@@ -382,13 +347,12 @@ int luaA_systray(lua_State* L) {
             Manager::get().systray.background_pixel = bg_color.pixel;
             getConnection().change_attributes(
               Manager::get().systray.window, XCB_CW_BACK_PIXEL, std::array{bg_color.pixel});
-            xcb_clear_area(Manager::get().x.connection, 1, Manager::get().systray.window, 0, 0, 0, 0);
+            getConnection().clear_area(1, Manager::get().systray.window);
             force_redraw = true;
         }
 
         if (Manager::get().systray.parent != w) {
-            xcb_reparent_window(
-              Manager::get().x.connection, Manager::get().systray.window, w->window, x, y);
+            getConnection().reparent_window(Manager::get().systray.window, w->window, x, y);
         } else {
             getConnection().configure_window(Manager::get().systray.window,
                                              XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y,
@@ -399,7 +363,7 @@ int luaA_systray(lua_State* L) {
 
         if (systray_num_visible_entries() != 0) {
             systray_update(base_size, horiz, revers, spacing, force_redraw, rows);
-            xcb_map_window(Manager::get().x.connection, Manager::get().systray.window);
+            getConnection().map_window(Manager::get().systray.window);
         }
     }
 

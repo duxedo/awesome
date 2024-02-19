@@ -322,7 +322,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
     const xproperty* prop = luaA_find_xproperty(L, prop_idx);
 
     if (lua_isnil(L, value_idx)) {
-        xcb_delete_property(Manager::get().x.connection, window, prop->atom);
+        getConnection().delete_property(window, prop->atom);
         return 0;
     }
     if (prop->type == xproperty::PROP_STRING) {
@@ -343,28 +343,22 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
 int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
     const xproperty* prop = luaA_find_xproperty(L, prop_idx);
     xcb_atom_t type;
-    const char* data;
-    xcb_get_property_reply_t* reply;
     uint32_t length;
 
     type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
-    reply = xcb_get_property_reply(
-      Manager::get().x.connection,
-      xcb_get_property_unchecked(
-        Manager::get().x.connection, false, window, prop->atom, type, 0, length),
-      NULL);
+    auto reply = getConnection().get_property_reply(
+      getConnection().get_property_unchecked(false, window, prop->atom, type, 0, length));
     if (!reply) {
         return 0;
     }
 
-    data = (const char*)xcb_get_property_value(reply);
+    auto data = (const char*)xcb_get_property_value(reply.get());
 
     if (prop->type == xproperty::PROP_STRING) {
         lua_pushlstring(L, data, reply->value_len);
     } else {
         if (reply->value_len <= 0) {
-            p_delete(&reply);
             return 0;
         }
         if (prop->type == xproperty::PROP_NUMBER) {
@@ -374,7 +368,6 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
         }
     }
 
-    p_delete(&reply);
     return 1;
 }
 

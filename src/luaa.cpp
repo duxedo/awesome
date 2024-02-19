@@ -184,8 +184,6 @@ std::filesystem::path conffile;
  * \return True if such a manager is running.
  */
 static bool composite_manager_running(void) {
-    xcb_intern_atom_reply_t* atom_r;
-    xcb_get_selection_owner_reply_t* selection_r;
     char* atom_name;
     bool result;
 
@@ -194,24 +192,17 @@ static bool composite_manager_running(void) {
         return false;
     }
 
-    atom_r = xcb_intern_atom_reply(
-      Manager::get().x.connection,
-      xcb_intern_atom_unchecked(Manager::get().x.connection, false, strlen(atom_name), atom_name),
-      NULL);
+    auto atom_r = getConnection().intern_atom_reply(
+      getConnection().intern_atom_unchecked(false, strlen(atom_name), atom_name));
     p_delete(&atom_name);
     if (!atom_r) {
         return false;
     }
 
-    selection_r = xcb_get_selection_owner_reply(
-      Manager::get().x.connection,
-      xcb_get_selection_owner_unchecked(Manager::get().x.connection, atom_r->atom),
-      NULL);
-    p_delete(&atom_r);
+    auto selection_r = getConnection().get_selection_owner_reply(
+      getConnection().get_selection_owner_unchecked(atom_r->atom));
 
-    result = selection_r != NULL && selection_r->owner != XCB_NONE;
-    p_delete(&selection_r);
-
+    result = selection_r && selection_r->owner != XCB_NONE;
     return result;
 }
 /** Quit awesome.
@@ -278,7 +269,7 @@ static int kill(lua_State* L) {
  * @noreturn
  */
 static int sync(lua_State* L) {
-    xcb_aux_sync(Manager::get().x.connection);
+    getConnection().aux_sync();
     return 0;
 }
 
@@ -446,7 +437,7 @@ static int get_key_name(lua_State* L) {
     {
         int keycode_from_hash = atoi(input + 1);
         // We discard keycodes with invalid values:
-        const xcb_setup_t* setup = xcb_get_setup(Manager::get().x.connection);
+        const xcb_setup_t* setup = getConnection().get_setup();
         if (keycode_from_hash < setup->min_keycode || keycode_from_hash > setup->max_keycode) {
             return 0;
         }
@@ -530,13 +521,12 @@ static int get_key_name(lua_State* L) {
  * query them each time. Use with moderation.
  */
 static int get_modifiers(lua_State* L) {
-    xcb_get_modifier_mapping_reply_t* mods = xcb_get_modifier_mapping_reply(
-      Manager::get().x.connection, xcb_get_modifier_mapping(Manager::get().x.connection), NULL);
+    auto mods = getConnection().get_modifier_mapping_reply(getConnection().get_modifier_mapping());
     if (!mods) {
         return 0;
     }
 
-    xcb_keycode_t* mappings = xcb_get_modifier_mapping_keycodes(mods);
+    xcb_keycode_t* mappings = xcb_get_modifier_mapping_keycodes(mods.get());
     struct xkb_keymap* keymap = xkb_state_get_keymap(Manager::get().xkb_state);
 
     lua_newtable(L);
@@ -573,8 +563,6 @@ static int get_modifiers(lua_State* L) {
         }
         lua_settable(L, -3);
     }
-
-    free(mods);
 
     return 0;
 }

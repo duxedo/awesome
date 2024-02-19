@@ -107,6 +107,7 @@
 #include "xwindow.h"
 
 #include <algorithm>
+#include <array>
 #include <cairo-xcb.h>
 #include <cstdint>
 #include <ranges>
@@ -1775,7 +1776,7 @@ void client_ban_unfocus(client* c) {
 void client_ban(client* c) {
     if (!c->isbanned) {
         client_ignore_enterleave_events();
-        xcb_unmap_window(Manager::get().x.connection, c->frame_window);
+        getConnection().unmap_window(c->frame_window);
         client_restore_enterleave_events();
 
         c->isbanned = true;
@@ -1792,14 +1793,13 @@ void client_ban(client* c) {
  */
 void client_ignore_enterleave_events(void) {
     awsm_check(Manager::get().pending_enter_leave_begin.sequence == 0);
-    Manager::get().pending_enter_leave_begin = xcb_grab_server(Manager::get().x.connection);
+    Manager::get().pending_enter_leave_begin = getConnection().grab_server();
     /* If the connection is broken, we get a request with sequence number 0
      * which would then trigger an assertion in
      * client_restore_enterleave_events(). Handle this nicely.
      */
-    if (xcb_connection_has_error(Manager::get().x.connection)) {
-        log_fatal("X server connection broke (error {})",
-                  xcb_connection_has_error(Manager::get().x.connection));
+    if (auto err = getConnection().connection_has_error()) {
+        log_fatal("X server connection broke (error {})", err);
     }
     awsm_check(Manager::get().pending_enter_leave_begin.sequence != 0);
 }
@@ -1809,8 +1809,8 @@ void client_restore_enterleave_events(void) {
 
     awsm_check(Manager::get().pending_enter_leave_begin.sequence != 0);
     pair.begin = Manager::get().pending_enter_leave_begin;
-    pair.end = xcb_no_operation(Manager::get().x.connection);
-    xutil_ungrab_server(Manager::get().x.connection);
+    pair.end = xcb_no_operation(getConnection().getConnection());
+    xutil_ungrab_server();
     Manager::get().pending_enter_leave_begin.sequence = 0;
     Manager::get().ignore_enter_leave_events.push_back(pair);
 }
@@ -1867,20 +1867,15 @@ void client_focus(client* c) {
 static xcb_window_t client_get_nofocus_window(client* c) {
     if (c->nofocus_window == XCB_NONE) {
         c->nofocus_window = getConnection().generate_id();
-        xcb_create_window(Manager::get().x.connection,
-                          Manager::get().default_depth,
-                          c->nofocus_window,
-                          c->frame_window,
-                          -2,
-                          -2,
-                          1,
-                          1,
-                          0,
-                          XCB_COPY_FROM_PARENT,
-                          Manager::get().visual->visual_id,
-                          0,
-                          NULL);
-        xcb_map_window(Manager::get().x.connection, c->nofocus_window);
+        getConnection().create_window(Manager::get().default_depth,
+                                      c->nofocus_window,
+                                      c->frame_window,
+                                      {-2, -2, 1, 1},
+                                      0,
+                                      XCB_COPY_FROM_PARENT,
+                                      Manager::get().visual->visual_id,
+                                      0);
+        getConnection().map_window(c->nofocus_window);
         xwindow_grabkeys(c->nofocus_window, c->keys);
     }
     return c->nofocus_window;
@@ -1914,8 +1909,7 @@ void client_focus_refresh(void) {
      * the previously focused client actually gets unfocused. Alternatively, the
      * new client gets the input focus.
      */
-    xcb_set_input_focus(
-      Manager::get().x.connection, XCB_INPUT_FOCUS_PARENT, win, Manager::get().x.get_timestamp());
+    getConnection().set_input_focus(XCB_INPUT_FOCUS_PARENT, win, Manager::get().x.get_timestamp());
 
     /* Do this last, because client_unban() might set it to true */
     Manager::get().focus.need_update = false;
@@ -2023,7 +2017,7 @@ void client_destroy_later(void) {
             client_ignore_enterleave_events();
             ignored_enterleave = true;
         }
-        xcb_destroy_window(Manager::get().x.connection, window);
+        getConnection().destroy_window(window);
     }
     if (ignored_enterleave) {
         client_restore_enterleave_events();
@@ -2109,13 +2103,13 @@ void client_manage(xcb_window_t w,
 
     /* If this is a new client that just has been launched, then request its
      * startup id. */
-    xcb_get_property_cookie_t startup_id_q = xcb_get_property(
-      Manager::get().x.connection, false, w, _NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
+    xcb_get_property_cookie_t startup_id_q = getConnection().get_property(
+      false, w, _NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
 
     /* Make sure the window is automatically mapped if awesome exits or dies. */
-    xcb_change_save_set(Manager::get().x.connection, XCB_SET_MODE_INSERT, w);
+    getConnection().change_save_set(XCB_SET_MODE_INSERT, w);
     if (Manager::get().x.caps.have_shape) {
-        xcb_shape_select_input(Manager::get().x.connection, w, 1);
+        getConnection().shape().select_input(w, 1);
     }
 
     client* c = newobj<client, client_class>(L);
@@ -2134,35 +2128,30 @@ void client_manage(xcb_window_t w,
                                1,
                                FRAME_SELECT_INPUT_EVENT_MASK,
                                Manager::get().default_cmap};
-    xcb_create_window(Manager::get().x.connection,
-                      Manager::get().default_depth,
-                      c->frame_window,
-                      s->root,
-                      wgeom->x,
-                      wgeom->y,
-                      wgeom->width,
-                      wgeom->height,
-                      wgeom->border_width,
-                      XCB_COPY_FROM_PARENT,
-                      Manager::get().visual->visual_id,
-                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_WIN_GRAVITY |
-                        XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP,
-                      values);
+    getConnection().create_window(Manager::get().default_depth,
+                                  c->frame_window,
+                                  s->root,
+                                  {wgeom->x, wgeom->y, wgeom->width, wgeom->height},
+                                  wgeom->border_width,
+                                  XCB_COPY_FROM_PARENT,
+                                  Manager::get().visual->visual_id,
+                                  XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_WIN_GRAVITY |
+                                    XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP,
+                                  values);
 
     /* The client may already be mapped, thus we must be sure that we don't send
      * ourselves an UnmapNotify due to the xcb_reparent_window().
      *
      * Grab the server to make sure we don't lose any events.
      */
-    xcb_grab_server(Manager::get().x.connection);
+    getConnection().grab_server();
 
     getConnection().clear_attributes(Manager::get().screen->root, XCB_CW_EVENT_MASK);
-    reparent_cookie =
-      xcb_reparent_window_checked(Manager::get().x.connection, w, c->frame_window, 0, 0);
-    xcb_map_window(Manager::get().x.connection, w);
+    reparent_cookie = getConnection().reparent_window_checked(w, c->frame_window, 0, 0);
+    getConnection().map_window(w);
     getConnection().change_attributes(
       Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
-    xutil_ungrab_server(Manager::get().x.connection);
+    xutil_ungrab_server();
 
     /* Do this now so that we don't get any events for the above
      * (Else, reparent could cause an UnmapNotify) */
@@ -2227,24 +2216,16 @@ void client_manage(xcb_window_t w,
     stack_client_push(c);
 
     /* Request our response */
-    xcb_get_property_reply_t* reply =
-      xcb_get_property_reply(Manager::get().x.connection, startup_id_q, NULL);
+    auto reply = getConnection().get_property_reply(startup_id_q);
     /* Say spawn that a client has been started, with startup id as argument */
     auto startup_id = xutil_get_text_property_from_reply(reply);
-    p_delete(&reply);
 
     if (startup_id.empty() && c->leader_window != XCB_NONE) {
         /* GTK hides this property elsewhere. No idea why. */
-        startup_id_q = xcb_get_property(Manager::get().x.connection,
-                                        false,
-                                        c->leader_window,
-                                        _NET_STARTUP_ID,
-                                        XCB_GET_PROPERTY_TYPE_ANY,
-                                        0,
-                                        UINT_MAX);
-        reply = xcb_get_property_reply(Manager::get().x.connection, startup_id_q, NULL);
+        startup_id_q = getConnection().get_property(
+          false, c->leader_window, _NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
+        reply = getConnection().get_property_reply(startup_id_q);
         startup_id = xutil_get_text_property_from_reply(reply);
-        p_delete(&reply);
     }
     c->setStartupId(startup_id);
 
@@ -2268,7 +2249,7 @@ void client_manage(xcb_window_t w,
     /*TODO v6: remove this*/
     luaA_object_emit_signal(L, -1, "manage", 0);
 
-    xcb_generic_error_t* error = xcb_request_check(Manager::get().x.connection, reparent_cookie);
+    xcb_generic_error_t* error = getConnection().request_check(reparent_cookie);
     if (error != NULL) {
         log_warn(
           "Failed to manage window with name '{}', class '{}', instance '{}', because reparenting "
@@ -2559,20 +2540,20 @@ void client_set_minimized(lua_State* L, int cidx, bool s) {
 
         const uint32_t client_select_input_val[] = {CLIENT_SELECT_INPUT_EVENT_MASK};
         const uint32_t frame_select_input_val[] = {FRAME_SELECT_INPUT_EVENT_MASK};
-        xcb_grab_server(Manager::get().x.connection);
+        getConnection().grab_server();
         getConnection().clear_attributes(Manager::get().screen->root, XCB_CW_EVENT_MASK);
         getConnection().clear_attributes(c->frame_window, XCB_CW_EVENT_MASK);
         getConnection().clear_attributes(c->window, XCB_CW_EVENT_MASK);
-        xcb_unmap_window(Manager::get().x.connection, c->window);
+        getConnection().unmap_window(c->window);
         getConnection().change_attributes(
           Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
         getConnection().change_attributes(
           c->frame_window, XCB_CW_EVENT_MASK, frame_select_input_val);
         getConnection().change_attributes(c->window, XCB_CW_EVENT_MASK, client_select_input_val);
-        xutil_ungrab_server(Manager::get().x.connection);
+        xutil_ungrab_server();
     } else {
         xwindow_set_state(c->window, XCB_ICCCM_WM_STATE_NORMAL);
-        xcb_map_window(Manager::get().x.connection, c->window);
+        getConnection().map_window(c->window);
     }
     if (strut_has_value(&c->strut)) {
         screen_update_workarea(c->screen);
@@ -2818,7 +2799,7 @@ void client_unban(client* c) {
     lua_State* L = globalconf_get_lua_State();
     if (c->isbanned) {
         client_ignore_enterleave_events();
-        xcb_map_window(Manager::get().x.connection, c->frame_window);
+        getConnection().map_window(c->frame_window);
         client_restore_enterleave_events();
 
         c->isbanned = false;
@@ -2854,7 +2835,8 @@ void client_unmanage(client* c, client_unmanage_t reason) {
     }
 
     /* remove client from global list and everywhere else */
-    if (auto it = std::ranges::find(Manager::get().clients, c); it != Manager::get().clients.end()) {
+    if (auto it = std::ranges::find(Manager::get().clients, c);
+        it != Manager::get().clients.end()) {
         Manager::get().clients.erase(it);
     }
     stack_client_remove(c);
@@ -2918,12 +2900,9 @@ void client_unmanage(client* c, client_unmanage_t reason) {
         xwindow_buttons_grab(c->window, {});
         xwindow_grabkeys(c->window, {});
         area_t geometry = client_get_undecorated_geometry(c);
-        xcb_unmap_window(Manager::get().x.connection, c->window);
-        xcb_reparent_window(Manager::get().x.connection,
-                            c->window,
-                            Manager::get().screen->root,
-                            geometry.top_left.x,
-                            geometry.top_left.y);
+        getConnection().unmap_window(c->window);
+        getConnection().reparent_window(
+          c->window, Manager::get().screen->root, geometry.top_left.x, geometry.top_left.y);
     }
 
     if (c->nofocus_window != XCB_NONE) {
@@ -2934,9 +2913,9 @@ void client_unmanage(client* c, client_unmanage_t reason) {
     if (reason != CLIENT_UNMANAGE_DESTROYED) {
         /* Remove this window from the save set since this shouldn't be made visible
          * after a restart anymore. */
-        xcb_change_save_set(Manager::get().x.connection, XCB_SET_MODE_DELETE, c->window);
+        getConnection().change_save_set(XCB_SET_MODE_DELETE, c->window);
         if (Manager::get().x.caps.have_shape) {
-            xcb_shape_select_input(Manager::get().x.connection, c->window, 0);
+            getConnection().shape().select_input(c->window, 0);
         }
 
         /* Do this last to avoid races with clients. According to ICCCM, clients
@@ -2967,10 +2946,9 @@ void client_kill(client* c) {
         ev.type = WM_PROTOCOLS;
         ev.data.data32[0] = WM_DELETE_WINDOW;
 
-        xcb_send_event(
-          Manager::get().x.connection, false, c->window, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
+        getConnection().send_event(false, c->window, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
     } else {
-        xcb_kill_client(Manager::get().x.connection, c->window);
+        getConnection().kill_client(c->window);
     }
 }
 
@@ -3066,21 +3044,21 @@ static void client_set_icon(client* c, cairo_surface_t* s) {
  * \param mask A mask for the bitmap (optional)
  */
 void client_set_icon_from_pixmaps(client* c, xcb_pixmap_t icon, xcb_pixmap_t mask) {
-    xcb_get_geometry_cookie_t geom_icon_c, geom_mask_c;
-    xcb_get_geometry_reply_t *geom_icon_r, *geom_mask_r = NULL;
     cairo_surface_t *s_icon, *result;
 
-    geom_icon_c = xcb_get_geometry_unchecked(Manager::get().x.connection, icon);
+    auto geom_icon_c = getConnection().get_geometry_unchecked(icon);
+    xcb_get_geometry_cookie_t geom_mask_c;
     if (mask) {
-        geom_mask_c = xcb_get_geometry_unchecked(Manager::get().x.connection, mask);
+        geom_mask_c = getConnection().get_geometry_unchecked(mask);
     }
-    geom_icon_r = xcb_get_geometry_reply(Manager::get().x.connection, geom_icon_c, NULL);
+    auto geom_icon_r = getConnection().get_geometry_reply(geom_icon_c);
+    XCB::reply<xcb_get_geometry_reply_t> geom_mask_r;
     if (mask) {
-        geom_mask_r = xcb_get_geometry_reply(Manager::get().x.connection, geom_mask_c, NULL);
+        geom_mask_r = getConnection().get_geometry_reply(geom_mask_c);
     }
 
     if (!geom_icon_r || (mask && !geom_mask_r)) {
-        goto out;
+        return;
     }
     if ((geom_icon_r->depth != 1 && geom_icon_r->depth != Manager::get().screen->root_depth) ||
         (geom_mask_r && geom_mask_r->depth != 1)) {
@@ -3090,17 +3068,17 @@ void client_set_icon_from_pixmaps(client* c, xcb_pixmap_t icon, xcb_pixmap_t mas
           geom_icon_r->depth,
           geom_mask_r ? geom_mask_r->depth : 0,
           Manager::get().screen->root_depth);
-        goto out;
+        return;
     }
 
     if (geom_icon_r->depth == 1) {
-        s_icon = cairo_xcb_surface_create_for_bitmap(Manager::get().x.connection,
+        s_icon = cairo_xcb_surface_create_for_bitmap(getConnection().getConnection(),
                                                      Manager::get().screen,
                                                      icon,
                                                      geom_icon_r->width,
                                                      geom_icon_r->height);
     } else {
-        s_icon = cairo_xcb_surface_create(Manager::get().x.connection,
+        s_icon = cairo_xcb_surface_create(getConnection().getConnection(),
                                           icon,
                                           Manager::get().default_visual,
                                           geom_icon_r->width,
@@ -3114,7 +3092,7 @@ void client_set_icon_from_pixmaps(client* c, xcb_pixmap_t icon, xcb_pixmap_t mas
 
         result = cairo_surface_create_similar(
           s_icon, CAIRO_CONTENT_COLOR_ALPHA, geom_icon_r->width, geom_icon_r->height);
-        s_mask = cairo_xcb_surface_create_for_bitmap(Manager::get().x.connection,
+        s_mask = cairo_xcb_surface_create_for_bitmap(getConnection().getConnection(),
                                                      Manager::get().screen,
                                                      mask,
                                                      geom_icon_r->width,
@@ -3133,10 +3111,6 @@ void client_set_icon_from_pixmaps(client* c, xcb_pixmap_t icon, xcb_pixmap_t mas
     if (result != s_icon) {
         cairo_surface_destroy(s_icon);
     }
-
-out:
-    p_delete(&geom_icon_r);
-    p_delete(&geom_mask_r);
 }
 
 /** Kill a client.
@@ -3427,16 +3401,12 @@ static void client_refresh_titlebar_partial(
 
     /* Redraw the affected parts */
     cairo_surface_flush(c->titlebar[bar].drawable->surface);
-    xcb_copy_area(Manager::get().x.connection,
-                  c->titlebar[bar].drawable->pixmap,
-                  c->frame_window,
-                  Manager::get().gc,
-                  x - area.left(),
-                  y - area.top(),
-                  x,
-                  y,
-                  width,
-                  height);
+    getConnection().copy_area(
+      c->titlebar[bar].drawable->pixmap,
+      c->frame_window,
+      Manager::get().gc,
+      {static_cast<int16_t>(x - area.left()), static_cast<int16_t>(y - area.top()), width, height},
+      {x, y});
 }
 
 #define HANDLE_TITLEBAR_REFRESH(name, index)                           \
@@ -3827,8 +3797,8 @@ static int luaA_client_get_content(lua_State* L, lua_object_t* o) {
     width -= c->titlebar[CLIENT_TITLEBAR_LEFT].size + c->titlebar[CLIENT_TITLEBAR_RIGHT].size;
     height -= c->titlebar[CLIENT_TITLEBAR_TOP].size + c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
 
-    surface =
-      cairo_xcb_surface_create(Manager::get().x.connection, c->window, c->visualtype, width, height);
+    surface = cairo_xcb_surface_create(
+      getConnection().getConnection(), c->window, c->visualtype, width, height);
 
     /* lua has to make sure to free the ref or we have a leak */
     lua_pushlightuserdata(L, surface);

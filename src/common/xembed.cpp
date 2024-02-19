@@ -41,26 +41,20 @@ namespace XEmbed {
  * \param d3 Element 5 of message.
  */
 #define IFLAG(x) static_cast<uint32_t>(InfoFlags::x)
-void xembed_message_send(xcb_connection_t* connection,
+void xembed_message_send(XCB::Connection& connection,
                          xcb_window_t towin,
                          xcb_timestamp_t timestamp,
                          Message message,
                          uint32_t d1,
                          uint32_t d2,
                          uint32_t d3) {
-    xcb_client_message_event_t ev;
-
-    p_clear(&ev, 1);
-    ev.response_type = XCB_CLIENT_MESSAGE;
-    ev.window = towin;
-    ev.format = 32;
-    ev.data.data32[0] = timestamp;
-    ev.data.data32[1] = to_native(message);
-    ev.data.data32[2] = d1;
-    ev.data.data32[3] = d2;
-    ev.data.data32[4] = d3;
-    ev.type = _XEMBED;
-    xcb_send_event(connection, false, towin, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
+    xcb_client_message_event_t ev {
+        .response_type = XCB_CLIENT_MESSAGE, .format = 32, .sequence = 0, .window = towin,
+        .type = _XEMBED, .data = {
+            .data32 = {timestamp, to_native(message), d1, d2, d3}
+        }
+    };
+    connection.send_event(false, towin, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 
 /** Deliver a request to get XEMBED info for a window.
@@ -107,7 +101,7 @@ std::optional<info> xembed_info_get_reply(XCB::Connection* conn, xcb_get_propert
  * \param timestamp The timestamp.
  * \param reply The property reply to handle.
  */
-void xembed_property_update(XCB::Connection* connection,
+void xembed_property_update(XCB::Connection& connection,
                             window& emwin,
                             xcb_timestamp_t timestamp,
                             const XCB::reply<xcb_get_property_reply_t>& reply) {
@@ -123,12 +117,12 @@ void xembed_property_update(XCB::Connection* connection,
     emwin.info.flags = _info.flags;
     if (flags_changed & IFLAG(MAPPED)) {
         if (_info.flags & IFLAG(MAPPED)) {
-            xcb_map_window(connection->connection, emwin.win);
-            xembed_window_activate(connection->connection, emwin.win, timestamp);
+            getConnection().map_window(emwin.win);
+            xembed_window_activate(connection, emwin.win, timestamp);
         } else {
-            xcb_unmap_window(connection->connection, emwin.win);
-            xembed_window_deactivate(connection->connection, emwin.win, timestamp);
-            xembed_focus_out(connection->connection, emwin.win, timestamp);
+            getConnection().unmap_window(emwin.win);
+            xembed_window_deactivate(connection, emwin.win, timestamp);
+            xembed_focus_out(connection, emwin.win, timestamp);
         }
         Lua::systray_invalidate();
     }

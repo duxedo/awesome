@@ -28,7 +28,7 @@
 #include <string_view>
 
 /* 0xFFFF / 0xFF == 0x101 (257) */
-#define RGB_8TO16(i) (((i) & 0xff) * 0x101)
+#define RGB_8TO16(i) static_cast<uint16_t>(((i) & 0xff) * 0x101)
 #define RGB_16TO8(i) (((i) & 0xffff) / 0x101)
 
 /** Parse an hexadecimal color string to its component.
@@ -155,11 +155,11 @@ color_init_unchecked(color_t* color, const char* colstr, ssize_t len, xcb_visual
         req.color->initialized = true;
         return req;
     }
-    req.cookie_hexa = xcb_alloc_color_unchecked(Manager::get().x.connection,
+    req.cookie_hexa = getConnection().alloc_color_unchecked(
                                                 Manager::get().default_cmap,
-                                                RGB_8TO16(red),
+                                                {RGB_8TO16(red),
                                                 RGB_8TO16(green),
-                                                RGB_8TO16(blue));
+                                                RGB_8TO16(blue)});
 
     return req;
 }
@@ -176,16 +176,14 @@ bool color_init_reply(color_init_request_t req) {
         return true;
     }
 
-    xcb_alloc_color_reply_t* hexa_color;
 
-    if ((hexa_color = xcb_alloc_color_reply(Manager::get().x.connection, req.cookie_hexa, NULL))) {
+    if (auto hexa_color = getConnection().alloc_color_reply(req.cookie_hexa)) {
         req.color->pixel = hexa_color->pixel;
         req.color->red = hexa_color->red;
         req.color->green = hexa_color->green;
         req.color->blue = hexa_color->blue;
         req.color->alpha = 0xffff;
         req.color->initialized = true;
-        p_delete(&hexa_color);
         return true;
     }
 

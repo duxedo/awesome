@@ -249,7 +249,7 @@ void spawn_start_notify(client* c, const char* startup_id) {
 /** Initialize program spawner.
  */
 void spawn_init(void) {
-    Manager::get().sndisplay = sn_xcb_display_new(Manager::get().x.connection, NULL, NULL);
+    Manager::get().sndisplay = sn_xcb_display_new(getConnection().getConnection(), NULL, NULL);
 
     Manager::get().snmonitor = sn_monitor_context_new(
       Manager::get().sndisplay, Manager::get().x.default_screen, spawn_monitor_event, NULL, NULL);
@@ -509,7 +509,8 @@ int luaA_spawn(lua_State* L) {
 
     SnLauncherContext* context = NULL;
     if (use_sn) {
-        context = sn_launcher_context_new(Manager::get().sndisplay, Manager::get().x.default_screen);
+        context =
+          sn_launcher_context_new(Manager::get().sndisplay, Manager::get().x.default_screen);
         sn_launcher_context_set_name(context, "awesome");
         sn_launcher_context_set_description(context, "awesome spawn");
         sn_launcher_context_set_binary_name(context, argv[0]);

@@ -82,7 +82,6 @@ void event_handle_xfixes_selection_notify(xcb_generic_event_t* ev) {
 static int luaA_selection_watcher_new(lua_State* L) {
     size_t name_length;
     const char* name;
-    xcb_intern_atom_reply_t* reply;
     selection_watcher_t* selection;
 
     name = luaL_checklstring(L, 2, &name_length);
@@ -91,13 +90,9 @@ static int luaA_selection_watcher_new(lua_State* L) {
     selection->window = XCB_NONE;
 
     /* Get the atom identifying the selection to watch */
-    reply = xcb_intern_atom_reply(
-      Manager::get().x.connection,
-      xcb_intern_atom_unchecked(Manager::get().x.connection, false, name_length, name),
-      NULL);
-    if (reply) {
+    if (auto reply = getConnection().intern_atom_reply(
+          getConnection().intern_atom_unchecked(false, name_length, name))) {
         selection->selection = reply->atom;
-        p_delete(&reply);
     }
 
     return 1;
@@ -114,24 +109,18 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
             if (selection->window == XCB_NONE) {
                 selection->window = getConnection().generate_id();
             }
-            xcb_create_window(Manager::get().x.connection,
-                              Manager::get().screen->root_depth,
-                              selection->window,
-                              Manager::get().screen->root,
-                              -1,
-                              -1,
-                              1,
-                              1,
-                              0,
-                              XCB_COPY_FROM_PARENT,
-                              Manager::get().screen->root_visual,
-                              0,
-                              NULL);
+            getConnection().create_window(Manager::get().screen->root_depth,
+                                          selection->window,
+                                          Manager::get().screen->root,
+                                          {-1, -1, 1, 1},
+                                          0,
+                                          XCB_COPY_FROM_PARENT,
+                                          Manager::get().screen->root_visual,
+                                          0);
 
             /* Start watching for selection changes */
             if (Manager::get().x.caps.have_xfixes) {
-                xcb_xfixes_select_selection_input(
-                  Manager::get().x.connection,
+                getConnection().xfixes().select_selection_input(
                   selection->window,
                   selection->selection,
                   XCB_XFIXES_SELECTION_EVENT_MASK_SET_SELECTION_OWNER |
@@ -156,10 +145,10 @@ static int luaA_selection_watcher_set_active(lua_State* L, selection_watcher_t* 
         } else {
             /* Stop watching and destroy the window */
             if (Manager::get().x.caps.have_xfixes) {
-                xcb_xfixes_select_selection_input(
-                  Manager::get().x.connection, selection->window, selection->selection, 0);
+                getConnection().xfixes().select_selection_input(
+                  selection->window, selection->selection, 0);
             }
-            xcb_destroy_window(Manager::get().x.connection, selection->window);
+            getConnection().destroy_window(selection->window);
 
             /* Unreference the selection object */
             lua_pushliteral(L, REGISTRY_WATCHER_TABLE_INDEX);
