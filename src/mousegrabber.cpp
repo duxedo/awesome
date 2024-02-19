@@ -43,21 +43,18 @@ static bool mousegrabber_grab(xcb_cursor_t cursor) {
     xcb_window_t root = Manager::get().screen->root;
 
     for (int i = 1000; i; i--) {
-        xcb_grab_pointer_reply_t* grab_ptr_r;
-        xcb_grab_pointer_cookie_t grab_ptr_c =
-          xcb_grab_pointer_unchecked(Manager::get().x.connection,
-                                     false,
-                                     root,
-                                     XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
-                                       XCB_EVENT_MASK_POINTER_MOTION,
-                                     XCB_GRAB_MODE_ASYNC,
-                                     XCB_GRAB_MODE_ASYNC,
-                                     root,
-                                     cursor,
-                                     XCB_CURRENT_TIME);
+        auto grab_ptr_c = Manager::get().x.connection.grab_pointer_unchecked(
+          false,
+          root,
+          XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+            XCB_EVENT_MASK_POINTER_MOTION,
+          XCB_GRAB_MODE_ASYNC,
+          XCB_GRAB_MODE_ASYNC,
+          root,
+          cursor,
+          XCB_CURRENT_TIME);
 
-        if ((grab_ptr_r = xcb_grab_pointer_reply(Manager::get().x.connection, grab_ptr_c, NULL))) {
-            p_delete(&grab_ptr_r);
+        if (Manager::get().x.connection.grab_pointer_reply(grab_ptr_c)) {
             return true;
         }
         usleep(1000);
@@ -125,7 +122,7 @@ static int luaA_mousegrabber_run(lua_State* L) {
  * @noreturn
  */
 int luaA_mousegrabber_stop(lua_State* L) {
-    xcb_ungrab_pointer(Manager::get().x.connection, XCB_CURRENT_TIME);
+    Manager::get().x.connection.ungrab_pointer();
     Lua::unregister(L, &Manager::get().mousegrabber);
     return 0;
 }

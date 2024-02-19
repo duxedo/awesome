@@ -51,6 +51,7 @@
 
 #include <array>
 #include <cairo-xcb.h>
+#include <cstdint>
 #include <xcb/shape.h>
 
 extern lua_class_t window_class;
@@ -173,11 +174,8 @@ static void drawin_systray_kickout(drawin_t* w) {
         /* Who! Check that we're not deleting a drawin with a systray, because it
          * may be its parent. If so, we reparent to root before, otherwise it will
          * hurt very much. */
-        xcb_reparent_window(Manager::get().x.connection,
-                            Manager::get().systray.window,
-                            Manager::get().screen->root,
-                            -512,
-                            -512);
+        getConnection().reparent_window(
+          Manager::get().systray.window, Manager::get().screen->root, -512, -512);
 
         Manager::get().systray.parent = NULL;
     }
@@ -193,7 +191,7 @@ drawin_t::~drawin_t() {
     if (window) {
         /* Make sure we don't accidentally kill the systray window */
         drawin_systray_kickout(this);
-        xcb_destroy_window(Manager::get().x.connection, window);
+        getConnection().destroy_window(window);
     }
     /* No unref needed because we are being garbage collected */
     drawable = NULL;
@@ -316,16 +314,8 @@ void drawin_refresh_pixmap_partial(drawin_t* drawin, int16_t x, int16_t y, uint1
 
     /* Make cairo do all pending drawing */
     cairo_surface_flush(drawin->drawable->surface);
-    xcb_copy_area(Manager::get().x.connection,
-                  drawin->drawable->pixmap,
-                  drawin->window,
-                  Manager::get().gc,
-                  x,
-                  y,
-                  x,
-                  y,
-                  w,
-                  h);
+    getConnection().copy_area(
+      drawin->drawable->pixmap, drawin->window, Manager::get().gc, {x, y, w, h}, {x, y});
 }
 
 static void drawin_map(lua_State* L, int widx) {
@@ -335,7 +325,7 @@ static void drawin_map(lua_State* L, int widx) {
     /* Activate BMA */
     client_ignore_enterleave_events();
     /* Map the drawin */
-    xcb_map_window(Manager::get().x.connection, drawin->window);
+    getConnection().map_window(drawin->window);
     /* Deactivate BMA */
     client_restore_enterleave_events();
     /* Stack this drawin correctly */
@@ -349,7 +339,7 @@ static void drawin_map(lua_State* L, int widx) {
 }
 
 static void drawin_unmap(drawin_t* drawin) {
-    xcb_unmap_window(Manager::get().x.connection, drawin->window);
+    getConnection().unmap_window(drawin->window);
     auto it = std::ranges::find(Manager::get().drawins, drawin);
     if (it != Manager::get().drawins.end()) {
         Manager::get().drawins.erase(it);
@@ -417,7 +407,7 @@ drawin_t* drawin_allocator(lua_State* L) {
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);
 
     w->window = getConnection().generate_id();
-    const uint32_t values[] = {
+    const auto values = std::array<uint32_t, 6>{
       w->border_color.pixel,
       XCB_GRAVITY_NORTH_WEST,
       1,
@@ -428,14 +418,11 @@ drawin_t* drawin_allocator(lua_State* L) {
         XCB_EVENT_MASK_PROPERTY_CHANGE,
       Manager::get().default_cmap,
       xcursor_new(Manager::get().x.cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
-    xcb_create_window(Manager::get().x.connection,
+    getConnection().create_window(
                       Manager::get().default_depth,
                       w->window,
                       s->root,
-                      w->geometry.top_left.x,
-                      w->geometry.top_left.y,
-                      w->geometry.width,
-                      w->geometry.height,
+                      w->geometry,
                       w->border_width,
                       XCB_COPY_FROM_PARENT,
                       Manager::get().visual->visual_id,

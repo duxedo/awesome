@@ -178,19 +178,14 @@ void ewmh_init(void) {
     /* create our own window */
     xcb_window_t father = getConnection().generate_id();
 
-    xcb_create_window(Manager::get().x.connection,
-                      xscreen->root_depth,
-                      father,
-                      xscreen->root,
-                      -1,
-                      -1,
-                      1,
-                      1,
-                      0,
-                      XCB_COPY_FROM_PARENT,
-                      xscreen->root_visual,
-                      0,
-                      NULL);
+    getConnection().create_window(xscreen->root_depth,
+                                  father,
+                                  xscreen->root,
+                                  {-1, -1, 1, 1},
+                                  0,
+                                  XCB_COPY_FROM_PARENT,
+                                  xscreen->root_visual,
+                                  0);
 
     getConnection().replace_property(
       xscreen->root, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
@@ -484,7 +479,7 @@ void ewmh_client_update_desktop(client* c) {
         }
     }
     /* It doesn't have any tags, remove the property */
-    xcb_delete_property(Manager::get().x.connection, c->window, _NET_WM_DESKTOP);
+    getConnection().delete_property(c->window, _NET_WM_DESKTOP);
 }
 
 /** Update the client struts.
@@ -521,42 +516,29 @@ void ewmh_update_window_type(xcb_window_t window, uint32_t type) {
 void ewmh_client_check_hints(client* c) {
     xcb_atom_t* state;
     void* data = NULL;
-    xcb_get_property_cookie_t c0, c1, c2;
-    xcb_get_property_reply_t* reply;
     bool is_h_max = false;
     bool is_v_max = false;
 
     /* Send the GetProperty requests which will be processed later */
-    c0 = xcb_get_property_unchecked(Manager::get().x.connection,
-                                    false,
-                                    c->window,
-                                    _NET_WM_DESKTOP,
-                                    XCB_GET_PROPERTY_TYPE_ANY,
-                                    0,
-                                    1);
+    auto c0 = getConnection().get_property_unchecked(
+      false, c->window, _NET_WM_DESKTOP, XCB_GET_PROPERTY_TYPE_ANY, 0, 1);
 
-    c1 = xcb_get_property_unchecked(
-      Manager::get().x.connection, false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+    auto c1 = getConnection().get_property_unchecked(
+      false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
-    c2 = xcb_get_property_unchecked(Manager::get().x.connection,
-                                    false,
-                                    c->window,
-                                    _NET_WM_WINDOW_TYPE,
-                                    XCB_ATOM_ATOM,
-                                    0,
-                                    UINT32_MAX);
+    auto c2 = getConnection().get_property_unchecked(
+      false, c->window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
-    reply = xcb_get_property_reply(Manager::get().x.connection, c0, NULL);
-    if (reply && reply->value_len && (data = xcb_get_property_value(reply))) {
+    auto reply = getConnection().get_property_reply(c0);
+    if (reply && reply->value_len && (data = xcb_get_property_value(reply.get()))) {
         ewmh_process_desktop(c, *(uint32_t*)data);
     }
 
-    p_delete(&reply);
-
-    reply = xcb_get_property_reply(Manager::get().x.connection, c1, NULL);
-    if (reply && (data = xcb_get_property_value(reply))) {
-        state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / (int)sizeof(xcb_atom_t); i++) {
+    reply = getConnection().get_property_reply(c1);
+    if (reply && (data = xcb_get_property_value(reply.get()))) {
+        state = reinterpret_cast<xcb_atom_t*>(data);
+        for (int i = 0; i < xcb_get_property_value_length(reply.get()) / (int)sizeof(xcb_atom_t);
+             i++) {
             if (state[i] == _NET_WM_STATE_MAXIMIZED_HORZ) {
                 is_h_max = true;
             } else if (state[i] == _NET_WM_STATE_MAXIMIZED_VERT) {
@@ -585,13 +567,12 @@ void ewmh_client_check_hints(client* c) {
         lua_pop(L, 1);
     }
 
-    p_delete(&reply);
-
-    reply = xcb_get_property_reply(Manager::get().x.connection, c2, NULL);
-    if (reply && (data = xcb_get_property_value(reply))) {
+    reply = getConnection().get_property_reply(c2);
+    if (reply && (data = xcb_get_property_value(reply.get()))) {
         c->has_NET_WM_WINDOW_TYPE = true;
-        state = (xcb_atom_t*)data;
-        for (int i = 0; i < xcb_get_property_value_length(reply) / (int)sizeof(xcb_atom_t); i++) {
+        state = reinterpret_cast<xcb_atom_t*>(data);
+        for (int i = 0; i < xcb_get_property_value_length(reply.get()) / (int)sizeof(xcb_atom_t);
+             i++) {
             if (state[i] == _NET_WM_WINDOW_TYPE_DESKTOP) {
                 c->type = MAX(c->type, WINDOW_TYPE_DESKTOP);
             } else if (state[i] == _NET_WM_WINDOW_TYPE_DIALOG) {
@@ -611,8 +592,6 @@ void ewmh_client_check_hints(client* c) {
     } else {
         c->has_NET_WM_WINDOW_TYPE = false;
     }
-
-    p_delete(&reply);
 }
 
 /** Process the WM strut of a client.
@@ -620,13 +599,12 @@ void ewmh_client_check_hints(client* c) {
  */
 void ewmh_process_client_strut(client* c) {
     void* data;
-    xcb_get_property_reply_t* strut_r;
 
-    xcb_get_property_cookie_t strut_q = xcb_get_property_unchecked(
-      Manager::get().x.connection, false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
-    strut_r = xcb_get_property_reply(Manager::get().x.connection, strut_q, NULL);
+    xcb_get_property_cookie_t strut_q = getConnection().get_property_unchecked(
+      false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
+    auto strut_r = getConnection().get_property_reply(strut_q);
 
-    if (strut_r && strut_r->value_len && (data = xcb_get_property_value(strut_r))) {
+    if (strut_r && strut_r->value_len && (data = xcb_get_property_value(strut_r.get()))) {
         auto strut = (uint32_t*)data;
 
         if (c->strut.left != strut[0] || c->strut.right != strut[1] || c->strut.top != strut[2] ||
@@ -654,8 +632,6 @@ void ewmh_process_client_strut(client* c) {
             lua_pop(L, 1);
         }
     }
-
-    p_delete(&strut_r);
 }
 
 /** Send request to get NET_WM_ICON (EWMH)
@@ -663,8 +639,8 @@ void ewmh_process_client_strut(client* c) {
  * \return The cookie associated with the request.
  */
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t w) {
-    return xcb_get_property_unchecked(
-      Manager::get().x.connection, false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
+    return getConnection().get_property_unchecked(
+      false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
 }
 
 static cairo_surface_t* ewmh_window_icon_from_reply_next(uint32_t** data, uint32_t* data_end) {
@@ -717,10 +693,8 @@ static std::vector<cairo_surface_handle> ewmh_window_icon_from_reply(xcb_get_pro
  * \return An array of icons.
  */
 std::vector<cairo_surface_handle> ewmh_window_icon_get_reply(xcb_get_property_cookie_t cookie) {
-    xcb_get_property_reply_t* r = xcb_get_property_reply(Manager::get().x.connection, cookie, NULL);
-    std::vector<cairo_surface_handle> result = ewmh_window_icon_from_reply(r);
-    p_delete(&r);
-    return result;
+    auto r = getConnection().get_property_reply(cookie);
+    return ewmh_window_icon_from_reply(r.get());
 }
 
 // vim: filetype=c:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80

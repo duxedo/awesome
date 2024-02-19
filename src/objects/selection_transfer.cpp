@@ -77,7 +77,7 @@ static lua_class_t selection_transfer_class{
 };
 
 static size_t max_property_length(void) {
-    uint32_t max_request_length = xcb_get_maximum_request_length(Manager::get().x.connection);
+    uint32_t max_request_length = getConnection().get_maximum_request_length();
     max_request_length = MIN(max_request_length, (1 << 16) - 1);
     return max_request_length * 4 - sizeof(xcb_change_property_request_t);
 }
@@ -97,8 +97,7 @@ static void selection_transfer_notify(xcb_window_t requestor,
     ev.property = property;
     ev.time = time;
 
-    xcb_send_event(
-      Manager::get().x.connection, false, requestor, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
+    getConnection().send_event(false, requestor, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 
 void selection_transfer_reject(xcb_window_t requestor,
@@ -187,13 +186,11 @@ void selection_transfer_begin(lua_State* L,
     lua_pop(L, 1);
 
     /* Get the atom name */
-    xcb_get_atom_name_reply_t* reply =
-      xcb_get_atom_name_reply(Manager::get().x.connection,
-                              xcb_get_atom_name_unchecked(Manager::get().x.connection, target),
-                              NULL);
+    auto reply =
+      getConnection().get_atom_name_reply(getConnection().get_atom_name_unchecked(target));
     if (reply) {
-        lua_pushlstring(L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
-        p_delete(&reply);
+        lua_pushlstring(
+          L, xcb_get_atom_name_name(reply.get()), xcb_get_atom_name_name_length(reply.get()));
     } else {
         lua_pushnil(L);
     }
@@ -282,14 +279,12 @@ static int luaA_selection_transfer_send(lua_State* L) {
         auto* cookies = p_alloca(xcb_intern_atom_cookie_t, len);
         auto* atoms = p_alloca(xcb_atom_t, len);
         for (size_t i = 0; i < len; i++) {
-            cookies[i] = xcb_intern_atom_unchecked(
-              Manager::get().x.connection, false, atom_lengths[i], atom_strings[i]);
+            cookies[i] =
+              getConnection().intern_atom_unchecked(false, atom_lengths[i], atom_strings[i]);
         }
         for (size_t i = 0; i < len; i++) {
-            xcb_intern_atom_reply_t* reply =
-              xcb_intern_atom_reply(Manager::get().x.connection, cookies[i], NULL);
+            auto reply = getConnection().intern_atom_reply(cookies[i]);
             atoms[i] = reply ? reply->atom : XCB_NONE;
-            p_delete(&reply);
         }
         getConnection().replace_property(
           transfer->requestor, transfer->property, XCB_ATOM_ATOM, std::span(atoms, len));
