@@ -35,7 +35,7 @@ struct selection_getter_t: public lua_object_t {
     /** Window used for the transfer */
     xcb_window_t window;
 
-    ~selection_getter_t() { xcb_destroy_window(Manager::get().x.connection, window); }
+    ~selection_getter_t() { getConnection().destroy_window(window); }
 };
 
 static lua_class_t selection_getter_class{
@@ -50,9 +50,6 @@ return static_cast<lua_object_t*>(newobj<selection_getter_t, selection_getter_cl
 
 static int luaA_selection_getter_new(lua_State* L) {
     size_t name_length, target_length;
-    const char *name, *target;
-    xcb_intern_atom_cookie_t cookies[2];
-    xcb_intern_atom_reply_t* reply;
     selection_getter_t* selection;
     xcb_atom_t name_atom, target_atom;
 
@@ -62,25 +59,20 @@ static int luaA_selection_getter_new(lua_State* L) {
     lua_pushliteral(L, "target");
     lua_gettable(L, 2);
 
-    name = luaL_checklstring(L, -2, &name_length);
-    target = luaL_checklstring(L, -1, &target_length);
+    auto name = luaL_checklstring(L, -2, &name_length);
+    auto target = luaL_checklstring(L, -1, &target_length);
 
     /* Create a selection object */
     selection = reinterpret_cast<selection_getter_t*>(selection_getter_class.alloc_object(L));
     selection->window = getConnection().generate_id();
-    xcb_create_window(Manager::get().x.connection,
-                      Manager::get().screen->root_depth,
-                      selection->window,
-                      Manager::get().screen->root,
-                      -1,
-                      -1,
-                      1,
-                      1,
-                      0,
-                      XCB_COPY_FROM_PARENT,
-                      Manager::get().screen->root_visual,
-                      0,
-                      NULL);
+    getConnection().create_window(Manager::get().screen->root_depth,
+                                  selection->window,
+                                  Manager::get().screen->root,
+                                  {-1, -1, 1, 1},
+                                  0,
+                                  XCB_COPY_FROM_PARENT,
+                                  Manager::get().screen->root_visual,
+                                  0);
 
     /* Save it in the registry */
     lua_pushliteral(L, REGISTRY_GETTER_TABLE_INDEX);
@@ -90,23 +82,20 @@ static int luaA_selection_getter_new(lua_State* L) {
     lua_pop(L, 1);
 
     /* Get the atoms identifying the request */
-    cookies[0] = xcb_intern_atom_unchecked(Manager::get().x.connection, false, name_length, name);
-    cookies[1] = xcb_intern_atom_unchecked(Manager::get().x.connection, false, target_length, target);
+    auto c1 = getConnection().intern_atom_unchecked(false, name_length, name);
+    auto c2 = getConnection().intern_atom_unchecked(false, target_length, target);
 
-    reply = xcb_intern_atom_reply(Manager::get().x.connection, cookies[0], NULL);
+    auto reply = getConnection().intern_atom_reply(c1);
     name_atom = reply ? reply->atom : XCB_NONE;
-    p_delete(&reply);
 
-    reply = xcb_intern_atom_reply(Manager::get().x.connection, cookies[1], NULL);
+    reply = getConnection().intern_atom_reply(c2);
     target_atom = reply ? reply->atom : XCB_NONE;
-    p_delete(&reply);
 
-    xcb_convert_selection(Manager::get().x.connection,
-                          selection->window,
-                          name_atom,
-                          target_atom,
-                          AWESOME_SELECTION_ATOM,
-                          Manager::get().x.get_timestamp());
+    getConnection().convert_selection(selection->window,
+                                      name_atom,
+                                      target_atom,
+                                      AWESOME_SELECTION_ATOM,
+                                      Manager::get().x.get_timestamp());
 
     return 1;
 }
@@ -132,19 +121,18 @@ static void selection_push_data(lua_State* L, xcb_get_property_reply_t* property
         xcb_get_atom_name_cookie_t cookies[num_atoms];
 
         for (size_t i = 0; i < num_atoms; i++) {
-            cookies[i] = xcb_get_atom_name_unchecked(Manager::get().x.connection, atoms[i]);
+            cookies[i] = getConnection().get_atom_name_unchecked(atoms[i]);
         }
 
         lua_newtable(L);
         for (size_t i = 0; i < num_atoms; i++) {
-            xcb_get_atom_name_reply_t* reply =
-              xcb_get_atom_name_reply(Manager::get().x.connection, cookies[i], NULL);
+            auto reply = getConnection().get_atom_name_reply(cookies[i]);
             if (reply) {
-                lua_pushlstring(
-                  L, xcb_get_atom_name_name(reply), xcb_get_atom_name_name_length(reply));
+                lua_pushlstring(L,
+                                xcb_get_atom_name_name(reply.get()),
+                                xcb_get_atom_name_name_length(reply.get()));
                 lua_rawseti(L, -2, i + 1);
             }
-            p_delete(&reply);
         }
     } else {
         lua_pushlstring(L,
@@ -167,16 +155,8 @@ static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t pr
     getConnection().change_attributes(
       selection->window, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
 
-    xcb_get_property_reply_t* property_r =
-      xcb_get_property_reply(Manager::get().x.connection,
-                             xcb_get_property(Manager::get().x.connection,
-                                              true,
-                                              selection->window,
-                                              AWESOME_SELECTION_ATOM,
-                                              XCB_GET_PROPERTY_TYPE_ANY,
-                                              0,
-                                              0xffffffff),
-                             NULL);
+    auto property_r = getConnection().get_property_reply(getConnection().get_property(
+      true, selection->window, AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
 
     if (!property_r) {
         selection_transfer_finished(L, ud);
@@ -189,13 +169,10 @@ static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t pr
          * transfer should start now. Right now we only get an estimate
          * of the size of the data to be transferred, which we ignore.
          */
-        p_delete(&property_r);
         return;
     }
-    selection_push_data(L, property_r);
+    selection_push_data(L, property_r.get());
     luaA_object_emit_signal(L, ud, "data", 1);
-    p_delete(&property_r);
-
     selection_transfer_finished(L, ud);
 }
 
@@ -236,27 +213,17 @@ void property_handle_awesome_selection_atom(uint8_t state, xcb_window_t window) 
 
     selection_getter_t* selection = (selection_getter_t*)lua_touserdata(L, -1);
 
-    xcb_get_property_reply_t* property_r =
-      xcb_get_property_reply(Manager::get().x.connection,
-                             xcb_get_property(Manager::get().x.connection,
-                                              true,
-                                              selection->window,
-                                              AWESOME_SELECTION_ATOM,
-                                              XCB_GET_PROPERTY_TYPE_ANY,
-                                              0,
-                                              0xffffffff),
-                             NULL);
+    auto property_r = getConnection().get_property_reply(getConnection().get_property(
+      true, selection->window, AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
 
     if (property_r) {
         if (property_r->value_len > 0) {
-            selection_push_data(L, property_r);
+            selection_push_data(L, property_r.get());
             luaA_object_emit_signal(L, -2, "data", 1);
         } else {
             /* Transfer finished */
             selection_transfer_finished(L, -1);
         }
-
-        p_delete(&property_r);
     }
 
     lua_pop(L, 1);

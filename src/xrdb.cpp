@@ -38,8 +38,8 @@ int luaA_xrdb_get_value(lua_State* L) {
     const char* resource_name = luaL_checkstring(L, 2);
     char* result = NULL;
 
-    if (xcb_xrm_resource_get_string(Manager::get().x.xrmdb, resource_name, resource_class, &result) <
-        0) {
+    if (xcb_xrm_resource_get_string(
+          Manager::get().x.xrmdb, resource_name, resource_class, &result) < 0) {
         lua_pushnil(L);
     } else {
         lua_pushstring(L, result);

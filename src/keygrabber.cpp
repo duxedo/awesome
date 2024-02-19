@@ -38,19 +38,13 @@
  * \return True if keyboard was grabbed.
  */
 static bool keygrabber_grab(void) {
-    int i;
-    xcb_grab_keyboard_reply_t* xgb;
-
-    for (i = 1000; i; i--) {
-        if ((xgb = xcb_grab_keyboard_reply(Manager::get().x.connection,
-                                           xcb_grab_keyboard(Manager::get().x.connection,
-                                                             true,
-                                                             Manager::get().screen->root,
-                                                             XCB_CURRENT_TIME,
-                                                             XCB_GRAB_MODE_ASYNC,
-                                                             XCB_GRAB_MODE_ASYNC),
-                                           NULL))) {
-            p_delete(&xgb);
+    for (int i = 1000; i; i--) {
+        if (Manager::get().x.connection.grab_keyboard_reply(
+              Manager::get().x.connection.grab_keyboard(true,
+                                                        Manager::get().screen->root,
+                                                        XCB_CURRENT_TIME,
+                                                        XCB_GRAB_MODE_ASYNC,
+                                                        XCB_GRAB_MODE_ASYNC))) {
             return true;
         }
         usleep(1000);
@@ -82,7 +76,8 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
 
     if (is_control(buf)) {
         /* Use text names for control characters, ignoring all modifiers. */
-        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(Manager::get().input.keysyms, e->detail, 0);
+        xcb_keysym_t keysym =
+          Manager::get().input.keysyms.get_keysym(e->detail, 0);
         xkb_keysym_get_name(keysym, buf, std::size(buf));
     }
 
@@ -122,7 +117,7 @@ static int luaA_keygrabber_run(lua_State* L) {
  * @deprecated keygrabber.stop
  */
 int luaA_keygrabber_stop(lua_State* L) {
-    xcb_ungrab_keyboard(Manager::get().x.connection, XCB_CURRENT_TIME);
+    Manager::get().x.connection.ungrab_keyboard();
     Lua::unregister(L, &Manager::get().keygrabber.idx);
     return 0;
 }

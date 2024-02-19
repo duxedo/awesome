@@ -215,7 +215,7 @@ static void event_handle_button(xcb_button_press_event_t* ev) {
          * "eaten" instead of being handled again on the root window.
          */
         if (ev->child == XCB_NONE) {
-            xcb_allow_events(Manager::get().x.connection, XCB_ALLOW_ASYNC_POINTER, ev->time);
+            getConnection().allow_events(XCB_ALLOW_ASYNC_POINTER, ev->time);
         }
     } else if ((c = client_getbyframewin(ev->event)) || (c = client_getbywin(ev->event))) {
         /* For clicks inside of c->window, we get two events. Once because of a
@@ -250,7 +250,7 @@ static void event_handle_button(xcb_button_press_event_t* ev) {
             /* then check if any button objects match */
             event_button_callback(ev, c->buttons, L, -1, 1, NULL);
         }
-        xcb_allow_events(Manager::get().x.connection, XCB_ALLOW_REPLAY_POINTER, ev->time);
+        getConnection().allow_events(XCB_ALLOW_REPLAY_POINTER, ev->time);
     } else if (ev->child == XCB_NONE && Manager::get().screen->root == ev->event) {
         event_button_callback(ev, Manager::get().buttons, L, 0, 0, NULL);
         return;
@@ -408,14 +408,12 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
          * thus we have to send a synthetic configure notify informing the
          * window that its configure request was denied.
          */
-        xcb_get_geometry_cookie_t geom_cookie =
-          xcb_get_geometry_unchecked(Manager::get().x.connection, ev->window);
-        xcb_translate_coordinates_cookie_t coords_cookie = xcb_translate_coordinates_unchecked(
-          Manager::get().x.connection, ev->window, Manager::get().screen->root, 0, 0);
-        xcb_get_geometry_reply_t* geom =
-          xcb_get_geometry_reply(Manager::get().x.connection, geom_cookie, NULL);
-        xcb_translate_coordinates_reply_t* coords =
-          xcb_translate_coordinates_reply(Manager::get().x.connection, coords_cookie, NULL);
+        auto geom_cookie = getConnection().get_geometry_unchecked(ev->window);
+        xcb_translate_coordinates_cookie_t coords_cookie =
+          getConnection().translate_coordinates_unchecked(
+            ev->window, Manager::get().screen->root, {0, 0});
+        auto geom = getConnection().get_geometry_reply(geom_cookie);
+        auto coords = getConnection().translate_coordinates_reply(coords_cookie);
 
         if (geom && coords) {
             xwindow_configure(ev->window,
@@ -425,8 +423,6 @@ static void event_handle_configurerequest(xcb_configure_request_event_t* ev) {
             },
                               0);
         }
-        p_delete(&geom);
-        p_delete(&coords);
     } else {
         event_handle_configurerequest_configure_window(ev);
     }
@@ -641,7 +637,8 @@ static void event_handle_enternotify(xcb_enter_notify_event_t* ev) {
         }
         event_drawable_under_mouse(L, -1);
         lua_pop(L, 2);
-    } else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR && ev->event == Manager::get().screen->root) {
+    } else if (ev->detail != XCB_NOTIFY_DETAIL_INFERIOR &&
+               ev->event == Manager::get().screen->root) {
         /* When there are multiple X screens with awesome running separate
          * instances, reset focus.
          */
@@ -718,7 +715,7 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
         }
     } else {
         /* get keysym ignoring all modifiers */
-        xcb_keysym_t keysym = xcb_key_symbols_get_keysym(Manager::get().input.keysyms, ev->detail, 0);
+        xcb_keysym_t keysym = Manager::get().input.keysyms.get_keysym(ev->detail, 0);
         client* c;
         if ((c = client_getbywin(ev->event)) || (c = client_getbynofocuswin(ev->event))) {
             luaA_object_push(L, c);
@@ -734,27 +731,20 @@ static void event_handle_key(xcb_key_press_event_t* ev) {
  */
 static void event_handle_maprequest(xcb_map_request_event_t* ev) {
     client* c;
-    xcb_get_window_attributes_cookie_t wa_c;
-    xcb_get_window_attributes_reply_t* wa_r;
-    xcb_get_geometry_cookie_t geom_c;
-    xcb_get_geometry_reply_t* geom_r;
+    auto wa_c = getConnection().get_window_attributes_unchecked(ev->window);
 
-    wa_c = xcb_get_window_attributes_unchecked(Manager::get().x.connection, ev->window);
-
-    if (!(wa_r = xcb_get_window_attributes_reply(Manager::get().x.connection, wa_c, NULL))) {
+    auto wa_r = getConnection().get_window_attributes_reply(wa_c);
+    if (!wa_r || wa_r->override_redirect) {
         return;
     }
 
-    if (wa_r->override_redirect) {
-        goto bailout;
-    }
-
-    if (auto em = std::ranges::find_if(
-          Manager::get().embedded, [xwin = ev->window](const auto& win) { return win.win == xwin; });
+    if (auto em =
+          std::ranges::find_if(Manager::get().embedded,
+                               [xwin = ev->window](const auto& win) { return win.win == xwin; });
         em != Manager::get().embedded.end()) {
-        xcb_map_window(Manager::get().x.connection, ev->window);
+        getConnection().map_window(ev->window);
         XEmbed::xembed_window_activate(
-          Manager::get().x.connection, ev->window, Manager::get().x.get_timestamp());
+          getConnection(), ev->window, Manager::get().x.get_timestamp());
         /* The correct way to set this is via the _XEMBED_INFO property. Neither
          * of the XEMBED not the systray spec talk about mapping windows.
          * Apparently, Qt doesn't care and does not set an _XEMBED_INFO
@@ -773,19 +763,14 @@ static void event_handle_maprequest(xcb_map_request_event_t* ev) {
             client_raise(c);
         }
     } else {
-        geom_c = xcb_get_geometry_unchecked(Manager::get().x.connection, ev->window);
-
-        if (!(geom_r = xcb_get_geometry_reply(Manager::get().x.connection, geom_c, NULL))) {
-            goto bailout;
+        auto geom_c = getConnection().get_geometry_unchecked(ev->window);
+        auto geom_r = getConnection().get_geometry_reply(geom_c);
+        if (!geom_r) {
+            return;
         }
 
-        client_manage(ev->window, geom_r, wa_r);
-
-        p_delete(&geom_r);
+        client_manage(ev->window, geom_r.get(), wa_r.get());
     }
-
-bailout:
-    p_delete(&wa_r);
 }
 
 /** The unmap notify event handler.
@@ -828,42 +813,38 @@ static void event_handle_randr_screen_change_notify(xcb_randr_screen_change_noti
 /** XRandR event handler for RRNotify subtype XRROutputChangeNotifyEvent
  */
 static void event_handle_randr_output_change_notify(xcb_randr_notify_event_t* ev) {
-    if (ev->subCode == XCB_RANDR_NOTIFY_OUTPUT_CHANGE) {
-        xcb_randr_output_t output = ev->u.oc.output;
-        uint8_t connection = ev->u.oc.connection;
-        const char* connection_str = NULL;
-        xcb_randr_get_output_info_reply_t* info;
-        lua_State* L = globalconf_get_lua_State();
-
-        /* The following explicitly uses XCB_CURRENT_TIME since we want to know
-         * the final state of the connection. There could be more notification
-         * events underway and using some "old" timestamp causes problems.
-         */
-        info = xcb_randr_get_output_info_reply(
-          Manager::get().x.connection,
-          xcb_randr_get_output_info_unchecked(Manager::get().x.connection, output, XCB_CURRENT_TIME),
-          NULL);
-        if (!info) {
-            return;
-        }
-
-        switch (connection) {
-        case XCB_RANDR_CONNECTION_CONNECTED: connection_str = "Connected"; break;
-        case XCB_RANDR_CONNECTION_DISCONNECTED: connection_str = "Disconnected"; break;
-        default: connection_str = "Unknown"; break;
-        }
-
-        lua_pushlstring(L,
-                        (char*)xcb_randr_get_output_info_name(info),
-                        xcb_randr_get_output_info_name_length(info));
-        lua_pushstring(L, connection_str);
-        signal_object_emit(L, &Lua::global_signals, "screen::change", 2);
-
-        p_delete(&info);
-
-        /* The docs for RRSetOutputPrimary say we get this signal */
-        screen_update_primary();
+    if (ev->subCode != XCB_RANDR_NOTIFY_OUTPUT_CHANGE) {
+        return;
     }
+    xcb_randr_output_t output = ev->u.oc.output;
+    uint8_t connection = ev->u.oc.connection;
+    const char* connection_str = NULL;
+    lua_State* L = globalconf_get_lua_State();
+
+    /* The following explicitly uses XCB_CURRENT_TIME since we want to know
+     * the final state of the connection. There could be more notification
+     * events underway and using some "old" timestamp causes problems.
+     */
+    auto info = getConnection().randr().get_output_info_reply(
+      getConnection().randr().get_output_info_unchecked(output, XCB_CURRENT_TIME));
+    if (!info) {
+        return;
+    }
+
+    switch (connection) {
+    case XCB_RANDR_CONNECTION_CONNECTED: connection_str = "Connected"; break;
+    case XCB_RANDR_CONNECTION_DISCONNECTED: connection_str = "Disconnected"; break;
+    default: connection_str = "Unknown"; break;
+    }
+
+    lua_pushlstring(L,
+                    (char*)xcb_randr_get_output_info_name(info.get()),
+                    xcb_randr_get_output_info_name_length(info.get()));
+    lua_pushstring(L, connection_str);
+    signal_object_emit(L, &Lua::global_signals, "screen::change", 2);
+
+    /* The docs for RRSetOutputPrimary say we get this signal */
+    screen_update_primary();
 }
 
 /** The shape notify event handler.
@@ -871,17 +852,18 @@ static void event_handle_randr_output_change_notify(xcb_randr_notify_event_t* ev
  */
 static void event_handle_shape_notify(xcb_shape_notify_event_t* ev) {
     client* c = client_getbywin(ev->affected_window);
-    if (c) {
-        lua_State* L = globalconf_get_lua_State();
-        luaA_object_push(L, c);
-        if (ev->shape_kind == XCB_SHAPE_SK_BOUNDING) {
-            luaA_object_emit_signal(L, -1, "property::shape_client_bounding", 0);
-        }
-        if (ev->shape_kind == XCB_SHAPE_SK_CLIP) {
-            luaA_object_emit_signal(L, -1, "property::shape_client_clip", 0);
-        }
-        lua_pop(L, 1);
+    if (!c) {
+        return;
     }
+    lua_State* L = globalconf_get_lua_State();
+    luaA_object_push(L, c);
+    if (ev->shape_kind == XCB_SHAPE_SK_BOUNDING) {
+        luaA_object_emit_signal(L, -1, "property::shape_client_bounding", 0);
+    }
+    if (ev->shape_kind == XCB_SHAPE_SK_CLIP) {
+        luaA_object_emit_signal(L, -1, "property::shape_client_clip", 0);
+    }
+    lua_pop(L, 1);
 }
 
 /** The client message event handler.
@@ -924,7 +906,7 @@ static void event_handle_reparentnotify(xcb_reparent_notify_event_t* ev) {
         /* Embedded window moved elsewhere, end of embedding */
         if (std::erase_if(Manager::get().embedded,
                           [xwin = ev->window](const auto& win) { return win.win == xwin; })) {
-            xcb_change_save_set(Manager::get().x.connection, XCB_SET_MODE_DELETE, ev->window);
+            getConnection().change_save_set(XCB_SET_MODE_DELETE, ev->window);
             Lua::systray_invalidate();
         }
     }
@@ -1056,7 +1038,7 @@ void event_handle(xcb_generic_event_t* event) {
 #undef EVENT
     }
 
-#define EXTENSION_EVENT(base, offset, callback)                       \
+#define EXTENSION_EVENT(base, offset, callback)                         \
     if (Manager::get().x.event_base_##base != 0 &&                      \
         response_type == Manager::get().x.event_base_##base + (offset)) \
     callback((decltype(get_argt(callback)))event)
@@ -1071,22 +1053,22 @@ void event_handle(xcb_generic_event_t* event) {
 void event_init(void) {
     const xcb_query_extension_reply_t* reply;
 
-    reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_randr_id);
+    reply = getConnection().get_extension_data(&xcb_randr_id);
     if (reply && reply->present) {
         Manager::get().x.event_base_randr = reply->first_event;
     }
 
-    reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_shape_id);
+    reply = getConnection().get_extension_data(&xcb_shape_id);
     if (reply && reply->present) {
         Manager::get().x.event_base_shape = reply->first_event;
     }
 
-    reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_xkb_id);
+    reply = getConnection().get_extension_data(&xcb_xkb_id);
     if (reply && reply->present) {
         Manager::get().x.event_base_xkb = reply->first_event;
     }
 
-    reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_xfixes_id);
+    reply = getConnection().get_extension_data(&xcb_xfixes_id);
     if (reply && reply->present) {
         Manager::get().x.event_base_xfixes = reply->first_event;
     }

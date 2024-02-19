@@ -75,9 +75,9 @@ enum class Modifier {
 #define XEMBED_ACCELERATOR_OVERLOADED (1 << 0)
 
 void xembed_message_send(
-  xcb_connection_t*, xcb_window_t, xcb_timestamp_t, Message, uint32_t, uint32_t, uint32_t);
+  XCB::Connection&, xcb_window_t, xcb_timestamp_t, Message, uint32_t, uint32_t, uint32_t);
 
-void xembed_property_update(XCB::Connection* connection,
+void xembed_property_update(XCB::Connection& connection,
                             window& emwin,
                             xcb_timestamp_t timestamp,
                             const XCB::reply<xcb_get_property_reply_t>& reply);
@@ -91,12 +91,12 @@ std::optional<info> xembed_info_get_reply(XCB::Connection* conn, xcb_get_propert
  * \param timestamp The timestamp.
  * \param focus_type The type of focus.
  */
-static inline void xembed_focus_in(xcb_connection_t* c,
+static inline void xembed_focus_in(XCB::Connection& connection,
                                    xcb_window_t client,
                                    xcb_timestamp_t timestamp,
                                    Focus focus_type) {
     xembed_message_send(
-      c, client, timestamp, Message::FOCUS_IN, static_cast<uint32_t>(focus_type), 0, 0);
+      connection, client, timestamp, Message::FOCUS_IN, static_cast<uint32_t>(focus_type), 0, 0);
 }
 
 /** Notify a window that it has become active.
@@ -105,7 +105,7 @@ static inline void xembed_focus_in(xcb_connection_t* c,
  * \param timestamp The timestamp.
  */
 static inline void
-xembed_window_activate(xcb_connection_t* c, xcb_window_t client, xcb_timestamp_t timestamp) {
+xembed_window_activate(XCB::Connection& c, xcb_window_t client, xcb_timestamp_t timestamp) {
     xembed_message_send(c, client, timestamp, Message::WINDOW_ACTIVATE, 0, 0, 0);
 }
 
@@ -115,7 +115,7 @@ xembed_window_activate(xcb_connection_t* c, xcb_window_t client, xcb_timestamp_t
  * \param timestamp The timestamp.
  */
 static inline void
-xembed_window_deactivate(xcb_connection_t* c, xcb_window_t client, xcb_timestamp_t timestamp) {
+xembed_window_deactivate(XCB::Connection& c, xcb_window_t client, xcb_timestamp_t timestamp) {
     xembed_message_send(c, client, timestamp, Message::WINDOW_DEACTIVATE, 0, 0, 0);
 }
 
@@ -126,7 +126,7 @@ xembed_window_deactivate(xcb_connection_t* c, xcb_window_t client, xcb_timestamp
  * \param embedder The embedder window.
  * \param version The version.
  */
-static inline void xembed_embedded_notify(xcb_connection_t* c,
+static inline void xembed_embedded_notify(XCB::Connection& c,
                                           xcb_window_t client,
                                           xcb_timestamp_t timestamp,
                                           xcb_window_t embedder,
@@ -140,8 +140,8 @@ static inline void xembed_embedded_notify(xcb_connection_t* c,
  * \param root The root window to reparent to.
  */
 static inline void
-xembed_window_unembed(xcb_connection_t* connection, xcb_window_t child, xcb_window_t root) {
-    xcb_reparent_window(connection, child, root, 0, 0);
+xembed_window_unembed(XCB::Connection& connection, xcb_window_t child, xcb_window_t root) {
+    connection.reparent_window(child, root, 0, 0);
 }
 
 /** Indicate to an embedded window that it has lost focus.
@@ -150,7 +150,7 @@ xembed_window_unembed(xcb_connection_t* connection, xcb_window_t child, xcb_wind
  * \param timestamp The timestamp.
  */
 static inline void
-xembed_focus_out(xcb_connection_t* c, xcb_window_t client, xcb_timestamp_t timestamp) {
+xembed_focus_out(XCB::Connection& c, xcb_window_t client, xcb_timestamp_t timestamp) {
     xembed_message_send(c, client, timestamp, Message::FOCUS_OUT, 0, 0, 0);
 }
 

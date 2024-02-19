@@ -47,6 +47,7 @@
 #include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
+#include <bits/ranges_util.h>
 #include <cairo-xcb.h>
 #include <xcb/xcb_aux.h>
 #include <xcb/xtest.h>
@@ -124,7 +125,7 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
      * the new one directly and doesn't need GetImage and PutImage.
      */
     surface = cairo_xcb_surface_create(
-      Manager::get().x.connection, p, draw_default_visual(screen), width, height);
+      getConnection().getConnection(), p, draw_default_visual(screen), width, height);
     cr = cairo_create(surface);
     /* Paint the pattern to the surface */
     cairo_set_source(cr, pattern);
@@ -132,15 +133,15 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
     cairo_paint(cr);
     cairo_destroy(cr);
     cairo_surface_flush(surface);
-    xcb_aux_sync(Manager::get().x.connection);
+    getConnection().aux_sync();
 
     /* Change the wallpaper, without sending us a PropertyNotify event */
-    xcb_grab_server(Manager::get().x.connection);
+    getConnection().grab_server();
     getConnection().clear_attributes(Manager::get().screen->root, XCB_CW_EVENT_MASK);
     root_set_wallpaper_pixmap(getConnection(), p);
     getConnection().change_attributes(
       Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
-    xutil_ungrab_server(Manager::get().x.connection);
+    xutil_ungrab_server();
 
     /* Make sure our pixmap is not destroyed when we disconnect. */
     xcb_set_close_down_mode(c, XCB_CLOSE_DOWN_RETAIN_PERMANENT);
@@ -156,70 +157,54 @@ static bool root_set_wallpaper(cairo_pattern_t* pattern) {
 }
 
 void root_update_wallpaper(void) {
-    xcb_get_property_cookie_t prop_c;
-    xcb_get_property_reply_t* prop_r;
-    xcb_get_geometry_cookie_t geom_c;
-    xcb_get_geometry_reply_t* geom_r;
     xcb_pixmap_t* rootpix;
 
     cairo_surface_destroy(Manager::get().wallpaper);
     Manager::get().wallpaper = NULL;
-
-    prop_c = xcb_get_property_unchecked(Manager::get().x.connection,
-                                        false,
-                                        Manager::get().screen->root,
-                                        _XROOTPMAP_ID,
-                                        XCB_ATOM_PIXMAP,
-                                        0,
-                                        1);
-    prop_r = xcb_get_property_reply(Manager::get().x.connection, prop_c, NULL);
+    auto prop_c = getConnection().get_property_unchecked(
+      false, Manager::get().screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
+    auto prop_r = getConnection().get_property_reply(prop_c);
 
     if (!prop_r || !prop_r->value_len) {
-        p_delete(&prop_r);
         return;
     }
 
-    rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r);
+    rootpix = (xcb_pixmap_t*)xcb_get_property_value(prop_r.get());
     if (!rootpix) {
-        p_delete(&prop_r);
         return;
     }
 
-    geom_c = xcb_get_geometry_unchecked(Manager::get().x.connection, *rootpix);
-    geom_r = xcb_get_geometry_reply(Manager::get().x.connection, geom_c, NULL);
+    auto geom_c = getConnection().get_geometry_unchecked(*rootpix);
+    auto geom_r = getConnection().get_geometry_reply(geom_c);
     if (!geom_r) {
-        p_delete(&prop_r);
         return;
     }
 
     /* Only the default visual makes sense, so just the default depth */
     if (geom_r->depth !=
         draw_visual_depth(Manager::get().screen, Manager::get().default_visual->visual_id)) {
-        log_warn("Got a pixmap with depth {}, but the default depth is {}, continuing anyway",
-                 geom_r->depth,
-                 draw_visual_depth(Manager::get().screen, Manager::get().default_visual->visual_id));
+        log_warn(
+          "Got a pixmap with depth {}, but the default depth is {}, continuing anyway",
+          geom_r->depth,
+          draw_visual_depth(Manager::get().screen, Manager::get().default_visual->visual_id));
     }
 
-    Manager::get().wallpaper = cairo_xcb_surface_create(Manager::get().x.connection,
-                                                      *rootpix,
-                                                      Manager::get().default_visual,
-                                                      geom_r->width,
-                                                      geom_r->height);
-
-    p_delete(&prop_r);
-    p_delete(&geom_r);
+    Manager::get().wallpaper = cairo_xcb_surface_create(getConnection().getConnection(),
+                                                        *rootpix,
+                                                        Manager::get().default_visual,
+                                                        geom_r->width,
+                                                        geom_r->height);
 }
 
 static xcb_keycode_t _string_to_key_code(const char* s) {
     xcb_keysym_t keysym;
-    xcb_keycode_t* keycodes;
 
     keysym = xkb_keysym_from_name(s, XKB_KEYSYM_NO_FLAGS);
-    keycodes = xcb_key_symbols_get_keycode(Manager::get().input.keysyms, keysym);
+    auto keycodes = Manager::get().input.keysyms.get_keycode(keysym);
 
     if (keycodes) {
-        return keycodes[0]; /* XXX only returning the first is probably not
-                             * the best */
+        return keycodes.get()[0]; /* XXX only returning the first is probably not
+                                   * the best */
     } else {
         return 0;
     }
@@ -323,14 +308,12 @@ static int luaA_root_fake_input(lua_State* L) {
         return 0;
     }
 
-    xcb_test_fake_input(Manager::get().x.connection,
-                        type,
-                        detail,
-                        0, /* This is a delay, not a timestamp! */
-                        XCB_NONE,
-                        x,
-                        y,
-                        0);
+    getConnection().test_fake_input(type,
+                                    detail,
+                                    0, /* This is a delay, not a timestamp! */
+                                    XCB_NONE,
+                                    {static_cast<int16_t>(x), static_cast<int16_t>(y)},
+                                    0);
     return 0;
 }
 
@@ -435,8 +418,7 @@ static int luaA_root_cursor(lua_State* L) {
     if (cursor_font) {
         uint32_t change_win_vals[] = {xcursor_new(Manager::get().x.cursor_ctx, cursor_font)};
 
-        xcb_change_window_attributes(
-          Manager::get().x.connection, Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
+        getConnection().change_attributes(Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
     } else {
         Lua::warn(L, "invalid cursor %s", cursor_name);
     }
@@ -502,7 +484,7 @@ static int luaA_root_wallpaper(lua_State* L) {
 static int luaA_root_get_content(lua_State* L) {
     cairo_surface_t* surface;
 
-    surface = cairo_xcb_surface_create(Manager::get().x.connection,
+    surface = cairo_xcb_surface_create(getConnection().getConnection(),
                                        Manager::get().screen->root,
                                        Manager::get().default_visual,
                                        Manager::get().screen->width_in_pixels,

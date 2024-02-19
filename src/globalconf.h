@@ -21,6 +21,7 @@
 #pragma once
 
 #include "common/lualib.h"
+
 #include <cstdlib>
 #include <xcb/xproto.h>
 #define SN_API_NOT_YET_FROZEN
@@ -71,8 +72,7 @@ struct XOrg {
     /** Default screen number */
     int default_screen = 0;
     /** Connection ref */
-    XCB::Connection _connection;
-    xcb_connection_t*& connection = _connection.connection;
+    XCB::Connection connection;
     /** X Resources DB */
     xcb_xrm_database_t* xrmdb = nullptr;
     /** xcb-cursor context */
@@ -119,7 +119,7 @@ struct XOrg {
 
 struct Input {
     /** Keys symbol table */
-    xcb_key_symbols_t* keysyms = nullptr;
+    XCB::KeySyms keysyms;
 };
 
 struct StartupConfig {
@@ -242,7 +242,7 @@ class Manager {
     /** List of windows to be destroyed later */
     std::vector<xcb_window_t> destroy_later_windows;
     /** Pending event that still needs to be handled */
-    xcb_generic_event_t* pending_event = nullptr;
+    XCB::event<xcb_generic_event_t> pending_event;
     /** The exit code that main() will return with */
     int exit_code = EXIT_SUCCESS;
     /** The Global API level */

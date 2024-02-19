@@ -32,6 +32,7 @@
 #include "options.h"
 #include "spawn.h"
 #include "systray.h"
+#include "xcbcpp/xcb.h"
 #include "xkb.h"
 #include "xwindow.h"
 
@@ -41,6 +42,7 @@
 #include <ranges>
 #include <sys/time.h>
 #include <uv.h>
+#include <xcb/xcb.h>
 
 static Manager* gGlobals = nullptr;
 Manager& Manager::get() {
@@ -48,7 +50,7 @@ Manager& Manager::get() {
     return *gGlobals;
 }
 
-XCB::Connection& getConnection() { return Manager::get().x._connection; }
+XCB::Connection& getConnection() { return Manager::get().x.connection; }
 
 /** argv used to run awesome */
 static char** awesome_argv;
@@ -130,11 +132,9 @@ void awesome_atexit(bool restart) {
      * Immediately afterwards, this parent is destroyed and the focus is gone.
      * Work around this by placing the focus where we like it to be.
      */
-    xcb_set_input_focus(Manager::get().x.connection,
-                        XCB_INPUT_FOCUS_POINTER_ROOT,
-                        XCB_NONE,
-                        Manager::get().x.get_timestamp());
-    xcb_aux_sync(Manager::get().x.connection);
+    getConnection().set_input_focus(
+      XCB_INPUT_FOCUS_POINTER_ROOT, XCB_NONE, Manager::get().x.get_timestamp());
+    getConnection().aux_sync();
 
     xkb_free();
 
@@ -143,7 +143,7 @@ void awesome_atexit(bool restart) {
 #ifdef WITH_XCB_ERRORS
     xcb_errors_context_free(Manager::get().x.errors_ctx);
 #endif
-    xcb_disconnect(Manager::get().x.connection);
+    getConnection().disconnect();
 
     close(sigchld_pipe[0]);
     close(sigchld_pipe[1]);
@@ -223,25 +223,17 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
 }
 
 static void acquire_WM_Sn(bool replace) {
-    xcb_intern_atom_cookie_t atom_q;
-    xcb_intern_atom_reply_t* atom_r;
-    xcb_get_selection_owner_reply_t* get_sel_reply;
 
     /* Get the WM_Sn atom */
     Manager::get().x.selection_owner_window = getConnection().generate_id();
-    xcb_create_window(Manager::get().x.connection,
-                      Manager::get().screen->root_depth,
-                      Manager::get().x.selection_owner_window,
-                      Manager::get().screen->root,
-                      -1,
-                      -1,
-                      1,
-                      1,
-                      0,
-                      XCB_COPY_FROM_PARENT,
-                      Manager::get().screen->root_visual,
-                      0,
-                      NULL);
+    getConnection().create_window(Manager::get().screen->root_depth,
+                                  Manager::get().x.selection_owner_window,
+                                  Manager::get().screen->root,
+                                  {-1, -1, 1, 1},
+                                  0,
+                                  XCB_COPY_FROM_PARENT,
+                                  Manager::get().screen->root_visual,
+                                  0);
     xwindow_set_class_instance(Manager::get().x.selection_owner_window);
     xwindow_set_name_static(Manager::get().x.selection_owner_window,
                             "Awesome WM_Sn selection owner window");
@@ -251,24 +243,20 @@ static void acquire_WM_Sn(bool replace) {
         log_fatal("error getting WM_Sn atom name");
     }
 
-    atom_q =
-      xcb_intern_atom_unchecked(Manager::get().x.connection, false, strlen(atom_name), atom_name);
+    auto atom_q = getConnection().intern_atom_unchecked(false, strlen(atom_name), atom_name);
 
     p_delete(&atom_name);
 
-    atom_r = xcb_intern_atom_reply(Manager::get().x.connection, atom_q, NULL);
+    auto atom_r = getConnection().intern_atom_reply(atom_q);
     if (!atom_r) {
         log_fatal("error getting WM_Sn atom");
     }
 
     Manager::get().x.selection_atom = atom_r->atom;
-    p_delete(&atom_r);
 
     /* Is the selection already owned? */
-    get_sel_reply = xcb_get_selection_owner_reply(
-      Manager::get().x.connection,
-      xcb_get_selection_owner(Manager::get().x.connection, Manager::get().x.selection_atom),
-      NULL);
+    auto get_sel_reply = getConnection().get_selection_owner_reply(
+      getConnection().get_selection_owner(Manager::get().x.selection_atom));
     if (!get_sel_reply) {
         log_fatal("GetSelectionOwner for WM_Sn failed");
     }
@@ -277,22 +265,17 @@ static void acquire_WM_Sn(bool replace) {
     }
 
     /* Acquire the selection */
-    xcb_set_selection_owner(Manager::get().x.connection,
-                            Manager::get().x.selection_owner_window,
-                            Manager::get().x.selection_atom,
-                            Manager::get().x.get_timestamp());
+    getConnection().set_selection_owner(Manager::get().x.selection_owner_window,
+                                        Manager::get().x.selection_atom,
+                                        Manager::get().x.get_timestamp());
     if (get_sel_reply->owner != XCB_NONE) {
         /* Wait for the old owner to go away */
-        xcb_get_geometry_reply_t* geom_reply = NULL;
+        XCB::reply<xcb_get_geometry_reply_t> geom_reply;
         do {
-            p_delete(&geom_reply);
-            geom_reply = xcb_get_geometry_reply(
-              Manager::get().x.connection,
-              xcb_get_geometry(Manager::get().x.connection, get_sel_reply->owner),
-              NULL);
-        } while (geom_reply != NULL);
+            geom_reply = getConnection().get_geometry_reply(
+              getConnection().get_geometry(get_sel_reply->owner));
+        } while (geom_reply);
     }
-    p_delete(&get_sel_reply);
 
     /* Announce that we are the new owner */
     xcb_client_message_event_t ev{.response_type = XCB_CLIENT_MESSAGE,
@@ -306,92 +289,82 @@ static void acquire_WM_Sn(bool replace) {
                                                    0,
                                                    0}}};
 
-    xcb_send_event(
-      Manager::get().x.connection, false, Manager::get().screen->root, 0xFFFFFF, (char*)&ev);
+    getConnection().send_event(false, Manager::get().screen->root, 0xFFFFFF, (char*)&ev);
 }
 
 static void acquire_timestamp(void) {
     /* Getting a current timestamp is hard. ICCCM recommends a zero-length
      * append to a property, so let's do that.
      */
-    xcb_generic_event_t* event;
     xcb_window_t win = Manager::get().screen->root;
     xcb_atom_t atom = XCB_ATOM_RESOURCE_MANAGER; /* Just something random */
     xcb_atom_t type = XCB_ATOM_STRING;           /* Equally random */
 
-    xcb_grab_server(Manager::get().x.connection);
+    getConnection().grab_server();
     getConnection().change_attributes(
       win, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
     getConnection().append_property(win, atom, type, std::span{"", 0});
     getConnection().clear_attributes(win, XCB_CW_EVENT_MASK);
-    xutil_ungrab_server(Manager::get().x.connection);
+    xutil_ungrab_server();
 
     /* Now wait for the event */
-    while ((event = xcb_wait_for_event(Manager::get().x.connection))) {
+    while (auto event = getConnection().wait_for_event()) {
         /* Is it the event we are waiting for? */
         if (XCB_EVENT_RESPONSE_TYPE(event) == XCB_PROPERTY_NOTIFY) {
-            xcb_property_notify_event_t* ev = (xcb_property_notify_event_t*)event;
+            xcb_property_notify_event_t* ev = (xcb_property_notify_event_t*)event.get();
             Manager::get().x.update_timestamp(ev);
-            p_delete(&event);
             break;
         }
 
         /* Hm, not the right event. */
-        if (Manager::get().pending_event != NULL) {
-            event_handle(Manager::get().pending_event);
-            p_delete(&Manager::get().pending_event);
+        if (Manager::get().pending_event) {
+            event_handle(Manager::get().pending_event.get());
         }
-        Manager::get().pending_event = event;
+        Manager::get().pending_event = std::move(event);
     }
 }
 
-static xcb_generic_event_t* poll_for_event(void) {
+static XCB::event<xcb_generic_event_t> poll_for_event(void) {
     if (Manager::get().pending_event) {
-        xcb_generic_event_t* event = Manager::get().pending_event;
-        Manager::get().pending_event = NULL;
-        return event;
+        return std::move(Manager::get().pending_event);
     }
 
-    return xcb_poll_for_event(Manager::get().x.connection);
+    return getConnection().poll_for_event();
 }
 
 static void a_xcb_check(void) {
-    xcb_generic_event_t *mouse = NULL, *event;
+    XCB::event<xcb_generic_event_t> mouse;
 
-    while ((event = poll_for_event())) {
+    while (auto event = poll_for_event()) {
         /* We will treat mouse events later.
          * We cannot afford to treat all mouse motion events,
          * because that would be too much CPU intensive, so we just
          * take the last we get after a bunch of events. */
         if (XCB_EVENT_RESPONSE_TYPE(event) == XCB_MOTION_NOTIFY) {
-            p_delete(&mouse);
-            mouse = event;
+            mouse = std::move(event);
         } else {
             uint8_t type = XCB_EVENT_RESPONSE_TYPE(event);
             if (mouse && (type == XCB_ENTER_NOTIFY || type == XCB_LEAVE_NOTIFY ||
                           type == XCB_BUTTON_PRESS || type == XCB_BUTTON_RELEASE)) {
                 /* Make sure enter/motion/leave/press/release events are handled
                  * in the correct order */
-                event_handle(mouse);
-                p_delete(&mouse);
+                event_handle(mouse.get());
+                mouse.reset();
             }
-            event_handle(event);
-            p_delete(&event);
+            event_handle(event.get());
         }
     }
 
     if (mouse) {
-        event_handle(mouse);
-        p_delete(&mouse);
+        event_handle(mouse.get());
     }
 }
 
 static gboolean a_xcb_io_cb(GIOChannel* source, GIOCondition cond, gpointer data) {
     /* a_xcb_check() already handled all events */
 
-    if (xcb_connection_has_error(Manager::get().x.connection)) {
-        log_fatal("X server connection broke (error {})",
-                  xcb_connection_has_error(Manager::get().x.connection));
+    if (auto err = getConnection().connection_has_error()) {
+        log_fatal("X server connection broke (error {})", err);
     }
 
     return TRUE;
@@ -416,7 +389,7 @@ static gint a_glib_poll(GPollFD* ufds, guint nfsd, gint timeout) {
 
     /* Don't sleep if there is a pending event */
     assert(!Manager::get().pending_event);
-    Manager::get().pending_event = xcb_poll_for_event(Manager::get().x.connection);
+    Manager::get().pending_event = getConnection().poll_for_event();
     if (Manager::get().pending_event) {
         timeout = 0;
     }
@@ -617,15 +590,13 @@ int main(int argc, char** argv) {
     Manager::get().preferred_icon_size = 0;
 
     /* X stuff */
-    Manager::get().x.connection = xcb_connect(NULL, &Manager::get().x.default_screen);
+    Manager::get().x.connection = XCB::Connection::connect(NULL, &Manager::get().x.default_screen);
 
-    if (xcb_connection_has_error(Manager::get().x.connection)) {
-        log_fatal("cannot open display (error {})",
-                  xcb_connection_has_error(Manager::get().x.connection));
+    if (auto err = getConnection().connection_has_error()) {
+        log_fatal("cannot open display (error {})", err);
     }
 
-    Manager::get().screen =
-      xcb_aux_get_screen(Manager::get().x.connection, Manager::get().x.default_screen);
+    Manager::get().screen = getConnection().aux_get_screen(Manager::get().x.default_screen);
     Manager::get().default_visual = draw_default_visual(Manager::get().screen);
     if (default_init_flags & Options::INIT_FLAG_ARGB) {
         Manager::get().visual = draw_argb_visual(Manager::get().screen);
@@ -639,15 +610,14 @@ int main(int argc, char** argv) {
     if (Manager::get().default_depth != Manager::get().screen->root_depth) {
         // We need our own color map if we aren't using the default depth
         Manager::get().default_cmap = getConnection().generate_id();
-        xcb_create_colormap(Manager::get().x.connection,
-                            XCB_COLORMAP_ALLOC_NONE,
-                            Manager::get().default_cmap,
-                            Manager::get().screen->root,
-                            Manager::get().visual->visual_id);
+        getConnection().create_colormap(XCB_COLORMAP_ALLOC_NONE,
+                                        Manager::get().default_cmap,
+                                        Manager::get().screen->root,
+                                        Manager::get().visual->visual_id);
     }
 
 #ifdef WITH_XCB_ERRORS
-    if (xcb_errors_context_new(Manager::get().x.connection, &Manager::get().x.errors_ctx) < 0) {
+    if (getConnection().errors_context_new(&Manager::get().x.errors_ctx) < 0) {
         log_fatal("Failed to initialize xcb-errors");
     }
 #endif
@@ -656,18 +626,19 @@ int main(int argc, char** argv) {
     acquire_timestamp();
 
     /* Prefetch all the extensions we might need */
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_big_requests_id);
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_test_id);
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_randr_id);
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_xinerama_id);
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_shape_id);
-    xcb_prefetch_extension_data(Manager::get().x.connection, &xcb_xfixes_id);
+    getConnection().prefetch_extension_data(&xcb_big_requests_id);
+    getConnection().prefetch_extension_data(&xcb_test_id);
+    getConnection().prefetch_extension_data(&xcb_randr_id);
+    getConnection().prefetch_extension_data(&xcb_xinerama_id);
+    getConnection().prefetch_extension_data(&xcb_shape_id);
+    getConnection().prefetch_extension_data(&xcb_xfixes_id);
 
-    if (xcb_cursor_context_new(
-          Manager::get().x.connection, Manager::get().screen, &Manager::get().x.cursor_ctx) < 0) {
+    if (xcb_cursor_context_new(getConnection().getConnection(),
+                               Manager::get().screen,
+                               &Manager::get().x.cursor_ctx) < 0) {
         log_fatal("Failed to initialize xcb-cursor");
     }
-    Manager::get().x.xrmdb = xcb_xrm_database_from_default(Manager::get().x.connection);
+    Manager::get().x.xrmdb = xcb_xrm_database_from_default(getConnection().getConnection());
     if (Manager::get().x.xrmdb == NULL) {
         Manager::get().x.xrmdb = xcb_xrm_database_from_string("");
     }
@@ -685,44 +656,44 @@ int main(int argc, char** argv) {
     a_dbus_init();
 
     /* Get the file descriptor corresponding to the X connection */
-    int xfd = xcb_get_file_descriptor(Manager::get().x.connection);
+    int xfd = xcb_get_file_descriptor(getConnection().getConnection());
     GIOChannel* channel = g_io_channel_unix_new(xfd);
     g_io_add_watch(channel, G_IO_IN, a_xcb_io_cb, NULL);
     g_io_channel_unref(channel);
 
     /* Grab server */
-    xcb_grab_server(Manager::get().x.connection);
+    getConnection().grab_server();
 
     {
         const uint32_t select_input_val = XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT;
         xcb_void_cookie_t cookie;
 
         /* This causes an error if some other window manager is running */
-        cookie = xcb_change_window_attributes_checked(Manager::get().x.connection,
+        cookie = xcb_change_window_attributes_checked(getConnection().getConnection(),
                                                       Manager::get().screen->root,
                                                       XCB_CW_EVENT_MASK,
                                                       &select_input_val);
-        if (xcb_request_check(Manager::get().x.connection, cookie)) {
+        if (xcb_request_check(getConnection().getConnection(), cookie)) {
             log_fatal(
               "another window manager is already running (can't select SubstructureRedirect)");
         }
     }
 
     /* Prefetch the maximum request length */
-    xcb_prefetch_maximum_request_length(Manager::get().x.connection);
+    xcb_prefetch_maximum_request_length(getConnection().getConnection());
 
     /* check for xtest extension */
     const xcb_query_extension_reply_t* query;
-    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_test_id);
+    query = xcb_get_extension_data(getConnection().getConnection(), &xcb_test_id);
     Manager::get().x.caps.have_xtest = query && query->present;
 
     /* check for shape extension */
-    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_shape_id);
+    query = xcb_get_extension_data(getConnection().getConnection(), &xcb_shape_id);
     Manager::get().x.caps.have_shape = query && query->present;
     if (Manager::get().x.caps.have_shape) {
         xcb_shape_query_version_reply_t* reply = xcb_shape_query_version_reply(
-          Manager::get().x.connection,
-          xcb_shape_query_version_unchecked(Manager::get().x.connection),
+          getConnection().getConnection(),
+          xcb_shape_query_version_unchecked(getConnection().getConnection()),
           NULL);
         Manager::get().x.caps.have_input_shape =
           reply &&
@@ -731,20 +702,20 @@ int main(int argc, char** argv) {
     }
 
     /* check for xfixes extension */
-    query = xcb_get_extension_data(Manager::get().x.connection, &xcb_xfixes_id);
+    query = xcb_get_extension_data(getConnection().getConnection(), &xcb_xfixes_id);
     Manager::get().x.caps.have_xfixes = query && query->present;
     if (Manager::get().x.caps.have_xfixes) {
-        xcb_discard_reply(Manager::get().x.connection,
-                          xcb_xfixes_query_version(Manager::get().x.connection, 1, 0).sequence);
+        getConnection().discard_reply(
+          xcb_xfixes_query_version(getConnection().getConnection(), 1, 0).sequence);
     }
 
     event_init();
 
     /* Allocate the key symbols */
-    Manager::get().input.keysyms = xcb_key_symbols_alloc(Manager::get().x.connection);
+    Manager::get().input.keysyms = getConnection().key_symbols_alloc();
 
     /* init atom cache */
-    atoms_init(Manager::get().x.connection);
+    atoms_init(getConnection().getConnection());
 
     ewmh_init();
     systray_init();
@@ -766,30 +737,25 @@ int main(int argc, char** argv) {
                                        1,
                                        Manager::get().default_cmap};
 
-    xcb_create_window(Manager::get().x.connection,
-                      Manager::get().default_depth,
-                      Manager::get().focus.window_no_focus,
-                      Manager::get().screen->root,
-                      -1,
-                      -1,
-                      1,
-                      1,
-                      0,
-                      XCB_COPY_FROM_PARENT,
-                      Manager::get().visual->visual_id,
-                      XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL | XCB_CW_OVERRIDE_REDIRECT |
-                        XCB_CW_COLORMAP,
-                      create_window_values);
+    getConnection().create_window(Manager::get().default_depth,
+                                  Manager::get().focus.window_no_focus,
+                                  Manager::get().screen->root,
+                                  {-1, -1, 1, 1},
+                                  0,
+                                  XCB_COPY_FROM_PARENT,
+                                  Manager::get().visual->visual_id,
+                                  XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL |
+                                    XCB_CW_OVERRIDE_REDIRECT | XCB_CW_COLORMAP,
+                                  create_window_values);
     xwindow_set_class_instance(Manager::get().focus.window_no_focus);
     xwindow_set_name_static(Manager::get().focus.window_no_focus, "Awesome no input window");
-    xcb_map_window(Manager::get().x.connection, Manager::get().focus.window_no_focus);
+    getConnection().map_window(Manager::get().focus.window_no_focus);
     uint32_t create_gc_flags[] = {Manager::get().screen->black_pixel,
                                   Manager::get().screen->white_pixel};
-    xcb_create_gc(Manager::get().x.connection,
-                  Manager::get().gc,
-                  Manager::get().focus.window_no_focus,
-                  XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
-                  create_gc_flags);
+    getConnection().create_gc(Manager::get().gc,
+                              Manager::get().focus.window_no_focus,
+                              XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
+                              create_gc_flags);
 
     /* Get the window tree associated to this screen */
     xcb_query_tree_cookie_t tree_c =
@@ -799,7 +765,7 @@ int main(int argc, char** argv) {
       Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
 
     /* we will receive events, stop grabbing server */
-    xutil_ungrab_server(Manager::get().x.connection);
+    xutil_ungrab_server();
 
     /* get the current wallpaper, from now on we are informed when it changes */
     root_update_wallpaper();

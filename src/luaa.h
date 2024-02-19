@@ -259,7 +259,6 @@ struct Pusher<area_t> {
     }
 };
 
-
 /** Register an Lua object.
  * \param L The Lua stack.
  * \param idx Index of the object in the stack.
@@ -303,9 +302,7 @@ static inline int registerfct(lua_State* L, int idx, FunctionRegistryIdx* fct) {
  * \param L The Lua stack.
  * \param ref A reference to a Lua object.
  */
-static inline void unregister(lua_State* L, FunctionRegistryIdx* ref) {
-    unregister(L, &ref->idx);
-}
+static inline void unregister(lua_State* L, FunctionRegistryIdx* ref) { unregister(L, &ref->idx); }
 using config_callback = bool(const std::filesystem::path&);
 
 extern Signals global_signals;
