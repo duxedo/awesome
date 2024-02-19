@@ -571,20 +571,17 @@ static screen_output_t screen_get_randr_output(lua_State* L,
                                                xcb_randr_monitor_info_iterator_t* it) {
     screen_output_t output;
     xcb_randr_output_t* randr_outputs;
-    xcb_get_atom_name_cookie_t name_c;
-    xcb_get_atom_name_reply_t* name_r;
 
     output.mm_width = it->data->width_in_millimeters;
     output.mm_height = it->data->height_in_millimeters;
 
-    name_c = xcb_get_atom_name_unchecked(Manager::get().x.connection, it->data->name);
-    name_r = xcb_get_atom_name_reply(Manager::get().x.connection, name_c, NULL);
+    auto name_c = getConnection().get_atom_name_unchecked(it->data->name);
+    auto name_r = getConnection().get_atom_name_reply(name_c);
 
     if (name_r) {
-        const char* name = xcb_get_atom_name_name(name_r);
-        size_t len = xcb_get_atom_name_name_length(name_r);
+        const char* name = xcb_get_atom_name_name(name_r.get());
+        size_t len = xcb_get_atom_name_name_length(name_r.get());
         output.name.assign(name, len);
-        p_delete(&name_r);
     } else {
         output.name = "unknown";
     }
@@ -599,10 +596,8 @@ static screen_output_t screen_get_randr_output(lua_State* L,
 }
 
 static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* screens) {
-    xcb_randr_get_monitors_cookie_t monitors_c =
-      xcb_randr_get_monitors(Manager::get().x.connection, Manager::get().screen->root, 1);
-    xcb_randr_get_monitors_reply_t* monitors_r =
-      xcb_randr_get_monitors_reply(Manager::get().x.connection, monitors_c, NULL);
+    auto monitors_c = getConnection().randr().get_monitors(Manager::get().screen->root, 1);
+    auto monitors_r = getConnection().randr().get_monitors_reply(monitors_c);
     xcb_randr_monitor_info_iterator_t monitor_iter;
 
     if (monitors_r == NULL) {
@@ -610,7 +605,8 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         return;
     }
 
-    for (monitor_iter = xcb_randr_get_monitors_monitors_iterator(monitors_r); monitor_iter.rem;
+    for (monitor_iter = xcb_randr_get_monitors_monitors_iterator(monitors_r.get());
+         monitor_iter.rem;
          xcb_randr_monitor_info_next(&monitor_iter)) {
         screen_t* new_screen;
 
@@ -638,8 +634,6 @@ static void screen_scan_randr_monitors(lua_State* L, std::vector<screen_t*>* scr
         new_screen->geometry.height = monitor_iter.data->height;
         new_screen->xid = monitor_iter.data->name;
     }
-
-    p_delete(&monitors_r);
 }
 #else
 static void screen_scan_randr_monitors(lua_State* L, screen_array_t* screens) {}
@@ -651,10 +645,9 @@ static void screen_get_randr_crtcs_outputs(lua_State* L,
     xcb_randr_output_t* randr_outputs = xcb_randr_get_crtc_info_outputs(crtc_info_r);
 
     for (int j = 0; j < xcb_randr_get_crtc_info_outputs_length(crtc_info_r); j++) {
-        xcb_randr_get_output_info_cookie_t output_info_c =
-          xcb_randr_get_output_info(Manager::get().x.connection, randr_outputs[j], XCB_CURRENT_TIME);
-        xcb_randr_get_output_info_reply_t* output_info_r =
-          xcb_randr_get_output_info_reply(Manager::get().x.connection, output_info_c, NULL);
+        auto output_info_c =
+          getConnection().randr().get_output_info(randr_outputs[j], XCB_CURRENT_TIME);
+        auto output_info_r = getConnection().randr().get_output_info_reply(output_info_c, NULL);
         screen_output_t output;
 
         if (!output_info_r) {
@@ -663,38 +656,34 @@ static void screen_get_randr_crtcs_outputs(lua_State* L,
         }
 
         outputs->emplace_back(screen_output_t{
-          .name{(char*)xcb_randr_get_output_info_name(output_info_r),
-                (size_t)xcb_randr_get_output_info_name_length(output_info_r)},
+          .name{(char*)xcb_randr_get_output_info_name(output_info_r.get()),
+                (size_t)xcb_randr_get_output_info_name_length(output_info_r.get())},
           .mm_width = output_info_r->mm_width,
           .mm_height = output_info_r->mm_height,
           .outputs{randr_outputs[j]}
         });
-
-        p_delete(&output_info_r);
     }
 }
 
 static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
     const xcb_query_extension_reply_t* extension_reply;
-    xcb_randr_query_version_reply_t* version_reply;
     uint32_t major_version;
     uint32_t minor_version;
 
     /* Check for extension before checking for XRandR */
-    extension_reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_randr_id);
+    extension_reply = getConnection().get_extension_data(&xcb_randr_id);
     if (!extension_reply || !extension_reply->present) {
         return;
     }
 
-    version_reply = xcb_randr_query_version_reply(
-      Manager::get().x.connection, xcb_randr_query_version(Manager::get().x.connection, 1, 5), 0);
+    auto version_reply =
+      getConnection().randr().query_version_reply(getConnection().randr().query_version(1, 5), 0);
     if (!version_reply) {
         return;
     }
 
     major_version = version_reply->major_version;
     minor_version = version_reply->minor_version;
-    p_delete(&version_reply);
 
     /* Do we agree on a supported version? */
     if (major_version != 1 || minor_version < 2) {
@@ -702,34 +691,33 @@ static void screen_scan_randr(lua_State* L, std::vector<screen_t*>* screens) {
     }
 
     /* We want to know when something changes */
-    xcb_randr_select_input(
-      Manager::get().x.connection, Manager::get().screen->root, XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
+    getConnection().randr().select_input(Manager::get().screen->root,
+                                         XCB_RANDR_NOTIFY_MASK_OUTPUT_CHANGE);
 
     screen_scan_randr_monitors(L, screens);
 
     if (screens->size() == 0 && !Manager::get().startup.ignore_screens) {
         /* Scanning failed, disable randr again */
-        xcb_randr_select_input(Manager::get().x.connection, Manager::get().screen->root, 0);
+        getConnection().randr().select_input(Manager::get().screen->root, 0);
         log_fatal("screen scan failed (found 0 screens)");
     }
 }
 
 static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) {
     bool xinerama_is_active;
-    const xcb_query_extension_reply_t* extension_reply;
     xcb_xinerama_is_active_reply_t* xia;
     xcb_xinerama_query_screens_reply_t* xsq;
     xcb_xinerama_screen_info_t* xsi;
     int xinerama_screen_number;
 
     /* Check for extension before checking for Xinerama */
-    extension_reply = xcb_get_extension_data(Manager::get().x.connection, &xcb_xinerama_id);
+    auto extension_reply = getConnection().get_extension_data(&xcb_xinerama_id);
     if (!extension_reply || !extension_reply->present) {
         return;
     }
 
     xia = xcb_xinerama_is_active_reply(
-      Manager::get().x.connection, xcb_xinerama_is_active(Manager::get().x.connection), NULL);
+      getConnection().getConnection(), xcb_xinerama_is_active(getConnection().getConnection()), NULL);
     xinerama_is_active = xia && xia->state;
     p_delete(&xia);
     if (!xinerama_is_active) {
@@ -737,8 +725,8 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
     }
 
     xsq = xcb_xinerama_query_screens_reply(
-      Manager::get().x.connection,
-      xcb_xinerama_query_screens_unchecked(Manager::get().x.connection),
+      getConnection().getConnection(),
+      xcb_xinerama_query_screens_unchecked(getConnection().getConnection()),
       NULL);
 
     if (!xsq) {
@@ -1254,8 +1242,8 @@ int screen_get_index(lua_object_t* s) {
 void screen_update_primary(void) {
     screen_t* primary_screen = NULL;
     xcb_randr_get_output_primary_reply_t* primary = xcb_randr_get_output_primary_reply(
-      Manager::get().x.connection,
-      xcb_randr_get_output_primary(Manager::get().x.connection, Manager::get().screen->root),
+      getConnection().getConnection(),
+      xcb_randr_get_output_primary(getConnection().getConnection(), Manager::get().screen->root),
       NULL);
 
     if (!primary) {

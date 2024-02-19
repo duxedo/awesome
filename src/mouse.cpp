@@ -100,14 +100,10 @@ static Lua::FunctionRegistryIdx miss_newindex_handler;
  **/
 bool mouse_query_pointer(
   xcb_window_t window, int16_t* x, int16_t* y, xcb_window_t* child, uint16_t* mask) {
-    xcb_query_pointer_cookie_t query_ptr_c;
-    xcb_query_pointer_reply_t* query_ptr_r;
-
-    query_ptr_c = xcb_query_pointer_unchecked(Manager::get().x.connection, window);
-    query_ptr_r = xcb_query_pointer_reply(Manager::get().x.connection, query_ptr_c, NULL);
+    xcb_query_pointer_cookie_t query_ptr_c = getConnection().query_pointer_unchecked(window);
+    auto query_ptr_r = getConnection().query_pointer_reply(query_ptr_c, NULL);
 
     if (!query_ptr_r || !query_ptr_r->same_screen) {
-        p_delete(&query_ptr_r);
         return false;
     }
 
@@ -120,8 +116,6 @@ bool mouse_query_pointer(
     if (child) {
         *child = query_ptr_r->child;
     }
-
-    p_delete(&query_ptr_r);
 
     return true;
 }
@@ -137,15 +131,6 @@ static bool mouse_query_pointer_root(int16_t* x, int16_t* y, xcb_window_t* child
     xcb_window_t root = Manager::get().screen->root;
 
     return mouse_query_pointer(root, x, y, child, mask);
-}
-
-/** Set the pointer position.
- * \param window The destination window.
- * \param x X-coordinate inside window.
- * \param y Y-coordinate inside window.
- */
-static inline void mouse_warp_pointer(xcb_window_t window, point p) {
-    xcb_warp_pointer(Manager::get().x.connection, XCB_NONE, window, 0, 0, 0, 0, p.x, p.y);
 }
 
 /** Mouse library.
@@ -202,7 +187,7 @@ static int luaA_mouse_newindex(lua_State* L) {
     }
 
     screen = luaA_checkscreen(L, 3);
-    mouse_warp_pointer(Manager::get().screen->root, screen->geometry.top_left);
+    getConnection().warp_pointer(Manager::get().screen->root, screen->geometry.top_left);
     return 0;
 }
 
@@ -258,7 +243,7 @@ static int luaA_mouse_coords(lua_State* L) {
             client_ignore_enterleave_events();
         }
 
-        mouse_warp_pointer(Manager::get().screen->root, {x, y});
+        getConnection().warp_pointer(Manager::get().screen->root, {static_cast<int16_t>(x), static_cast<int16_t>(y)});
 
         if (ignore_enter_notify) {
             client_restore_enterleave_events();
