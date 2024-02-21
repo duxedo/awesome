@@ -850,12 +850,13 @@ class Connection {
         return xcb_prefetch_extension_data(connection, ext);
     }
 
+    template<size_t N>
     xcb_void_cookie_t create_gc(xcb_gcontext_t cid,
                                 xcb_drawable_t drawable,
                                 uint32_t value_mask,
-                                const void* value_list) {
+                                const std::array<uint32_t, N> value_list) {
 
-        return xcb_create_gc(connection, cid, drawable, value_mask, value_list);
+        return xcb_create_gc(connection, cid, drawable, value_mask, value_list.data());
     }
     xcb_void_cookie_t test_fake_input(uint8_t type,
                                       uint8_t detail,

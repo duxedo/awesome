@@ -43,26 +43,6 @@ struct TypeIdentifier {
     constexpr static int _id{};
     constexpr static auto id() { return &_id; }
 };
-namespace array {
-template <typename T, std::size_t LL, std::size_t RL>
-constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, std::array<T, RL> lhs) {
-    std::array<T, LL + RL> ar;
-
-    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
-    std::copy(lhs.begin(), lhs.end(), current);
-
-    return ar;
-}
-template <typename T, std::size_t LL, std::size_t RL>
-constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, T (&&lhs)[RL]) {
-    std::array<T, std::size(rhs) + RL> ar;
-
-    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
-    std::copy(std::begin(lhs), std::end(lhs), current);
-
-    return ar;
-}
-}
 
 /** Generic type for all objects.
  * All Lua objects can be casted to this type.
