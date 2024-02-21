@@ -732,11 +732,6 @@ int main(int argc, char** argv) {
     Manager::get().focus.window_no_focus = getConnection().generate_id();
     Manager::get().gc = getConnection().generate_id();
 
-    uint32_t create_window_values[] = {Manager::get().screen->black_pixel,
-                                       Manager::get().screen->black_pixel,
-                                       1,
-                                       Manager::get().default_cmap};
-
     getConnection().create_window(Manager::get().default_depth,
                                   Manager::get().focus.window_no_focus,
                                   Manager::get().screen->root,
@@ -744,18 +739,25 @@ int main(int argc, char** argv) {
                                   0,
                                   XCB_COPY_FROM_PARENT,
                                   Manager::get().visual->visual_id,
+
                                   XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL |
                                     XCB_CW_OVERRIDE_REDIRECT | XCB_CW_COLORMAP,
-                                  create_window_values);
+
+                                  std::to_array<uint32_t>({
+                                       Manager::get().screen->black_pixel,
+                                       Manager::get().screen->black_pixel,
+                                       1u,
+                                       Manager::get().default_cmap}));
+
     xwindow_set_class_instance(Manager::get().focus.window_no_focus);
     xwindow_set_name_static(Manager::get().focus.window_no_focus, "Awesome no input window");
+
     getConnection().map_window(Manager::get().focus.window_no_focus);
-    uint32_t create_gc_flags[] = {Manager::get().screen->black_pixel,
-                                  Manager::get().screen->white_pixel};
     getConnection().create_gc(Manager::get().gc,
                               Manager::get().focus.window_no_focus,
                               XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
-                              create_gc_flags);
+                              std::to_array<uint32_t>({Manager::get().screen->black_pixel,
+                                  Manager::get().screen->white_pixel}));
 
     /* Get the window tree associated to this screen */
     xcb_query_tree_cookie_t tree_c =

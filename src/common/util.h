@@ -21,6 +21,7 @@
  */
 #pragma once
 
+#include <array>
 #include <fmt/core.h>
 #include <source_location>
 #include <type_traits>
@@ -130,4 +131,25 @@ void a_exec(const char*);
 inline bool ichar_equals(char a, char b) {
     return std::tolower(static_cast<unsigned char>(a)) ==
            std::tolower(static_cast<unsigned char>(b));
+}
+
+namespace array {
+template <typename T, std::size_t LL, std::size_t RL>
+constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, std::array<T, RL> lhs) {
+    std::array<T, LL + RL> ar;
+
+    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
+    std::copy(lhs.begin(), lhs.end(), current);
+
+    return ar;
+}
+template <typename T, std::size_t LL, std::size_t RL>
+constexpr std::array<T, LL + RL> join(std::array<T, LL> rhs, T (&&lhs)[RL]) {
+    std::array<T, std::size(rhs) + RL> ar;
+
+    auto current = std::copy(rhs.begin(), rhs.end(), ar.begin());
+    std::copy(std::begin(lhs), std::end(lhs), current);
+
+    return ar;
+}
 }
