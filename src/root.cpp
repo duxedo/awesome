@@ -416,7 +416,9 @@ static int luaA_root_cursor(lua_State *L) {
     xcb_cursor_t cursor = xcursor_new(&Manager::get().x.cursor_cache, Manager::get().x.cursor_ctx, cursor_name);
 
     if (cursor) {
-        getConnection().change_attributes(Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
+        uint32_t change_win_vals[] = {cursor};
+        getConnection().change_attributes(
+          Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
     } else {
         Lua::warn(L, "invalid cursor %s", cursor_name);
     }

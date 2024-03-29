@@ -76,7 +76,7 @@ struct to {
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))
 #define span_alloca(type, count) \
-    std::span<type>{p_alloca(type, count), count}
+    std::span<type> { p_alloca(type, count), count }
 
 #define p_clear(p, count) ((void)memset((p), 0, sizeof(*(p)) * (count)))
 #define p_dup(p, count) xmemdup((p), sizeof(*(p)) * (count))

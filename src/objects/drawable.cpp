@@ -108,7 +108,7 @@ static lua_class_t drawable_class{
   NULL,
   {
     [](auto* state) {
-    return static_cast<lua_object_t*>(newobj<drawable_t, drawable_class>(state));
+        return static_cast<lua_object_t*>(newobj<drawable_t, drawable_class>(state));
     }, destroyObject<drawable_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,
@@ -152,14 +152,15 @@ void drawable_set_geometry(lua_State* L, int didx, area_t geom) {
     }
     if (area_changed && geom.width > 0 && geom.height > 0) {
         d->pixmap = getConnection().generate_id();
-        getConnection().create_pixmap(
-                          Manager::get().default_depth,
-                          d->pixmap,
-                          Manager::get().screen->root,
-                          {geom.width,
-                          geom.height});
-        d->surface = cairo_xcb_surface_create(
-          getConnection().getConnection(), d->pixmap, Manager::get().visual, geom.width, geom.height);
+        getConnection().create_pixmap(Manager::get().default_depth,
+                                      d->pixmap,
+                                      Manager::get().screen->root,
+                                      {geom.width, geom.height});
+        d->surface = cairo_xcb_surface_create(getConnection().getConnection(),
+                                              d->pixmap,
+                                              Manager::get().visual,
+                                              geom.width,
+                                              geom.height);
         luaA_object_emit_signal(L, didx, "property::surface", 0);
     }
 

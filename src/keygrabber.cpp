@@ -76,8 +76,7 @@ bool keygrabber_handlekpress(lua_State* L, xcb_key_press_event_t* e) {
 
     if (is_control(buf)) {
         /* Use text names for control characters, ignoring all modifiers. */
-        xcb_keysym_t keysym =
-          Manager::get().input.keysyms.get_keysym(e->detail, 0);
+        xcb_keysym_t keysym = Manager::get().input.keysyms.get_keysym(e->detail, 0);
         xkb_keysym_get_name(keysym, buf, std::size(buf));
     }
 

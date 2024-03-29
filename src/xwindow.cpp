@@ -156,7 +156,7 @@ double xwindow_get_opacity(xcb_window_t win) {
  * \return The opacity, between 0 and 1.
  */
 double xwindow_get_opacity_from_cookie(xcb_get_property_cookie_t cookie) {
-     auto prop_r = getConnection().get_property_reply(cookie, NULL);
+    auto prop_r = getConnection().get_property_reply(cookie, NULL);
 
     if (prop_r && prop_r->value_len && prop_r->format == 32) {
         auto val = getConnection().get_property_value<uint32_t>(prop_r);
@@ -231,8 +231,7 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
 
     int16_t x, y;
     uint16_t width, height;
-    xcb_shape_get_rectangles_cookie_t rcookie =
-      getConnection().shape().get_rectangles(win, kind);
+    xcb_shape_get_rectangles_cookie_t rcookie = getConnection().shape().get_rectangles(win, kind);
     if (kind == XCB_SHAPE_SK_INPUT) {
         /* We cannot query the size/existence of an input shape... */
         auto geom = getConnection().get_geometry_reply(getConnection().get_geometry(win));
@@ -246,10 +245,8 @@ cairo_surface_t* xwindow_get_shape(xcb_window_t win, enum xcb_shape_sk_t kind) {
         width = geom->width;
         height = geom->height;
     } else {
-        xcb_shape_query_extents_cookie_t ecookie =
-            getConnection().shape().query_extents(win);
-        auto extents =
-            getConnection().shape().query_extents_reply(ecookie);
+        xcb_shape_query_extents_cookie_t ecookie = getConnection().shape().query_extents(win);
+        auto extents = getConnection().shape().query_extents_reply(ecookie);
         bool shaped;
 
         if (!extents) {
@@ -312,7 +309,8 @@ static xcb_pixmap_t xwindow_shape_pixmap(int width, int height, cairo_surface_t*
         return XCB_NONE;
     }
 
-    getConnection().create_pixmap(1, pixmap, Manager::get().screen->root, {(uint16_t)(width), (uint16_t)height});
+    getConnection().create_pixmap(
+      1, pixmap, Manager::get().screen->root, {(uint16_t)(width), (uint16_t)height});
     dest = cairo_xcb_surface_create_for_bitmap(
       getConnection().getConnection(), Manager::get().screen, pixmap, width, height);
 
@@ -348,8 +346,7 @@ void xwindow_set_shape(xcb_window_t win,
         pixmap = xwindow_shape_pixmap(width, height, surf);
     }
 
-    getConnection().shape().mask(
-      XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
+    getConnection().shape().mask(XCB_SHAPE_SO_SET, kind, win, offset, offset, pixmap);
 
     if (pixmap != XCB_NONE) {
         getConnection().free_pixmap(pixmap);

@@ -716,8 +716,9 @@ static void screen_scan_xinerama(lua_State* L, std::vector<screen_t*>* screens) 
         return;
     }
 
-    xia = xcb_xinerama_is_active_reply(
-      getConnection().getConnection(), xcb_xinerama_is_active(getConnection().getConnection()), NULL);
+    xia = xcb_xinerama_is_active_reply(getConnection().getConnection(),
+                                       xcb_xinerama_is_active(getConnection().getConnection()),
+                                       NULL);
     xinerama_is_active = xia && xia->state;
     p_delete(&xia);
     if (!xinerama_is_active) {
