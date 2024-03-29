@@ -109,13 +109,13 @@ void awesome_atexit(bool restart) {
     }
 
     /* Save the client order.  This is useful also for "hard" restarts. */
-    xcb_window_t* wins = p_alloca(xcb_window_t, Manager::get().clients.size());
-    std::ranges::transform(Manager::get().clients, wins, [](auto& cli) { return cli->window; });
+    auto wins = span_alloca(xcb_window_t, Manager::get().clients.size());
+    std::ranges::transform(Manager::get().clients, wins.begin(), [](auto& cli) { return cli->window; });
 
     getConnection().replace_property(Manager::get().screen->root,
                                      AWESOME_CLIENT_ORDER,
                                      XCB_ATOM_WINDOW,
-                                     std::span{wins, Manager::get().clients.size()});
+                                     wins);
 
     a_dbus_cleanup();
 
