@@ -27,6 +27,9 @@
 #include "globalconf.h"
 #include "lua.h"
 
+#include <algorithm>
+#include <ranges>
+
 #define REGISTRY_GETTER_TABLE_INDEX "awesome_selection_getters"
 
 struct selection_getter_t: public lua_object_t {
@@ -42,8 +45,8 @@ static lua_class_t selection_getter_class{
   "selection_getter",
   NULL,
   {[](auto* state) {
-return static_cast<lua_object_t*>(newobj<selection_getter_t, selection_getter_class>(state));
-}, destroyObject<selection_getter_t>,
+       return static_cast<lua_object_t*>(newobj<selection_getter_t, selection_getter_class>(state));
+   }, destroyObject<selection_getter_t>,
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property}
 };
@@ -116,23 +119,26 @@ static void selection_transfer_finished(lua_State* L, int ud) {
 
 static void selection_push_data(lua_State* L, xcb_get_property_reply_t* property) {
     if (property->type == XCB_ATOM_ATOM && property->format == 32) {
+        namespace views = std::ranges::views;
+        namespace ranges = std::ranges;
+
         size_t num_atoms = xcb_get_property_value_length(property) / 4;
         xcb_atom_t* atoms = (xcb_atom_t*)xcb_get_property_value(property);
-        xcb_get_atom_name_cookie_t cookies[num_atoms];
+        auto cookies = span_alloca(xcb_get_atom_name_cookie_t, num_atoms);
 
-        for (size_t i = 0; i < num_atoms; i++) {
-            cookies[i] = getConnection().get_atom_name_unchecked(atoms[i]);
-        }
+        ranges::transform(std::span{atoms, num_atoms}, cookies.begin(), [](const auto& atom) {
+            return getConnection().get_atom_name_unchecked(atom);
+        });
 
         lua_newtable(L);
-        for (size_t i = 0; i < num_atoms; i++) {
-            auto reply = getConnection().get_atom_name_reply(cookies[i]);
-            if (reply) {
-                lua_pushlstring(L,
-                                xcb_get_atom_name_name(reply.get()),
-                                xcb_get_atom_name_name_length(reply.get()));
-                lua_rawseti(L, -2, i + 1);
+        for (const auto& [cookie, idx] : views::zip(cookies, views::iota(1))) {
+            auto reply = getConnection().get_atom_name_reply(cookie);
+            if (!reply) {
+                continue;
             }
+            lua_pushlstring(
+              L, xcb_get_atom_name_name(reply.get()), xcb_get_atom_name_name_length(reply.get()));
+            lua_rawseti(L, -2, idx);
         }
     } else {
         lua_pushlstring(L,
