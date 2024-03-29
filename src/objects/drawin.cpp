@@ -418,17 +418,17 @@ drawin_t* drawin_allocator(lua_State* L) {
         XCB_EVENT_MASK_PROPERTY_CHANGE,
       Manager::get().default_cmap,
       xcursor_new(Manager::get().x.cursor_ctx, xcursor_font_fromstr(w->cursor.c_str()))};
-    getConnection().create_window(
-                      Manager::get().default_depth,
-                      w->window,
-                      s->root,
-                      w->geometry,
-                      w->border_width,
-                      XCB_COPY_FROM_PARENT,
-                      Manager::get().visual->visual_id,
-                      XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY | XCB_CW_OVERRIDE_REDIRECT |
-                        XCB_CW_EVENT_MASK | XCB_CW_COLORMAP | XCB_CW_CURSOR,
-                      values);
+    getConnection().create_window(Manager::get().default_depth,
+                                  w->window,
+                                  s->root,
+                                  w->geometry,
+                                  w->border_width,
+                                  XCB_COPY_FROM_PARENT,
+                                  Manager::get().visual->visual_id,
+                                  XCB_CW_BORDER_PIXEL | XCB_CW_BIT_GRAVITY |
+                                    XCB_CW_OVERRIDE_REDIRECT | XCB_CW_EVENT_MASK | XCB_CW_COLORMAP |
+                                    XCB_CW_CURSOR,
+                                  values);
     xwindow_set_class_instance(w->window);
     xwindow_set_name_static(w->window, "Awesome drawin");
 

@@ -22,11 +22,11 @@
 
 #include "common/luahdr.h"
 #include "common/util.h"
+#include "xcbcpp/xcb.h"
 
 #include <cairo.h>
 #include <glib.h> /* for GError */
 #include <memory>
-#include "xcbcpp/xcb.h"
 
 /* Forward definition */
 typedef struct _GdkPixbuf GdkPixbuf;
@@ -47,9 +47,7 @@ struct point {
     point operator-(const point& rhs) const { return {x - rhs.x, y - rhs.y}; }
     point operator+(const point& rhs) const { return {x + rhs.x, y + rhs.y}; }
     bool operator<=>(const point&) const = default;
-    operator XCB::Pos() const {
-        return {(int16_t)x, (int16_t)y};
-    }
+    operator XCB::Pos() const { return {(int16_t)x, (int16_t)y}; }
 };
 
 struct area_t {
@@ -70,9 +68,7 @@ struct area_t {
     bool inside(point p) const {
         return (left() > p.x || right() <= p.x) && (top() > p.y || bottom() <= p.y);
     }
-    operator XCB::Rect() const {
-        return {(int16_t)left(), (int16_t)top(), width, height};
-    }
+    operator XCB::Rect() const { return {(int16_t)left(), (int16_t)top(), width, height}; }
 };
 
 struct CairoDeleter {

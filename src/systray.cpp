@@ -214,10 +214,8 @@ bool systray_iskdedockapp(xcb_window_t w) {
 int xembed_process_client_message(xcb_client_message_event_t* ev) {
     switch (XEmbed::from_native(ev->data.data32[1])) {
     case XEmbed::Message::REQUEST_FOCUS:
-        xembed_focus_in(getConnection(),
-                        ev->window,
-                        Manager::get().x.get_timestamp(),
-                        XEmbed::Focus::CURRENT);
+        xembed_focus_in(
+          getConnection(), ev->window, Manager::get().x.get_timestamp(), XEmbed::Focus::CURRENT);
     default: break;
     }
     return 0;

@@ -48,12 +48,12 @@ void xembed_message_send(XCB::Connection& connection,
                          uint32_t d1,
                          uint32_t d2,
                          uint32_t d3) {
-    xcb_client_message_event_t ev {
-        .response_type = XCB_CLIENT_MESSAGE, .format = 32, .sequence = 0, .window = towin,
-        .type = _XEMBED, .data = {
-            .data32 = {timestamp, to_native(message), d1, d2, d3}
-        }
-    };
+    xcb_client_message_event_t ev{.response_type = XCB_CLIENT_MESSAGE,
+                                  .format = 32,
+                                  .sequence = 0,
+                                  .window = towin,
+                                  .type = _XEMBED,
+                                  .data = {.data32 = {timestamp, to_native(message), d1, d2, d3}}};
     connection.send_event(false, towin, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
 

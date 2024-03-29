@@ -243,7 +243,8 @@ static int luaA_mouse_coords(lua_State* L) {
             client_ignore_enterleave_events();
         }
 
-        getConnection().warp_pointer(Manager::get().screen->root, {static_cast<int16_t>(x), static_cast<int16_t>(y)});
+        getConnection().warp_pointer(Manager::get().screen->root,
+                                     {static_cast<int16_t>(x), static_cast<int16_t>(y)});
 
         if (ignore_enter_notify) {
             client_restore_enterleave_events();
