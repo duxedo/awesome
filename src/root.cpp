@@ -418,7 +418,8 @@ static int luaA_root_cursor(lua_State* L) {
     if (cursor_font) {
         uint32_t change_win_vals[] = {xcursor_new(Manager::get().x.cursor_ctx, cursor_font)};
 
-        getConnection().change_attributes(Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
+        getConnection().change_attributes(
+          Manager::get().screen->root, XCB_CW_CURSOR, change_win_vals);
     } else {
         Lua::warn(L, "invalid cursor %s", cursor_name);
     }

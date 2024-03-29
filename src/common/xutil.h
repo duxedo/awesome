@@ -22,11 +22,11 @@
 
 #include "common/atoms.h"
 #include "common/util.h"
+#include "globalconf.h"
+#include "xcbcpp/xcb.h"
 
 #include <string>
 #include <string_view>
-#include "globalconf.h"
-#include "xcbcpp/xcb.h"
 #include <xcb/xcb_keysyms.h>
 
 #define MAX_X11_COORDINATE INT16_MAX
@@ -34,20 +34,22 @@
 #define MAX_X11_SIZE UINT16_MAX
 #define MIN_X11_SIZE 1
 
-static inline std::string xutil_get_text_property_from_reply(const XCB::reply<xcb_get_property_reply_t>& reply) {
+static inline std::string
+xutil_get_text_property_from_reply(const XCB::reply<xcb_get_property_reply_t>& reply) {
     if (!reply ||
         (reply->type != XCB_ATOM_STRING && reply->type != UTF8_STRING &&
-         reply->type != COMPOUND_TEXT) || reply->format != 8 ) {
+         reply->type != COMPOUND_TEXT) ||
+        reply->format != 8) {
         return "";
         /* We need to copy it that way since the string may not be
          * NULL-terminated */
     }
     int len = xcb_get_property_value_length(reply.get());
-    if(!len) {
+    if (!len) {
         return "";
     }
     auto data = (char*)xcb_get_property_value(reply.get());
-    return std::string {data, data + len};
+    return std::string{data, data + len};
 }
 
 static inline void xutil_ungrab_server() {

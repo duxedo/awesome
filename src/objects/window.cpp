@@ -72,8 +72,8 @@ lua_class_t window_class{
   nullptr,
   {
     [](auto* state) -> lua_object_t* {
-    assert(false);
-    return nullptr;
+        assert(false);
+        return nullptr;
     }, [](auto* obj) { assert(false); },
     nullptr, Lua::class_index_miss_property,
     Lua::class_newindex_miss_property,

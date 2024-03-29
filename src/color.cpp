@@ -156,10 +156,7 @@ color_init_unchecked(color_t* color, const char* colstr, ssize_t len, xcb_visual
         return req;
     }
     req.cookie_hexa = getConnection().alloc_color_unchecked(
-                                                Manager::get().default_cmap,
-                                                {RGB_8TO16(red),
-                                                RGB_8TO16(green),
-                                                RGB_8TO16(blue)});
+      Manager::get().default_cmap, {RGB_8TO16(red), RGB_8TO16(green), RGB_8TO16(blue)});
 
     return req;
 }
@@ -175,7 +172,6 @@ bool color_init_reply(color_init_request_t req) {
     if (req.color->initialized) {
         return true;
     }
-
 
     if (auto hexa_color = getConnection().alloc_color_reply(req.cookie_hexa)) {
         req.color->pixel = hexa_color->pixel;

@@ -135,15 +135,15 @@ int luaA_button_array_get(lua_State* L, int oidx, const std::vector<button_t*>& 
 
 void button_t::grab(xcb_window_t win) {
     Manager::get().x.connection.grab_button(
-                    false,
-                    win,
-                    (XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE),
-                    XCB_GRAB_MODE_SYNC,
-                    XCB_GRAB_MODE_ASYNC,
-                    XCB_NONE,
-                    XCB_NONE,
-                    _button,
-                    _modifiers);
+      false,
+      win,
+      (XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE),
+      XCB_GRAB_MODE_SYNC,
+      XCB_GRAB_MODE_ASYNC,
+      XCB_NONE,
+      XCB_NONE,
+      _button,
+      _modifiers);
 }
 
 void button_class_setup(lua_State* L) {
