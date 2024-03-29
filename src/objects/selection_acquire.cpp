@@ -47,8 +47,8 @@ static lua_class_t selection_acquire_class{
   NULL,
   {
     [](auto* state) {
-    return static_cast<lua_object_t*>(
-    newobj<selection_acquire_t, selection_acquire_class>(state));
+        return static_cast<lua_object_t*>(
+          newobj<selection_acquire_t, selection_acquire_class>(state));
     }, destroyObject<selection_acquire_t>,
     [](auto* obj) { return selection_acquire_checker(static_cast<selection_acquire_t*>(obj)); },
     Lua::class_index_miss_property,

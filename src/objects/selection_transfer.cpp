@@ -67,8 +67,8 @@ static lua_class_t selection_transfer_class{
   NULL,
   {
     [](auto* state) {
-    return static_cast<lua_object_t*>(
-    newobj<selection_transfer_t, selection_transfer_class>(state));
+        return static_cast<lua_object_t*>(
+          newobj<selection_transfer_t, selection_transfer_class>(state));
     }, destroyObject<selection_transfer_t>,
     [](auto* obj) { return selection_transfer_checker(static_cast<selection_transfer_t*>(obj)); },
     Lua::class_index_miss_property,

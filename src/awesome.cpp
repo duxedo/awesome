@@ -110,12 +110,11 @@ void awesome_atexit(bool restart) {
 
     /* Save the client order.  This is useful also for "hard" restarts. */
     auto wins = span_alloca(xcb_window_t, Manager::get().clients.size());
-    std::ranges::transform(Manager::get().clients, wins.begin(), [](auto& cli) { return cli->window; });
+    std::ranges::transform(
+      Manager::get().clients, wins.begin(), [](auto& cli) { return cli->window; });
 
-    getConnection().replace_property(Manager::get().screen->root,
-                                     AWESOME_CLIENT_ORDER,
-                                     XCB_ATOM_WINDOW,
-                                     wins);
+    getConnection().replace_property(
+      Manager::get().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, wins);
 
     a_dbus_cleanup();
 
@@ -743,11 +742,10 @@ int main(int argc, char** argv) {
                                   XCB_CW_BACK_PIXEL | XCB_CW_BORDER_PIXEL |
                                     XCB_CW_OVERRIDE_REDIRECT | XCB_CW_COLORMAP,
 
-                                  std::to_array<uint32_t>({
-                                       Manager::get().screen->black_pixel,
-                                       Manager::get().screen->black_pixel,
-                                       1u,
-                                       Manager::get().default_cmap}));
+                                  std::to_array<uint32_t>({Manager::get().screen->black_pixel,
+                                                           Manager::get().screen->black_pixel,
+                                                           1u,
+                                                           Manager::get().default_cmap}));
 
     xwindow_set_class_instance(Manager::get().focus.window_no_focus);
     xwindow_set_name_static(Manager::get().focus.window_no_focus, "Awesome no input window");
@@ -757,7 +755,7 @@ int main(int argc, char** argv) {
                               Manager::get().focus.window_no_focus,
                               XCB_GC_FOREGROUND | XCB_GC_BACKGROUND,
                               std::to_array<uint32_t>({Manager::get().screen->black_pixel,
-                                  Manager::get().screen->white_pixel}));
+                                                       Manager::get().screen->white_pixel}));
 
     /* Get the window tree associated to this screen */
     xcb_query_tree_cookie_t tree_c =

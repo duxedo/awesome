@@ -241,8 +241,8 @@ void draw_test_cairo_xcb(void) {
     xcb_pixmap_t pixmap = getConnection().generate_id();
     getConnection().create_pixmap(
       Manager::get().default_depth, pixmap, Manager::get().screen->root, {1, 1});
-    cairo_surface_t* surface =
-      cairo_xcb_surface_create(getConnection().getConnection(), pixmap, Manager::get().visual, 1, 1);
+    cairo_surface_t* surface = cairo_xcb_surface_create(
+      getConnection().getConnection(), pixmap, Manager::get().visual, 1, 1);
     if (cairo_surface_status(surface) != CAIRO_STATUS_SUCCESS) {
         log_fatal("Could not set up display: got cairo surface with status {}",
                   cairo_status_to_string(cairo_surface_status(surface)));
