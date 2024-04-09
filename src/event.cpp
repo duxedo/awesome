@@ -42,7 +42,6 @@
 #include "xkb.h"
 #include "xwindow.h"
 
-#include <bits/ranges_util.h>
 #include <map>
 #include <set>
 #include <vector>
