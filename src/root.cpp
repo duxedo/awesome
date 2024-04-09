@@ -47,7 +47,6 @@
 #include "xcbcpp/xcb.h"
 #include "xwindow.h"
 
-#include <bits/ranges_util.h>
 #include <cairo-xcb.h>
 #include <xcb/xcb_aux.h>
 #include <xcb/xtest.h>
