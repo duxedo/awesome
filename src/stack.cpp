@@ -156,37 +156,40 @@ void stack_refresh() {
 
     xcb_window_t next = XCB_NONE;
 
-    /* stack desktop windows */
-    for (int layer = WINDOW_LAYER_DESKTOP; layer < WINDOW_LAYER_BELOW; layer++) {
+    auto stack_layer = [&next](int layer) {
         for (auto* node : Manager::get().getStack()) {
             if (client_layer_translator(node) == layer) {
                 next = stack_client_above(node, next);
             }
         }
+    };
+
+    auto stack_drawin = [&next](auto * drawin) {
+        stack_window_above(drawin->window, next);
+        next = drawin->window;
+    };
+
+    /* stack desktop windows */
+    for (int layer = WINDOW_LAYER_DESKTOP; layer < WINDOW_LAYER_BELOW; layer++) {
+        stack_layer(layer);
     }
 
     /* first stack not ontop drawin window */
-    for (auto drawin : Manager::get().drawins) {
+    for (auto* drawin : Manager::get().drawins) {
         if (!drawin->ontop) {
-            stack_window_above(drawin->window, next);
-            next = drawin->window;
+            stack_drawin(drawin);
         }
     }
 
     /* then stack clients */
     for (int layer = WINDOW_LAYER_BELOW; layer < WINDOW_LAYER_COUNT; layer++) {
-        for (auto* node : Manager::get().getStack()) {
-            if (client_layer_translator(node) == layer) {
-                next = stack_client_above(node, next);
-            }
-        }
+        stack_layer(layer);
     }
 
     /* then stack ontop drawin window */
     for (auto* drawin : Manager::get().drawins) {
         if (drawin->ontop) {
-            stack_window_above(drawin->window, next);
-            next = drawin->window;
+            stack_drawin(drawin);
         }
     }
 
