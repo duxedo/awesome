@@ -38,7 +38,7 @@
 #include <unistd.h>
 
 const char* a_current_time_str(void) {
-    static char buffer[25];
+    thread_local char buffer[25];
     time_t now;
     struct tm tm;
 
