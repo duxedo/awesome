@@ -2092,8 +2092,6 @@ static void client_update_properties(lua_State* L, int cidx, client* c) {
 void client_manage(xcb_window_t w,
                    xcb_get_geometry_reply_t* wgeom,
                    xcb_get_window_attributes_reply_t* wattr) {
-    xcb_void_cookie_t reparent_cookie;
-    lua_State* L = globalconf_get_lua_State();
     const uint32_t select_input_val[] = {CLIENT_SELECT_INPUT_EVENT_MASK};
 
     if (systray_iskdedockapp(w)) {
@@ -2112,6 +2110,7 @@ void client_manage(xcb_window_t w,
         getConnection().shape().select_input(w, 1);
     }
 
+    lua_State* L = globalconf_get_lua_State();
     client* c = newobj<client, client_class>(L);
     xcb_screen_t* s = Manager::get().screen;
     c->border_width_callback = (void (*)(void*, uint16_t, uint16_t))border_width_callback;
@@ -2147,7 +2146,7 @@ void client_manage(xcb_window_t w,
     getConnection().grab_server();
 
     getConnection().clear_attributes(Manager::get().screen->root, XCB_CW_EVENT_MASK);
-    reparent_cookie = getConnection().reparent_window_checked(w, c->frame_window, 0, 0);
+    xcb_void_cookie_t reparent_cookie = getConnection().reparent_window_checked(w, c->frame_window, 0, 0);
     getConnection().map_window(w);
     getConnection().change_attributes(
       Manager::get().screen->root, XCB_CW_EVENT_MASK, ROOT_WINDOW_EVENT_MASK);
