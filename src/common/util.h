@@ -110,9 +110,9 @@ void log_messagev(char tag,
                   fmt::format_args args);
 
 template <typename... Args>
-void log_message(
+inline void log_message(
   char tag, FILE* file, const std::source_location loc, std::string_view format, Args&&... args) {
-    log_messagev(tag, file, loc, format, fmt::make_format_args(std::forward<Args>(args)...));
+    log_messagev(tag, file, loc, format, fmt::make_format_args(args...));
 }
 
 #define log_fatal(string, ...) \
