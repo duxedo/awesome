@@ -2398,9 +2398,8 @@ static area_t client_apply_size_hints(client* c, area_t geometry) {
     /* Handle the size increment */
     if (c->size_hints.flags & (XCB_ICCCM_SIZE_HINT_P_RESIZE_INC | XCB_ICCCM_SIZE_HINT_BASE_SIZE) &&
         c->size_hints.width_inc && c->size_hints.height_inc) {
-        uint16_t t1 = geometry.width, t2 = geometry.height;
-        unsigned_subtract(t1, basew);
-        unsigned_subtract(t2, baseh);
+        auto t1 = unsigned_subtract(geometry.width, basew);
+        auto t2 = unsigned_subtract(geometry.height, baseh);
         geometry.width -= t1 % c->size_hints.width_inc;
         geometry.height -= t2 % c->size_hints.height_inc;
     }

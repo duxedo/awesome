@@ -198,8 +198,7 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
                                                   conn.get_window_attributes_unchecked(v),
                                                   xwindow_get_state_unchecked(v),
                                                   conn.get_geometry_unchecked(v)};
-                            }) |
-                            range::to<std::vector>{};
+                            }) | std::ranges::to<std::vector>();
 
     auto clients_to_manage = winparams | views::transform([&conn](const auto& v) {
                                  auto& [win, attr_c, state_c, geo_c] = v;
