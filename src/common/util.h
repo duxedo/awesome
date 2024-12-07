@@ -55,23 +55,14 @@
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-namespace range {
-template <template <typename...> class Container>
-struct to {
-    template <typename Range>
-    friend auto operator|(Range&& range, to&& to) {
-        return Container(range.begin(), range.end());
+template<typename T, typename U>
+T unsigned_subtract(T a, U b)
+{
+    if(b > a) {
+        return 0;
     }
-};
+    return a - b;
 }
-
-#define unsigned_subtract(a, b) \
-    do {                        \
-        if (b > a)              \
-            a = 0;              \
-        else                    \
-            a -= b;             \
-    } while (0)
 
 #define p_alloca(type, count) \
     ((type*)memset(alloca(sizeof(type) * (count)), 0, sizeof(type) * (count)))
