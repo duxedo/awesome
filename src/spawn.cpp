@@ -408,68 +408,68 @@ int luaA_spawn(lua_State* L) {
 
     if (lua_gettop(L) >= 2) {
         use_sn = Lua::checkboolean(L, 2);
+    }
     /* Valid values for return_std* are:
-    * true -> return a fd
-    * false -> keep glib's default behaviour
-    * "DEV_NULL" -> use direct output to /dev/null
-    * "INHERIT" -> use the same fd as the parent
-    */
-    if(lua_gettop(L) >= 3) {
+     * true -> return a fd
+     * false -> keep glib's default behaviour
+     * "DEV_NULL" -> use direct output to /dev/null
+     * "INHERIT" -> use the same fd as the parent
+     */
+    if (lua_gettop(L) >= 3) {
         if (lua_isstring(L, 3)) {
-            const char *str = lua_tostring(L, 3);
-            if (a_strcmp(str, "DEV_NULL") == 0){
-                // This is the default behaviour. Compiles to a no-op before 2.74.
-                #if GLIB_CHECK_VERSION(2, 74, 0)
+            auto str = Lua::tostring(L, 3);
+            if (str == "DEV_NULL") {
+// This is the default behaviour. Compiles to a no-op before 2.74.
+#if GLIB_CHECK_VERSION(2, 74, 0)
                 flags |= G_SPAWN_STDIN_FROM_DEV_NULL;
-                # endif
-            } else if (a_strcmp(str, "INHERIT") == 0)
+#endif
+            } else if (str == "INHERIT")
                 flags |= G_SPAWN_CHILD_INHERITS_STDIN;
             else
                 Lua::typerror(L, 3, "DEV_NULL or INHERIT");
-        } else if(lua_isboolean(L, 3)) {
+        } else if (lua_isboolean(L, 3)) {
             return_stdin = lua_toboolean(L, 3);
         } else {
             Lua::typerror(L, 3, "boolean or string");
         }
     }
-    if(lua_gettop(L) >= 4) {
+    if (lua_gettop(L) >= 4) {
         if (lua_isstring(L, 4)) {
-            const char *str = lua_tostring(L, 4);
-            if (a_strcmp(str, "DEV_NULL") == 0)
+            auto str = Lua::tostring(L, 4);
+            if (str == "DEV_NULL")
                 flags |= G_SPAWN_STDOUT_TO_DEV_NULL;
-            else if (a_strcmp(str, "INHERIT") == 0) {
-                // This is the default behaviour. Compiles to a no-op before 2.74.
-                #if GLIB_CHECK_VERSION(2, 74, 0)
+            else if (str == "INHERIT") {
+// This is the default behaviour. Compiles to a no-op before 2.74.
+#if GLIB_CHECK_VERSION(2, 74, 0)
                 flags |= G_SPAWN_CHILD_INHERITS_STDOUT;
-                # endif
+#endif
             } else
                 Lua::typerror(L, 4, "DEV_NULL or INHERIT");
-        } else if(lua_isboolean(L, 4)) {
+        } else if (lua_isboolean(L, 4)) {
             return_stdout = lua_toboolean(L, 4);
         } else {
             Lua::typerror(L, 4, "boolean or string");
         }
     }
-    if(lua_gettop(L) >= 5) {
+    if (lua_gettop(L) >= 5) {
         if (lua_isstring(L, 5)) {
-            const char *str = lua_tostring(L, 5);
-            if (a_strcmp(str, "DEV_NULL") == 0)
+            auto str = Lua::tostring(L, 5);
+            if (str == "DEV_NULL")
                 flags |= G_SPAWN_STDERR_TO_DEV_NULL;
-            else if (a_strcmp(str, "INHERIT") == 0) {
-                // This is the default behaviour. Compiles to a no-op before 2.74.
-                #if GLIB_CHECK_VERSION(2, 74, 0)
+            else if (str == "INHERIT") {
+// This is the default behaviour. Compiles to a no-op before 2.74.
+#if GLIB_CHECK_VERSION(2, 74, 0)
                 flags |= G_SPAWN_CHILD_INHERITS_STDERR;
-                # endif
+#endif
             } else
                 Lua::typerror(L, 5, "DEV_NULL or INHERIT");
-        } else if(lua_isboolean(L, 5)) {
+        } else if (lua_isboolean(L, 5)) {
             return_stderr = lua_toboolean(L, 5);
         } else {
             Lua::typerror(L, 5, "boolean or string");
         }
     }
-    if (!lua_isnoneornil(L, 6))
-    {
+    if (!lua_isnoneornil(L, 6)) {
         Lua::checkfunction(L, 6);
         flags |= G_SPAWN_DO_NOT_REAP_CHILD;
     }
