@@ -370,7 +370,7 @@ ConfigResult options_check_args(int argc, char** argv, int* init_flags) {
 
     while ((opt = getopt_long(argc, argv, "vhfkc:arms:l:", long_options, NULL)) != -1) {
         switch (opt) {
-        case 'v': eprint_version(); break;
+        case 'v': eprint_version(ret); break;
         case 'h':
             if (!((*init_flags) & INIT_FLAG_ALLOW_FALLBACK)) {
                 exit_help(EXIT_SUCCESS);

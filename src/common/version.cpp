@@ -23,8 +23,8 @@
 
 #include "awesome-version-internal.h"
 #include "config.h"
-#include "globalconf.h"
 #include "luahdr.h"
+#include "options.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,7 +33,7 @@
 /** \brief Print version message and quit program.
  * \param executable program name
  */
-void eprint_version(void) {
+void eprint_version(const Options::ConfigResult& res) {
     lua_State* L = luaL_newstate();
     luaL_openlibs(L);
     lua_getglobal(L, "_VERSION");
@@ -79,15 +79,15 @@ void eprint_version(void) {
       /* release      */ AWESOME_RELEASE,
       /* Lua linked   */ LUA_RELEASE,
       /* Lua runtime  */ lua_tostring(L, -2),
-      /* API Level    */ Manager::get().api_level,
+      /* API Level    */ res.api_level.value_or(awesome_default_api_level()),
       /* DBus         */ has_dbus,
       /* XCB Error    */ has_xcb_errors,
       /* Execinfo     */ has_execinfo,
       /* XRandR major */ XCB_RANDR_MAJOR_VERSION,
       /* XRandR minor */ XCB_RANDR_MINOR_VERSION,
       /* LGI version  */ lua_tostring(L, -1),
-      /* ARGB support */ Manager::get().had_overriden_depth ? "no" : "yes",
-      /* Search path  */ Manager::get().startup.have_searchpaths ? "yes" : "no");
+      /* ARGB support */ res.had_overriden_depth ? "no" : "yes",
+      /* Search path  */ res.have_searchpaths ? "yes" : "no");
     lua_close(L);
 
     exit(EXIT_SUCCESS);
