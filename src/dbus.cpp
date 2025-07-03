@@ -36,6 +36,7 @@
 
 #include "common/lualib.h"
 #include "common/signal.h"
+#include "common/util.h"
 #include "config.h"
 
 #include <glib.h>
@@ -379,56 +380,61 @@ static void a_dbus_process_request(DBusConnection* dbus_connection, DBusMessage*
         nargs += a_dbus_message_iter(L, &iter);
     }
 
-    if (dbus_message_get_no_reply(msg)) {
-        auto signalIt = dbus_signals.find(interface);
-        /* emit signals */
-        if (signalIt != dbus_signals.end()) {
-            signal_object_emit(L, &dbus_signals, NONULL(interface), nargs);
-        }
-    } else {
-        auto signalIt = dbus_signals.find(interface);
-        if (signalIt != dbus_signals.end()) {
-            /* there can be only ONE handler to send reply */
-            auto func = signalIt->second.functions.front();
+    auto signalIt = dbus_signals.find(NONULL(interface));
 
-            int n = lua_gettop(L) - nargs;
-
-            luaA_object_push(L, func);
-            Lua::dofunction(L, nargs, LUA_MULTRET);
-
-            n -= lua_gettop(L);
-
-            DBusMessage* reply = dbus_message_new_method_return(msg);
-
-            dbus_message_iter_init_append(reply, &iter);
-
-            if (n % 2 != 0) {
-                Lua::warn(L,
-                          "your D-Bus signal handling method returned wrong number of arguments");
-                /* Restore stack */
-                lua_settop(L, old_top);
-                return;
-            }
-
-            /* i is negative */
-            for (int i = n; i < 0; i += 2) {
-                if (!a_dbus_convert_value(L, i, &iter)) {
-                    Lua::warn(L, "your D-Bus signal handling method returned bad data");
-                    /* Restore stack */
-                    lua_settop(L, old_top);
-                    return;
-                }
-
-                lua_remove(L, i);
-                lua_remove(L, i + 1);
-            }
-
-            dbus_connection_send(dbus_connection, reply, NULL);
-            dbus_message_unref(reply);
-        }
+    if (signalIt == dbus_signals.end()) {
+        lua_settop(L, old_top);
+        return;
     }
+
+    if (dbus_message_get_no_reply(msg)) {
+        /* emit signals */
+        signal_object_emit(L, &dbus_signals, NONULL(interface), nargs);
+        lua_settop(L, old_top);
+        return;
+    }
+
+    /* there can be only ONE handler to send reply */
+    auto func = signalIt->second.functions.front();
+
+    int n = lua_gettop(L) - nargs;
+
+    luaA_object_push(L, func);
+    Lua::dofunction(L, nargs, LUA_MULTRET);
+
+    n -= lua_gettop(L);
+
+    DBusMessage* reply = dbus_message_new_method_return(msg);
+
+    dbus_message_iter_init_append(reply, &iter);
+
+    if (n % 2 != 0) {
+        Lua::warn(L,
+                  "your D-Bus signal handling method returned wrong number of arguments");
+        /* Restore stack */
+        lua_settop(L, old_top);
+        return;
+    }
+
+    /* i is negative */
+    for (int i = n; i < 0; i += 2) {
+        if (!a_dbus_convert_value(L, i, &iter)) {
+            Lua::warn(L, "your D-Bus signal handling method returned bad data");
+            /* Restore stack */
+            lua_settop(L, old_top);
+            return;
+        }
+
+        lua_remove(L, i);
+        lua_remove(L, i + 1);
+    }
+
+    dbus_connection_send(dbus_connection, reply, NULL);
+    dbus_message_unref(reply);
+
     /* Restore stack */
     lua_settop(L, old_top);
+    return;
 }
 
 /** Attempt to process all the requests in the D-Bus connection.
@@ -690,14 +696,15 @@ static int luaA_dbus_remove_match(lua_State* L) {
 static int luaA_dbus_connect_signal(lua_State* L) {
     const auto name = Lua::checkstring(L, 1);
     Lua::checkfunction(L, 2);
-    auto signalIt = dbus_signals.find(*name);
+    auto nameStr = name.value_or("");
+    auto signalIt = dbus_signals.find(nameStr);
     if (signalIt != dbus_signals.end()) {
         Lua::warn(L, "cannot add signal %s on D-Bus, already existing", name->data());
         lua_pushnil(L);
         lua_pushfstring(L, "cannot add signal %s on D-Bus, already existing", name->data());
         return 2;
     } else {
-        dbus_signals.connect(*name, LuaFunction{luaA_object_ref(L, 2)});
+        dbus_signals.connect(nameStr, LuaFunction{luaA_object_ref(L, 2)});
         lua_pushboolean(L, 1);
         return 1;
     }
