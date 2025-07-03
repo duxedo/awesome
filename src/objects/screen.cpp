@@ -1401,13 +1401,13 @@ static int luaA_screen_get_managed(lua_State* L, lua_object_t* o) {
 }
 
 static int set_name(lua_State* L, lua_object_t* s) {
-    static_cast<screen_t*>(s)->name = *Lua::checkstring(L, -1);
+    static_cast<screen_t*>(s)->name = Lua::checkstring(L, -1).value_or("");
     return 0;
 }
 
 static int get_name(lua_State* L, lua_object_t* o) {
     auto s = static_cast<screen_t*>(o);
-    Lua::State{L}.push(s->name.empty() ? s->name : fmt::format("screen{}", screen_get_index(s)));
+    Lua::State{L}.push(!s->name.empty() ? s->name : fmt::format("screen{}", screen_get_index(s)));
     return 1;
 }
 
