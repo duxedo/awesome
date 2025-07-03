@@ -289,20 +289,22 @@ static lua_class_t screen_class{
 
 /** Get a screen argument from the lua stack */
 screen_t* luaA_checkscreen(lua_State* L, int sidx) {
-    if (lua_isnumber(L, sidx)) {
-        int screen = lua_tointeger(L, sidx);
-        if (screen < 1 || (size_t)screen > Manager::get().screens.size()) {
-            Lua::warn(L,
-                      "invalid screen number: %d (of %d existing)",
-                      screen,
-                      (int)Manager::get().screens.size());
-            lua_pushnil(L);
-            return NULL;
-        }
-        return Manager::get().screens[screen - 1];
-    } else {
+    if (!lua_isnumber(L, sidx)) {
         return screen_class.checkudata<screen_t>(L, sidx);
     }
+
+    int screen = lua_tointeger(L, sidx);
+
+    if (screen < 1 || (size_t)screen > Manager::get().screens.size()) {
+        Lua::warn(L,
+                  "invalid screen number: %d (of %d existing)",
+                  screen,
+                  (int)Manager::get().screens.size());
+        lua_pushnil(L);
+        std::cout << "checkscreen failed 1" << std::endl;
+        return NULL;
+    }
+    return Manager::get().screens[screen - 1];
 }
 
 static void screen_deduplicate(lua_State* L, std::vector<screen_t*>* screens) {
