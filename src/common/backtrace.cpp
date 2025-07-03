@@ -23,26 +23,82 @@
 
 #include "config.h"
 
+#include <array>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#ifdef HAS_EXECINFO
-#include <execinfo.h>
-#endif
 enum { MAX_STACK_SIZE = 32, MAX_BT_SIZE = 2048 };
-
-#include <array>
-
 static char bt_text[MAX_BT_SIZE] = "\0";
 
 /** Get a backtrace.
  * \param buf The buffer to fill with backtrace.
  */
+
+#if HAS_LIBUNWIND
+#define UNW_LOCAL_ONLY
+#include <libunwind.h>
+#include <cxxabi.h>
+const char* backtrace_get() {
+    unw_cursor_t cursor;
+    unw_context_t context;
+
+    memset(bt_text, 0, sizeof(bt_text));
+
+    unw_getcontext(&context);
+    unw_init_local(&cursor, &context);
+
+    int n = 0;
+    char * next= bt_text;
+    while (unw_step(&cursor)) {
+        unw_word_t ip, sp, off;
+
+        unw_get_reg(&cursor, UNW_REG_IP, &ip);
+        unw_get_reg(&cursor, UNW_REG_SP, &sp);
+
+        char symbol[256] = {"<unknown>"};
+        char* name = symbol;
+
+        if (!unw_get_proc_name(&cursor, symbol, sizeof(symbol), &off)) {
+            int status;
+            if ((name = abi::__cxa_demangle(symbol, NULL, NULL, &status)) == 0)
+                name = symbol;
+        }
+
+        int result = snprintf(next, std::end(bt_text) - next - 1, "#%-2d 0x%016" PRIxPTR " sp=0x%016" PRIxPTR " %s + 0x%" PRIxPTR "\n",
+               ++n,
+               static_cast<uintptr_t>(ip),
+               static_cast<uintptr_t>(sp),
+               name,
+               static_cast<uintptr_t>(off));
+
+        if (name != symbol)
+        {
+            free(name);
+        }
+        if(result < 0)
+        {
+            break;
+        }
+        next+=result;
+        if(next >= std::end(bt_text) - 1)
+        {
+            break;
+        }
+    }
+    *next = '\0';
+    return bt_text;
+}
+#elif HAS_EXECINFO
+#include <execinfo.h>
 const char* backtrace_get() {
     void* stack[MAX_STACK_SIZE];
     char** bt;
     int stack_size;
     memset(bt_text, 0, sizeof(bt_text));
+
+    int i = 1;
+    while (i) {}
 
     stack_size = backtrace(stack, std::size(stack));
     bt = backtrace_symbols(stack, stack_size);
@@ -68,4 +124,5 @@ const char* backtrace_get() {
     }
     return "Cannot get backtrace symbols.";
 }
+#endif
 

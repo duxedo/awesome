@@ -33,7 +33,8 @@ deps = [
     dependency('libstartup-notification-1.0', version : '>=0.10'),
     dependency('libxdg-basedir', version : '>=1.0.0'),
     dependency('dbus-1'),
-    dependency('luajit')
+    dependency('luajit'),
+    dependency('libunwind'),
 ]
 srcs = [
     'src/awesome.cpp',
@@ -120,6 +121,7 @@ confdata.set('AWESOME_DEFAULT_CONF', '/etc/xdg/awesome/rc.lua')
 confdata.set('WITH_DBUS', true)
 confdata.set('WITH_XCB_ERRORS', true)
 confdata.set('HAS_EXECINFO', 1)
+confdata.set('HAS_LIBUNWIND', 1)
 confdata.set('HAS_LUAJIT', 1)
 
 config_h = configure_file(input: 'templates/config.h.in', output: 'config.h', configuration:confdata, install:false)
