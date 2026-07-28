@@ -33,9 +33,9 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_atom.h>
 
-#define _NET_WM_STATE_REMOVE 0
-#define _NET_WM_STATE_ADD 1
-#define _NET_WM_STATE_TOGGLE 2
+#define NET_WM_STATE_REMOVE 0
+#define NET_WM_STATE_ADD 1
+#define NET_WM_STATE_TOGGLE 2
 
 #define ALL_DESKTOPS 0xffffffff
 
@@ -48,37 +48,37 @@ static int ewmh_client_update_hints(lua_State* L) {
     size_t i = 0;
 
     if (c->modal) {
-        state[i++] = _NET_WM_STATE_MODAL;
+        state[i++] = ATOM_NET_WM_STATE_MODAL;
     }
     if (c->fullscreen) {
-        state[i++] = _NET_WM_STATE_FULLSCREEN;
+        state[i++] = ATOM_NET_WM_STATE_FULLSCREEN;
     }
     if (c->maximized_vertical || c->maximized) {
-        state[i++] = _NET_WM_STATE_MAXIMIZED_VERT;
+        state[i++] = ATOM_NET_WM_STATE_MAXIMIZED_VERT;
     }
     if (c->maximized_horizontal || c->maximized) {
-        state[i++] = _NET_WM_STATE_MAXIMIZED_HORZ;
+        state[i++] = ATOM_NET_WM_STATE_MAXIMIZED_HORZ;
     }
     if (c->sticky) {
-        state[i++] = _NET_WM_STATE_STICKY;
+        state[i++] = ATOM_NET_WM_STATE_STICKY;
     }
     if (c->skip_taskbar) {
-        state[i++] = _NET_WM_STATE_SKIP_TASKBAR;
+        state[i++] = ATOM_NET_WM_STATE_SKIP_TASKBAR;
     }
     if (c->above) {
-        state[i++] = _NET_WM_STATE_ABOVE;
+        state[i++] = ATOM_NET_WM_STATE_ABOVE;
     }
     if (c->below) {
-        state[i++] = _NET_WM_STATE_BELOW;
+        state[i++] = ATOM_NET_WM_STATE_BELOW;
     }
     if (c->minimized) {
-        state[i++] = _NET_WM_STATE_HIDDEN;
+        state[i++] = ATOM_NET_WM_STATE_HIDDEN;
     }
     if (c->urgent) {
-        state[i++] = _NET_WM_STATE_DEMANDS_ATTENTION;
+        state[i++] = ATOM_NET_WM_STATE_DEMANDS_ATTENTION;
     }
 
-    getConnection().replace_property(c->window, _NET_WM_STATE, XCB_ATOM_ATOM, std::span{state, i});
+    getConnection().replace_property(c->window, ATOM_NET_WM_STATE, XCB_ATOM_ATOM, std::span{state, i});
 
     return 0;
 }
@@ -93,7 +93,7 @@ static int ewmh_update_net_active_window(lua_State* L) {
     }
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
+      Manager::get().screen->root, ATOM_NET_ACTIVE_WINDOW, XCB_ATOM_WINDOW, win);
     return 0;
 }
 
@@ -106,7 +106,7 @@ static int ewmh_update_net_client_list(lua_State* L) {
     }
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
+      Manager::get().screen->root, ATOM_NET_CLIENT_LIST, XCB_ATOM_WINDOW, std::span(wins, n));
 
     return 0;
 }
@@ -120,60 +120,60 @@ static int ewmh_client_update_frame_extents(lua_State* L) {
     extents[2] = c->border_width + c->titlebar[CLIENT_TITLEBAR_TOP].size;
     extents[3] = c->border_width + c->titlebar[CLIENT_TITLEBAR_BOTTOM].size;
 
-    getConnection().replace_property(c->window, _NET_FRAME_EXTENTS, XCB_ATOM_CARDINAL, extents);
+    getConnection().replace_property(c->window, ATOM_NET_FRAME_EXTENTS, XCB_ATOM_CARDINAL, extents);
 
     return 0;
 }
 
 void ewmh_init(void) {
-    xcb_atom_t atom[] = {_NET_SUPPORTED,
-                         _NET_SUPPORTING_WM_CHECK,
-                         _NET_STARTUP_ID,
-                         _NET_CLIENT_LIST,
-                         _NET_CLIENT_LIST_STACKING,
-                         _NET_NUMBER_OF_DESKTOPS,
-                         _NET_CURRENT_DESKTOP,
-                         _NET_DESKTOP_NAMES,
-                         _NET_ACTIVE_WINDOW,
-                         _NET_CLOSE_WINDOW,
-                         _NET_FRAME_EXTENTS,
-                         _NET_WM_NAME,
-                         _NET_WM_STRUT_PARTIAL,
-                         _NET_WM_ICON_NAME,
-                         _NET_WM_VISIBLE_ICON_NAME,
-                         _NET_WM_DESKTOP,
-                         _NET_WM_WINDOW_TYPE,
-                         _NET_WM_WINDOW_TYPE_DESKTOP,
-                         _NET_WM_WINDOW_TYPE_DOCK,
-                         _NET_WM_WINDOW_TYPE_TOOLBAR,
-                         _NET_WM_WINDOW_TYPE_MENU,
-                         _NET_WM_WINDOW_TYPE_UTILITY,
-                         _NET_WM_WINDOW_TYPE_SPLASH,
-                         _NET_WM_WINDOW_TYPE_DIALOG,
-                         _NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-                         _NET_WM_WINDOW_TYPE_POPUP_MENU,
-                         _NET_WM_WINDOW_TYPE_TOOLTIP,
-                         _NET_WM_WINDOW_TYPE_NOTIFICATION,
-                         _NET_WM_WINDOW_TYPE_COMBO,
-                         _NET_WM_WINDOW_TYPE_DND,
-                         _NET_WM_WINDOW_TYPE_NORMAL,
-                         _NET_WM_ICON,
-                         _NET_WM_PID,
-                         _NET_WM_STATE,
-                         _NET_WM_STATE_STICKY,
-                         _NET_WM_STATE_SKIP_TASKBAR,
-                         _NET_WM_STATE_FULLSCREEN,
-                         _NET_WM_STATE_MAXIMIZED_HORZ,
-                         _NET_WM_STATE_MAXIMIZED_VERT,
-                         _NET_WM_STATE_ABOVE,
-                         _NET_WM_STATE_BELOW,
-                         _NET_WM_STATE_MODAL,
-                         _NET_WM_STATE_HIDDEN,
-                         _NET_WM_STATE_DEMANDS_ATTENTION};
+    xcb_atom_t atom[] = {ATOM_NET_SUPPORTED,
+                         ATOM_NET_SUPPORTING_WM_CHECK,
+                         ATOM_NET_STARTUP_ID,
+                         ATOM_NET_CLIENT_LIST,
+                         ATOM_NET_CLIENT_LIST_STACKING,
+                         ATOM_NET_NUMBER_OF_DESKTOPS,
+                         ATOM_NET_CURRENT_DESKTOP,
+                         ATOM_NET_DESKTOP_NAMES,
+                         ATOM_NET_ACTIVE_WINDOW,
+                         ATOM_NET_CLOSE_WINDOW,
+                         ATOM_NET_FRAME_EXTENTS,
+                         ATOM_NET_WM_NAME,
+                         ATOM_NET_WM_STRUT_PARTIAL,
+                         ATOM_NET_WM_ICON_NAME,
+                         ATOM_NET_WM_VISIBLE_ICON_NAME,
+                         ATOM_NET_WM_DESKTOP,
+                         ATOM_NET_WM_WINDOW_TYPE,
+                         ATOM_NET_WM_WINDOW_TYPE_DESKTOP,
+                         ATOM_NET_WM_WINDOW_TYPE_DOCK,
+                         ATOM_NET_WM_WINDOW_TYPE_TOOLBAR,
+                         ATOM_NET_WM_WINDOW_TYPE_MENU,
+                         ATOM_NET_WM_WINDOW_TYPE_UTILITY,
+                         ATOM_NET_WM_WINDOW_TYPE_SPLASH,
+                         ATOM_NET_WM_WINDOW_TYPE_DIALOG,
+                         ATOM_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+                         ATOM_NET_WM_WINDOW_TYPE_POPUP_MENU,
+                         ATOM_NET_WM_WINDOW_TYPE_TOOLTIP,
+                         ATOM_NET_WM_WINDOW_TYPE_NOTIFICATION,
+                         ATOM_NET_WM_WINDOW_TYPE_COMBO,
+                         ATOM_NET_WM_WINDOW_TYPE_DND,
+                         ATOM_NET_WM_WINDOW_TYPE_NORMAL,
+                         ATOM_NET_WM_ICON,
+                         ATOM_NET_WM_PID,
+                         ATOM_NET_WM_STATE,
+                         ATOM_NET_WM_STATE_STICKY,
+                         ATOM_NET_WM_STATE_SKIP_TASKBAR,
+                         ATOM_NET_WM_STATE_FULLSCREEN,
+                         ATOM_NET_WM_STATE_MAXIMIZED_HORZ,
+                         ATOM_NET_WM_STATE_MAXIMIZED_VERT,
+                         ATOM_NET_WM_STATE_ABOVE,
+                         ATOM_NET_WM_STATE_BELOW,
+                         ATOM_NET_WM_STATE_MODAL,
+                         ATOM_NET_WM_STATE_HIDDEN,
+                         ATOM_NET_WM_STATE_DEMANDS_ATTENTION};
 
     xcb_screen_t* xscreen = Manager::get().screen;
 
-    getConnection().replace_property(xscreen->root, _NET_SUPPORTED, XCB_ATOM_ATOM, atom);
+    getConnection().replace_property(xscreen->root, ATOM_NET_SUPPORTED, XCB_ATOM_ATOM, atom);
 
     /* create our own window */
     xcb_window_t father = getConnection().generate_id();
@@ -188,19 +188,19 @@ void ewmh_init(void) {
                                   0);
 
     getConnection().replace_property(
-      xscreen->root, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
+      xscreen->root, ATOM_NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
 
-    getConnection().replace_property(father, _NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
+    getConnection().replace_property(father, ATOM_NET_SUPPORTING_WM_CHECK, XCB_ATOM_WINDOW, father);
 
     /* set the window manager name */
-    getConnection().replace_property(father, _NET_WM_NAME, UTF8_STRING, "awesome");
+    getConnection().replace_property(father, ATOM_NET_WM_NAME, ATOM_UTF8_STRING, "awesome");
 
     /* Set an instance, just because we can */
     xwindow_set_class_instance(father);
 
     /* set the window manager PID */
     int32_t i = getpid();
-    getConnection().replace_property(father, _NET_WM_PID, XCB_ATOM_CARDINAL, i);
+    getConnection().replace_property(father, ATOM_NET_WM_PID, XCB_ATOM_CARDINAL, i);
 }
 
 static void ewmh_update_maximize(bool h, bool status, bool toggle) {
@@ -267,21 +267,21 @@ void ewmh_update_net_client_list_stacking(void) {
     }
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins});
+      Manager::get().screen->root, ATOM_NET_CLIENT_LIST_STACKING, XCB_ATOM_WINDOW, std::span{wins});
 }
 
 void ewmh_update_net_numbers_of_desktop(void) {
     uint32_t count = Manager::get().tags.size();
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
+      Manager::get().screen->root, ATOM_NET_NUMBER_OF_DESKTOPS, XCB_ATOM_CARDINAL, count);
 }
 
 int ewmh_update_net_current_desktop(lua_State* L) {
     uint32_t idx = tags_get_current_or_first_selected_index();
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, idx);
+      Manager::get().screen->root, ATOM_NET_CURRENT_DESKTOP, XCB_ATOM_CARDINAL, idx);
     return 0;
 }
 
@@ -294,95 +294,95 @@ void ewmh_update_net_desktop_names(void) {
     }
 
     getConnection().replace_property(
-      Manager::get().screen->root, _NET_DESKTOP_NAMES, UTF8_STRING, buf);
+      Manager::get().screen->root, ATOM_NET_DESKTOP_NAMES, ATOM_UTF8_STRING, buf);
 }
 
 static void ewmh_process_state_atom(client* c, xcb_atom_t state, int set) {
     lua_State* L = globalconf_get_lua_State();
     luaA_object_push(L, c);
 
-    if (state == _NET_WM_STATE_STICKY) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    if (state == ATOM_NET_WM_STATE_STICKY) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_sticky(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_sticky(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_sticky(L, -1, !c->sticky);
         }
-    } else if (state == _NET_WM_STATE_SKIP_TASKBAR) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_SKIP_TASKBAR) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_skip_taskbar(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_skip_taskbar(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_skip_taskbar(L, -1, !c->skip_taskbar);
         }
-    } else if (state == _NET_WM_STATE_FULLSCREEN) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_FULLSCREEN) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_fullscreen(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_fullscreen(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_fullscreen(L, -1, !c->fullscreen);
         }
-    } else if (state == _NET_WM_STATE_MAXIMIZED_HORZ) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_MAXIMIZED_HORZ) {
+        if (set == NET_WM_STATE_REMOVE) {
             ewmh_update_maximize(true, false, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             ewmh_update_maximize(true, true, false);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             ewmh_update_maximize(true, false, true);
         }
-    } else if (state == _NET_WM_STATE_MAXIMIZED_VERT) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_MAXIMIZED_VERT) {
+        if (set == NET_WM_STATE_REMOVE) {
             ewmh_update_maximize(false, false, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             ewmh_update_maximize(false, true, false);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             ewmh_update_maximize(false, false, true);
         }
-    } else if (state == _NET_WM_STATE_ABOVE) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_ABOVE) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_above(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_above(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_above(L, -1, !c->above);
         }
-    } else if (state == _NET_WM_STATE_BELOW) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_BELOW) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_below(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_below(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_below(L, -1, !c->below);
         }
-    } else if (state == _NET_WM_STATE_MODAL) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_MODAL) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_modal(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_modal(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_modal(L, -1, !c->modal);
         }
-    } else if (state == _NET_WM_STATE_HIDDEN) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_HIDDEN) {
+        if (set == NET_WM_STATE_REMOVE) {
             client_set_minimized(L, -1, false);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             client_set_minimized(L, -1, true);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             client_set_minimized(L, -1, !c->minimized);
         }
-    } else if (state == _NET_WM_STATE_DEMANDS_ATTENTION) {
-        if (set == _NET_WM_STATE_REMOVE) {
+    } else if (state == ATOM_NET_WM_STATE_DEMANDS_ATTENTION) {
+        if (set == NET_WM_STATE_REMOVE) {
             lua_pushboolean(L, false);
             /*TODO v5: Add a context */
             luaA_object_emit_signal(L, -2, "request::urgent", 1);
-        } else if (set == _NET_WM_STATE_ADD) {
+        } else if (set == NET_WM_STATE_ADD) {
             lua_pushboolean(L, true);
             /*TODO v5: Add a context */
             luaA_object_emit_signal(L, -2, "request::urgent", 1);
-        } else if (set == _NET_WM_STATE_TOGGLE) {
+        } else if (set == NET_WM_STATE_TOGGLE) {
             lua_pushboolean(L, !c->urgent);
             /*TODO v5: Add a context */
             luaA_object_emit_signal(L, -2, "request::urgent", 1);
@@ -415,7 +415,7 @@ static void ewmh_process_desktop(client* c, uint32_t desktop) {
 int ewmh_process_client_message(xcb_client_message_event_t* ev) {
     client* c;
 
-    if (ev->type == _NET_CURRENT_DESKTOP) {
+    if (ev->type == ATOM_NET_CURRENT_DESKTOP) {
         int idx = ev->data.data32[0];
         if (idx >= 0 && idx < (int)Manager::get().tags.size()) {
             lua_State* L = globalconf_get_lua_State();
@@ -424,22 +424,22 @@ int ewmh_process_client_message(xcb_client_message_event_t* ev) {
             luaA_object_emit_signal(L, -2, "request::select", 1);
             lua_pop(L, 1);
         }
-    } else if (ev->type == _NET_CLOSE_WINDOW) {
+    } else if (ev->type == ATOM_NET_CLOSE_WINDOW) {
         if ((c = client_getbywin(ev->window))) {
             client_kill(c);
         }
-    } else if (ev->type == _NET_WM_DESKTOP) {
+    } else if (ev->type == ATOM_NET_WM_DESKTOP) {
         if ((c = client_getbywin(ev->window))) {
             ewmh_process_desktop(c, ev->data.data32[0]);
         }
-    } else if (ev->type == _NET_WM_STATE) {
+    } else if (ev->type == ATOM_NET_WM_STATE) {
         if ((c = client_getbywin(ev->window))) {
             ewmh_process_state_atom(c, (xcb_atom_t)ev->data.data32[1], ev->data.data32[0]);
             if (ev->data.data32[2]) {
                 ewmh_process_state_atom(c, (xcb_atom_t)ev->data.data32[2], ev->data.data32[0]);
             }
         }
-    } else if (ev->type == _NET_ACTIVE_WINDOW) {
+    } else if (ev->type == ATOM_NET_ACTIVE_WINDOW) {
         if ((c = client_getbywin(ev->window))) {
             lua_State* L = globalconf_get_lua_State();
             luaA_object_push(L, c);
@@ -469,17 +469,17 @@ void ewmh_client_update_desktop(client* c) {
 
     if (c->sticky) {
         static uint32_t desktops = ALL_DESKTOPS;
-        getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
+        getConnection().replace_property(c->window, ATOM_NET_WM_DESKTOP, XCB_ATOM_CARDINAL, desktops);
         return;
     }
     for (i = 0; i < (size_t)Manager::get().tags.size(); i++) {
         if (is_client_tagged(c, Manager::get().tags[i].get())) {
-            getConnection().replace_property(c->window, _NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
+            getConnection().replace_property(c->window, ATOM_NET_WM_DESKTOP, XCB_ATOM_CARDINAL, i);
             return;
         }
     }
     /* It doesn't have any tags, remove the property */
-    getConnection().delete_property(c->window, _NET_WM_DESKTOP);
+    getConnection().delete_property(c->window, ATOM_NET_WM_DESKTOP);
 }
 
 /** Update the client struts.
@@ -501,7 +501,7 @@ void ewmh_update_strut(xcb_window_t window, strut_t* strut) {
                                   strut->bottom_start_x,
                                   strut->bottom_end_x};
 
-        getConnection().replace_property(window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, state);
+        getConnection().replace_property(window, ATOM_NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, state);
     }
 }
 
@@ -510,7 +510,7 @@ void ewmh_update_strut(xcb_window_t window, strut_t* strut) {
  * \param type The new type to set.
  */
 void ewmh_update_window_type(xcb_window_t window, uint32_t type) {
-    getConnection().replace_property(window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, type);
+    getConnection().replace_property(window, ATOM_NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, type);
 }
 
 void ewmh_client_check_hints(client* c) {
@@ -521,13 +521,13 @@ void ewmh_client_check_hints(client* c) {
 
     /* Send the GetProperty requests which will be processed later */
     auto c0 = getConnection().get_property_unchecked(
-      false, c->window, _NET_WM_DESKTOP, XCB_GET_PROPERTY_TYPE_ANY, 0, 1);
+      false, c->window, ATOM_NET_WM_DESKTOP, XCB_GET_PROPERTY_TYPE_ANY, 0, 1);
 
     auto c1 = getConnection().get_property_unchecked(
-      false, c->window, _NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+      false, c->window, ATOM_NET_WM_STATE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
     auto c2 = getConnection().get_property_unchecked(
-      false, c->window, _NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 0, UINT32_MAX);
+      false, c->window, ATOM_NET_WM_WINDOW_TYPE, XCB_ATOM_ATOM, 0, UINT32_MAX);
 
     auto reply = getConnection().get_property_reply(c0);
     if (reply && reply->value_len && (data = xcb_get_property_value(reply.get()))) {
@@ -539,12 +539,12 @@ void ewmh_client_check_hints(client* c) {
         state = reinterpret_cast<xcb_atom_t*>(data);
         for (int i = 0; i < xcb_get_property_value_length(reply.get()) / (int)sizeof(xcb_atom_t);
              i++) {
-            if (state[i] == _NET_WM_STATE_MAXIMIZED_HORZ) {
+            if (state[i] == ATOM_NET_WM_STATE_MAXIMIZED_HORZ) {
                 is_h_max = true;
-            } else if (state[i] == _NET_WM_STATE_MAXIMIZED_VERT) {
+            } else if (state[i] == ATOM_NET_WM_STATE_MAXIMIZED_VERT) {
                 is_v_max = true;
             } else {
-                ewmh_process_state_atom(c, state[i], _NET_WM_STATE_ADD);
+                ewmh_process_state_atom(c, state[i], NET_WM_STATE_ADD);
             }
         }
     }
@@ -573,19 +573,19 @@ void ewmh_client_check_hints(client* c) {
         state = reinterpret_cast<xcb_atom_t*>(data);
         for (int i = 0; i < xcb_get_property_value_length(reply.get()) / (int)sizeof(xcb_atom_t);
              i++) {
-            if (state[i] == _NET_WM_WINDOW_TYPE_DESKTOP) {
+            if (state[i] == ATOM_NET_WM_WINDOW_TYPE_DESKTOP) {
                 c->type = MAX(c->type, WINDOW_TYPE_DESKTOP);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_DIALOG) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_DIALOG) {
                 c->type = MAX(c->type, WINDOW_TYPE_DIALOG);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_SPLASH) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_SPLASH) {
                 c->type = MAX(c->type, WINDOW_TYPE_SPLASH);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_DOCK) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_DOCK) {
                 c->type = MAX(c->type, WINDOW_TYPE_DOCK);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_MENU) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_MENU) {
                 c->type = MAX(c->type, WINDOW_TYPE_MENU);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_TOOLBAR) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_TOOLBAR) {
                 c->type = MAX(c->type, WINDOW_TYPE_TOOLBAR);
-            } else if (state[i] == _NET_WM_WINDOW_TYPE_UTILITY) {
+            } else if (state[i] == ATOM_NET_WM_WINDOW_TYPE_UTILITY) {
                 c->type = MAX(c->type, WINDOW_TYPE_UTILITY);
             }
         }
@@ -601,7 +601,7 @@ void ewmh_process_client_strut(client* c) {
     void* data;
 
     xcb_get_property_cookie_t strut_q = getConnection().get_property_unchecked(
-      false, c->window, _NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
+      false, c->window, ATOM_NET_WM_STRUT_PARTIAL, XCB_ATOM_CARDINAL, 0, 12);
     auto strut_r = getConnection().get_property_reply(strut_q);
 
     if (strut_r && strut_r->value_len && (data = xcb_get_property_value(strut_r.get()))) {
@@ -640,7 +640,7 @@ void ewmh_process_client_strut(client* c) {
  */
 xcb_get_property_cookie_t ewmh_window_icon_get_unchecked(xcb_window_t w) {
     return getConnection().get_property_unchecked(
-      false, w, _NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
+      false, w, ATOM_NET_WM_ICON, XCB_ATOM_CARDINAL, 0, UINT32_MAX);
 }
 
 static cairo_surface_t* ewmh_window_icon_from_reply_next(uint32_t** data, uint32_t* data_end) {

@@ -114,7 +114,7 @@ void awesome_atexit(bool restart) {
       Manager::get().clients, wins.begin(), [](auto& cli) { return cli->window; });
 
     getConnection().replace_property(
-      Manager::get().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, wins);
+      Manager::get().screen->root, ATOM_AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, wins);
 
     a_dbus_cleanup();
 
@@ -184,7 +184,7 @@ static void scan(xcb_query_tree_cookie_t tree_c) {
 
     /* This gets the property and deletes it */
     auto prop_cookie = conn.get_property_unchecked(
-      true, Manager::get().screen->root, AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 0, UINT_MAX);
+      true, Manager::get().screen->root, ATOM_AWESOME_CLIENT_ORDER, XCB_ATOM_WINDOW, 0, UINT_MAX);
     auto wins = conn.query_tree_children(tree_r);
     /* Get the tree of the children windows of the current root window */
     if (!wins) {
@@ -280,7 +280,7 @@ static void acquire_WM_Sn(bool replace) {
                                   .format = 32,
                                   .sequence = 0,
                                   .window = Manager::get().screen->root,
-                                  .type = MANAGER,
+                                  .type = ATOM_MANAGER,
                                   .data{.data32 = {Manager::get().x.get_timestamp(),
                                                    Manager::get().x.selection_atom,
                                                    Manager::get().x.selection_owner_window,

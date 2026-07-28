@@ -401,7 +401,7 @@ drawin_t* drawin_allocator(lua_State* L) {
     w->geometry.width = 1;
     w->geometry.height = 1;
     w->geometry_dirty = false;
-    w->type = (window_type_t)_NET_WM_WINDOW_TYPE_NORMAL;
+    w->type = (window_type_t)ATOM_NET_WM_WINDOW_TYPE_NORMAL;
 
     drawable_allocator(L, (drawable_refresh_callback*)drawin_refresh_pixmap, w);
     w->drawable = (drawable_t*)luaA_object_ref_item(L, -2, -1);

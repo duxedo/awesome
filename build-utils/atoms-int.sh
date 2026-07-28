@@ -5,7 +5,10 @@ echo
 
 while read atom
 do
-    echo xcb_atom_t $atom\;
+    case $atom in
+      "_"*) echo xcb_atom_t ATOM$atom\; ;;
+      *)    echo xcb_atom_t ATOM_$atom\; ;;
+    esac
 done < $1
 
 echo
@@ -14,7 +17,10 @@ echo '{'
 
 while read atom
 do
-    echo '    { "'$atom'", sizeof("'$atom'") - 1, &'$atom' },'
+    case $atom in
+      "_"*) echo '    { "'$atom'", sizeof("'$atom'") - 1, &'ATOM$atom' },' ;;
+      *) echo '    { "'$atom'", sizeof("'$atom'") - 1, &'ATOM_$atom' },' ;;
+    esac
 done < $1
 
 echo '};'

@@ -111,7 +111,7 @@ static bool fill_rmlvo_from_root(struct xkb_rule_names* xkb_names) {
     auto prop_reply = getConnection().get_property_reply(
       getConnection().get_property_unchecked(false,
                                              Manager::get().screen->root,
-                                             _XKB_RULES_NAMES,
+                                             ATOM_XKB_RULES_NAMES,
                                              XCB_GET_PROPERTY_TYPE_ANY,
                                              0,
                                              UINT_MAX));

@@ -144,7 +144,7 @@ static void transfer_continue_incremental(lua_State* L, int ud) {
         }
         /* End of transfer */
         getConnection().replace_property(
-          transfer->requestor, transfer->property, UTF8_STRING, std::span("", 0));
+          transfer->requestor, transfer->property, ATOM_UTF8_STRING, std::span("", 0));
         getConnection().clear_attributes(transfer->requestor, XCB_CW_EVENT_MASK);
         transfer_done(L, transfer);
     } else {
@@ -153,7 +153,7 @@ static void transfer_continue_incremental(lua_State* L, int ud) {
         size_t next_length = MIN(data_length - transfer->offset, max_property_length());
         getConnection().replace_property(transfer->requestor,
                                          transfer->property,
-                                         UTF8_STRING,
+                                         ATOM_UTF8_STRING,
                                          std::span(data + transfer->offset, next_length));
         transfer->offset += next_length;
     }
@@ -304,7 +304,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
             getConnection().change_attributes(
               transfer->requestor, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
             getConnection().replace_property(
-              transfer->requestor, transfer->property, INCR, incr_size);
+              transfer->requestor, transfer->property, ATOM_INCR, incr_size);
 
             /* Save the data on the transfer object */
             Lua::getuservalue(L, 1);
@@ -317,7 +317,7 @@ static int luaA_selection_transfer_send(lua_State* L) {
             transfer->offset = 0;
         } else {
             getConnection().replace_property(
-              transfer->requestor, transfer->property, UTF8_STRING, std::span(data, data_length));
+              transfer->requestor, transfer->property, ATOM_UTF8_STRING, std::span(data, data_length));
         }
     }
 

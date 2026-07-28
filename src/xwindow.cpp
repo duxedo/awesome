@@ -40,7 +40,7 @@
  */
 void xwindow_set_state(xcb_window_t win, uint32_t state) {
     uint32_t data[] = {state, XCB_NONE};
-    getConnection().replace_property(win, WM_STATE, WM_STATE, data);
+    getConnection().replace_property(win, ATOM_WM_STATE, ATOM_WM_STATE, data);
 }
 
 /** Send request to get a window state (WM_STATE).
@@ -48,7 +48,7 @@ void xwindow_set_state(xcb_window_t win, uint32_t state) {
  * \return The cookie associated with the request.
  */
 xcb_get_property_cookie_t xwindow_get_state_unchecked(xcb_window_t w) {
-    return getConnection().get_property_unchecked(false, w, WM_STATE, WM_STATE, 0L, 2L);
+    return getConnection().get_property_unchecked(false, w, ATOM_WM_STATE, ATOM_WM_STATE, 0L, 2L);
 }
 
 /** Get a window state (WM_STATE).
@@ -139,7 +139,7 @@ void xwindow_grabkeys(xcb_window_t win, const std::vector<keyb_t*>& keys) {
  */
 xcb_get_property_cookie_t xwindow_get_opacity_unchecked(xcb_window_t win) {
     return getConnection().get_property_unchecked(
-      false, win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 0L, 1L);
+      false, win, ATOM_NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, 0L, 1L);
 }
 
 /** Get the opacity of a window.
@@ -175,9 +175,9 @@ void xwindow_set_opacity(xcb_window_t win, double opacity) {
         if (opacity >= 0 && opacity <= 1) {
             uint32_t real_opacity = opacity * 0xffffffff;
             getConnection().replace_property(
-              win, _NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
+              win, ATOM_NET_WM_WINDOW_OPACITY, XCB_ATOM_CARDINAL, real_opacity);
         } else {
-            getConnection().delete_property(win, _NET_WM_WINDOW_OPACITY);
+            getConnection().delete_property(win, ATOM_NET_WM_WINDOW_OPACITY);
         }
     }
 }
@@ -195,8 +195,8 @@ void xwindow_takefocus(xcb_window_t win) {
     ev.window = win;
     ev.format = 32;
     ev.data.data32[1] = Manager::get().x.get_timestamp();
-    ev.type = WM_PROTOCOLS;
-    ev.data.data32[0] = WM_TAKE_FOCUS;
+    ev.type = ATOM_WM_PROTOCOLS;
+    ev.data.data32[0] = ATOM_WM_TAKE_FOCUS;
 
     getConnection().send_event(false, win, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }

@@ -52,7 +52,7 @@ void xembed_message_send(XCB::Connection& connection,
                                   .format = 32,
                                   .sequence = 0,
                                   .window = towin,
-                                  .type = _XEMBED,
+                                  .type = ATOM_XEMBED,
                                   .data = {.data32 = {timestamp, to_native(message), d1, d2, d3}}};
     connection.send_event(false, towin, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
 }
@@ -64,7 +64,7 @@ void xembed_message_send(XCB::Connection& connection,
  */
 xcb_get_property_cookie_t info_get_unchecked(XCB::Connection* connection, xcb_window_t win) {
     return connection->get_property_unchecked(
-      false, win, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
+      false, win, ATOM_XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0L, 2);
 }
 
 static std::optional<info>

@@ -91,7 +91,7 @@ static void systray_register(void) {
                                   .format = 32,
                                   .sequence = 0,
                                   .window = xscreen->root,
-                                  .type = MANAGER,
+                                  .type = ATOM_MANAGER,
                                   .data = {.data32 = {Manager::get().x.get_timestamp(),
                                                       Manager::get().systray.atom,
                                                       Manager::get().systray.window,
@@ -199,7 +199,7 @@ bool systray_iskdedockapp(xcb_window_t w) {
      * thanks KDE. */
 
     auto kde_check_q = getConnection().get_property_unchecked(
-      false, w, _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR, XCB_ATOM_WINDOW, 0, 1);
+      false, w, ATOM_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR, XCB_ATOM_WINDOW, 0, 1);
 
     auto kde_check = getConnection().get_property_reply(kde_check_q);
 

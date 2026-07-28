@@ -97,7 +97,7 @@ static int luaA_selection_getter_new(lua_State* L) {
     getConnection().convert_selection(selection->window,
                                       name_atom,
                                       target_atom,
-                                      AWESOME_SELECTION_ATOM,
+                                      ATOM_AWESOME_SELECTION_ATOM,
                                       Manager::get().x.get_timestamp());
 
     return 1;
@@ -162,14 +162,14 @@ static void selection_handle_selectionnotify(lua_State* L, int ud, xcb_atom_t pr
       selection->window, XCB_CW_EVENT_MASK, std::array{XCB_EVENT_MASK_PROPERTY_CHANGE});
 
     auto property_r = getConnection().get_property_reply(getConnection().get_property(
-      true, selection->window, AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
+      true, selection->window, ATOM_AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
 
     if (!property_r) {
         selection_transfer_finished(L, ud);
         return;
     }
 
-    if (property_r->type == INCR) {
+    if (property_r->type == ATOM_INCR) {
         /* This is an incremental transfer. The above GetProperty had
          * delete=true. This indicates to the other end that the
          * transfer should start now. Right now we only get an estimate
@@ -220,7 +220,7 @@ void property_handle_awesome_selection_atom(uint8_t state, xcb_window_t window) 
     selection_getter_t* selection = (selection_getter_t*)lua_touserdata(L, -1);
 
     auto property_r = getConnection().get_property_reply(getConnection().get_property(
-      true, selection->window, AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
+      true, selection->window, ATOM_AWESOME_SELECTION_ATOM, XCB_GET_PROPERTY_TYPE_ANY, 0, 0xffffffff));
 
     if (property_r) {
         if (property_r->value_len > 0) {

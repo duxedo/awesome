@@ -54,11 +54,11 @@
     }
 
 HANDLE_TEXT_PROPERTY(wm_name, XCB_ATOM_WM_NAME, client_set_AltName)
-HANDLE_TEXT_PROPERTY(net_wm_name, _NET_WM_NAME, client_set_Name)
+HANDLE_TEXT_PROPERTY(net_wm_name, ATOM_NET_WM_NAME, client_set_Name)
 HANDLE_TEXT_PROPERTY(wm_icon_name, XCB_ATOM_WM_ICON_NAME, client_set_AltIconName)
-HANDLE_TEXT_PROPERTY(net_wm_icon_name, _NET_WM_ICON_NAME, client_set_IconName)
+HANDLE_TEXT_PROPERTY(net_wm_icon_name, ATOM_NET_WM_ICON_NAME, client_set_IconName)
 HANDLE_TEXT_PROPERTY(wm_client_machine, XCB_ATOM_WM_CLIENT_MACHINE, client_set_Machine)
-HANDLE_TEXT_PROPERTY(wm_window_role, WM_WINDOW_ROLE, client_set_Role)
+HANDLE_TEXT_PROPERTY(wm_window_role, ATOM_WM_WINDOW_ROLE, client_set_Role)
 
 #undef HANDLE_TEXT_PROPERTY
 
@@ -109,7 +109,7 @@ void property_update_wm_transient_for(client* c, xcb_get_property_cookie_t cooki
 
 xcb_get_property_cookie_t property_get_wm_client_leader(client* c) {
     return getConnection().get_property_unchecked(
-      false, c->window, WM_CLIENT_LEADER, XCB_ATOM_WINDOW, 0, 32);
+      false, c->window, ATOM_WM_CLIENT_LEADER, XCB_ATOM_WINDOW, 0, 32);
 }
 
 /** Update leader hint of a client.
@@ -233,7 +233,7 @@ void property_update_net_wm_icon(client* c, xcb_get_property_cookie_t cookie) {
 
 xcb_get_property_cookie_t property_get_net_wm_pid(client* c) {
     return getConnection().get_property_unchecked(
-      false, c->window, _NET_WM_PID, XCB_ATOM_CARDINAL, 0L, 1L);
+      false, c->window, ATOM_NET_WM_PID, XCB_ATOM_CARDINAL, 0L, 1L);
 }
 
 void property_update_net_wm_pid(client* c, xcb_get_property_cookie_t cookie) {
@@ -254,7 +254,7 @@ void property_update_net_wm_pid(client* c, xcb_get_property_cookie_t cookie) {
 
 xcb_get_property_cookie_t property_get_motif_wm_hints(client* c) {
     return getConnection().get_property_unchecked(
-      false, c->window, _MOTIF_WM_HINTS, _MOTIF_WM_HINTS, 0L, 5L);
+      false, c->window, ATOM_MOTIF_WM_HINTS, ATOM_MOTIF_WM_HINTS, 0L, 5L);
 }
 
 void property_update_motif_wm_hints(client* c, xcb_get_property_cookie_t cookie) {
@@ -280,7 +280,7 @@ void property_update_motif_wm_hints(client* c, xcb_get_property_cookie_t cookie)
 }
 
 xcb_get_property_cookie_t property_get_wm_protocols(client* c) {
-    return getConnection().icccm_get_wm_protocols_unchecked(c->window, WM_PROTOCOLS);
+    return getConnection().icccm_get_wm_protocols_unchecked(c->window, ATOM_WM_PROTOCOLS);
 }
 
 /** Update the list of supported protocols for a client.
@@ -309,7 +309,7 @@ static void property_handle_xembed_info(uint8_t state, xcb_window_t window) {
                                 [window](const auto& w) { return w.win == window; });
     if (emwinIt != Manager::get().embedded.end()) {
         auto cookie =
-          getConnection().get_property(0, window, _XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0, 3);
+          getConnection().get_property(0, window, ATOM_XEMBED_INFO, XCB_GET_PROPERTY_TYPE_ANY, 0, 3);
         auto reply = getConnection().get_property_reply(cookie);
         xembed_property_update(getConnection(), *emwinIt, Manager::get().x.get_timestamp(), reply);
     }
@@ -395,36 +395,36 @@ void property_handle_propertynotify(xcb_property_notify_event_t* ev) {
 #define END return
 
     /* Xembed stuff */
-    HANDLE(_XEMBED_INFO, property_handle_xembed_info)
+    HANDLE(ATOM_XEMBED_INFO, property_handle_xembed_info)
 
     /* ICCCM stuff */
     HANDLE(XCB_ATOM_WM_TRANSIENT_FOR, property_handle_wm_transient_for)
-    HANDLE(WM_CLIENT_LEADER, property_handle_wm_client_leader)
+    HANDLE(ATOM_WM_CLIENT_LEADER, property_handle_wm_client_leader)
     HANDLE(XCB_ATOM_WM_NORMAL_HINTS, property_handle_wm_normal_hints)
     HANDLE(XCB_ATOM_WM_HINTS, property_handle_wm_hints)
     HANDLE(XCB_ATOM_WM_NAME, property_handle_wm_name)
     HANDLE(XCB_ATOM_WM_ICON_NAME, property_handle_wm_icon_name)
     HANDLE(XCB_ATOM_WM_CLASS, property_handle_wm_class)
-    HANDLE(WM_PROTOCOLS, property_handle_wm_protocols)
+    HANDLE(ATOM_WM_PROTOCOLS, property_handle_wm_protocols)
     HANDLE(XCB_ATOM_WM_CLIENT_MACHINE, property_handle_wm_client_machine)
-    HANDLE(WM_WINDOW_ROLE, property_handle_wm_window_role)
+    HANDLE(ATOM_WM_WINDOW_ROLE, property_handle_wm_window_role)
 
     /* EWMH stuff */
-    HANDLE(_NET_WM_NAME, property_handle_net_wm_name)
-    HANDLE(_NET_WM_ICON_NAME, property_handle_net_wm_icon_name)
-    HANDLE(_NET_WM_STRUT_PARTIAL, property_handle_net_wm_strut_partial)
-    HANDLE(_NET_WM_ICON, property_handle_net_wm_icon)
-    HANDLE(_NET_WM_PID, property_handle_net_wm_pid)
-    HANDLE(_NET_WM_WINDOW_OPACITY, property_handle_net_wm_opacity)
+    HANDLE(ATOM_NET_WM_NAME, property_handle_net_wm_name)
+    HANDLE(ATOM_NET_WM_ICON_NAME, property_handle_net_wm_icon_name)
+    HANDLE(ATOM_NET_WM_STRUT_PARTIAL, property_handle_net_wm_strut_partial)
+    HANDLE(ATOM_NET_WM_ICON, property_handle_net_wm_icon)
+    HANDLE(ATOM_NET_WM_PID, property_handle_net_wm_pid)
+    HANDLE(ATOM_NET_WM_WINDOW_OPACITY, property_handle_net_wm_opacity)
 
     /* MOTIF hints */
-    HANDLE(_MOTIF_WM_HINTS, property_handle_motif_wm_hints)
+    HANDLE(ATOM_MOTIF_WM_HINTS, property_handle_motif_wm_hints)
 
     /* background change */
-    HANDLE(_XROOTPMAP_ID, property_handle_xrootpmap_id)
+    HANDLE(ATOM_XROOTPMAP_ID, property_handle_xrootpmap_id)
 
     /* selection transfers */
-    HANDLE(AWESOME_SELECTION_ATOM, property_handle_awesome_selection_atom)
+    HANDLE(ATOM_AWESOME_SELECTION_ATOM, property_handle_awesome_selection_atom)
 
     /* If nothing was found, return */
     END;

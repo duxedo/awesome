@@ -1899,7 +1899,7 @@ void client_focus_refresh(void) {
             win = client_get_nofocus_window(c);
         }
 
-        if (client_hasproto(c, WM_TAKE_FOCUS)) {
+        if (client_hasproto(c, ATOM_WM_TAKE_FOCUS)) {
             xwindow_takefocus(c->window);
         }
     }
@@ -2102,7 +2102,7 @@ void client_manage(xcb_window_t w,
     /* If this is a new client that just has been launched, then request its
      * startup id. */
     xcb_get_property_cookie_t startup_id_q = getConnection().get_property(
-      false, w, _NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
+      false, w, ATOM_NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
 
     /* Make sure the window is automatically mapped if awesome exits or dies. */
     getConnection().change_save_set(XCB_SET_MODE_INSERT, w);
@@ -2222,7 +2222,7 @@ void client_manage(xcb_window_t w,
     if (startup_id.empty() && c->leader_window != XCB_NONE) {
         /* GTK hides this property elsewhere. No idea why. */
         startup_id_q = getConnection().get_property(
-          false, c->leader_window, _NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
+          false, c->leader_window, ATOM_NET_STARTUP_ID, XCB_GET_PROPERTY_TYPE_ANY, 0, UINT_MAX);
         reply = getConnection().get_property_reply(startup_id_q);
         startup_id = xutil_get_text_property_from_reply(reply);
     }
@@ -2932,7 +2932,7 @@ void client_unmanage(client* c, client_unmanage_t reason) {
  * \param c The client to kill.
  */
 void client_kill(client* c) {
-    if (client_hasproto(c, WM_DELETE_WINDOW)) {
+    if (client_hasproto(c, ATOM_WM_DELETE_WINDOW)) {
         xcb_client_message_event_t ev;
 
         memset(&ev, 0, sizeof(ev));
@@ -2941,8 +2941,8 @@ void client_kill(client* c) {
         ev.window = c->window;
         ev.format = 32;
         ev.data.data32[1] = Manager::get().x.get_timestamp();
-        ev.type = WM_PROTOCOLS;
-        ev.data.data32[0] = WM_DELETE_WINDOW;
+        ev.type = ATOM_WM_PROTOCOLS;
+        ev.data.data32[0] = ATOM_WM_DELETE_WINDOW;
 
         getConnection().send_event(false, c->window, XCB_EVENT_MASK_NO_EVENT, (char*)&ev);
     } else {
@@ -3847,7 +3847,7 @@ static int luaA_client_get_focusable(lua_State* L, lua_object_t* o) {
         return 1;
     }
 
-    lua_pushboolean(L, !c->nofocus || client_hasproto(c, WM_TAKE_FOCUS));
+    lua_pushboolean(L, !c->nofocus || client_hasproto(c, ATOM_WM_TAKE_FOCUS));
     return 1;
 }
 

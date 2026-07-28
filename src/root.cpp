@@ -68,14 +68,14 @@ static void root_set_wallpaper_pixmap(XCB::Connection& c, xcb_pixmap_t p) {
     xcb_clear_area(c.getConnection(), 0, screen->root, 0, 0, 0, 0);
 
     prop_c = xcb_get_property_unchecked(
-      c.connection, false, screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
+      c.connection, false, screen->root, ATOM_ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
 
     /* Theoretically, this should be enough to set the wallpaper. However, to
      * make pseudo-transparency work, clients need a way to get the wallpaper.
      * You can't query a window's back pixmap, so properties are (ab)used.
      */
-    c.replace_property(screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, p);
-    c.replace_property(screen->root, ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, p);
+    c.replace_property(screen->root, ATOM_XROOTPMAP_ID, XCB_ATOM_PIXMAP, p);
+    c.replace_property(screen->root, ATOM_ESETROOT_PMAP_ID, XCB_ATOM_PIXMAP, p);
 
     /* Now make sure that the old wallpaper is freed (but only do this for ESETROOT_PMAP_ID) */
     prop_r = xcb_get_property_reply(c.connection, prop_c, NULL);
@@ -161,7 +161,7 @@ void root_update_wallpaper(void) {
     cairo_surface_destroy(Manager::get().wallpaper);
     Manager::get().wallpaper = NULL;
     auto prop_c = getConnection().get_property_unchecked(
-      false, Manager::get().screen->root, _XROOTPMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
+      false, Manager::get().screen->root, ATOM_XROOTPMAP_ID, XCB_ATOM_PIXMAP, 0, 1);
     auto prop_r = getConnection().get_property_reply(prop_c);
 
     if (!prop_r || !prop_r->value_len) {

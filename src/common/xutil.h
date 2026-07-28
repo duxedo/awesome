@@ -37,8 +37,8 @@
 static inline std::string
 xutil_get_text_property_from_reply(const XCB::reply<xcb_get_property_reply_t>& reply) {
     if (!reply ||
-        (reply->type != XCB_ATOM_STRING && reply->type != UTF8_STRING &&
-         reply->type != COMPOUND_TEXT) ||
+        (reply->type != XCB_ATOM_STRING && reply->type != ATOM_UTF8_STRING &&
+         reply->type != ATOM_COMPOUND_TEXT) ||
         reply->format != 8) {
         return "";
         /* We need to copy it that way since the string may not be

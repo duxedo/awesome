@@ -872,7 +872,7 @@ static void event_handle_clientmessage(xcb_client_message_event_t* ev) {
         return;
     }
 
-    if (ev->type == WM_CHANGE_STATE) {
+    if (ev->type == ATOM_WM_CHANGE_STATE) {
         client* c;
         if ((c = client_getbywin(ev->window)) && ev->format == 32 &&
             ev->data.data32[0] == XCB_ICCCM_WM_STATE_ICONIC) {
@@ -881,9 +881,9 @@ static void event_handle_clientmessage(xcb_client_message_event_t* ev) {
             client_set_minimized(L, -1, true);
             lua_pop(L, 1);
         }
-    } else if (ev->type == _XEMBED) {
+    } else if (ev->type == ATOM_XEMBED) {
         xembed_process_client_message(ev);
-    } else if (ev->type == _NET_SYSTEM_TRAY_OPCODE) {
+    } else if (ev->type == ATOM_NET_SYSTEM_TRAY_OPCODE) {
         systray_process_client_message(ev);
     } else {
         ewmh_process_client_message(ev);

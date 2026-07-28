@@ -328,7 +328,7 @@ int window_set_xproperty(lua_State* L, xcb_window_t window, int prop_idx, int va
     if (prop->type == xproperty::PROP_STRING) {
         size_t len = 0;
         const char* data = luaL_checklstring(L, value_idx, &len);
-        getConnection().replace_property(window, prop->atom, UTF8_STRING, std::span(data, len));
+        getConnection().replace_property(window, prop->atom, ATOM_UTF8_STRING, std::span(data, len));
     } else if (prop->type == xproperty::PROP_NUMBER || prop->type == xproperty::PROP_BOOLEAN) {
         uint32_t data = (prop->type == xproperty::PROP_NUMBER)
                           ? Lua::checkinteger_range(L, value_idx, 0, UINT32_MAX)
@@ -345,7 +345,7 @@ int window_get_xproperty(lua_State* L, xcb_window_t window, int prop_idx) {
     xcb_atom_t type;
     uint32_t length;
 
-    type = prop->type == xproperty::PROP_STRING ? UTF8_STRING : XCB_ATOM_CARDINAL;
+    type = prop->type == xproperty::PROP_STRING ? ATOM_UTF8_STRING : XCB_ATOM_CARDINAL;
     length = prop->type == xproperty::PROP_STRING ? UINT32_MAX : 1;
     auto reply = getConnection().get_property_reply(
       getConnection().get_property_unchecked(false, window, prop->atom, type, 0, length));
@@ -398,22 +398,22 @@ static int luaA_window_get_xproperty(lua_State* L) {
  */
 uint32_t window_translate_type(window_type_t type) {
     switch (type) {
-    case WINDOW_TYPE_NORMAL: return _NET_WM_WINDOW_TYPE_NORMAL;
-    case WINDOW_TYPE_DESKTOP: return _NET_WM_WINDOW_TYPE_DESKTOP;
-    case WINDOW_TYPE_DOCK: return _NET_WM_WINDOW_TYPE_DOCK;
-    case WINDOW_TYPE_SPLASH: return _NET_WM_WINDOW_TYPE_SPLASH;
-    case WINDOW_TYPE_DIALOG: return _NET_WM_WINDOW_TYPE_DIALOG;
-    case WINDOW_TYPE_MENU: return _NET_WM_WINDOW_TYPE_MENU;
-    case WINDOW_TYPE_TOOLBAR: return _NET_WM_WINDOW_TYPE_TOOLBAR;
-    case WINDOW_TYPE_UTILITY: return _NET_WM_WINDOW_TYPE_UTILITY;
-    case WINDOW_TYPE_DROPDOWN_MENU: return _NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
-    case WINDOW_TYPE_POPUP_MENU: return _NET_WM_WINDOW_TYPE_POPUP_MENU;
-    case WINDOW_TYPE_TOOLTIP: return _NET_WM_WINDOW_TYPE_TOOLTIP;
-    case WINDOW_TYPE_NOTIFICATION: return _NET_WM_WINDOW_TYPE_NOTIFICATION;
-    case WINDOW_TYPE_COMBO: return _NET_WM_WINDOW_TYPE_COMBO;
-    case WINDOW_TYPE_DND: return _NET_WM_WINDOW_TYPE_DND;
+    case WINDOW_TYPE_NORMAL: return ATOM_NET_WM_WINDOW_TYPE_NORMAL;
+    case WINDOW_TYPE_DESKTOP: return ATOM_NET_WM_WINDOW_TYPE_DESKTOP;
+    case WINDOW_TYPE_DOCK: return ATOM_NET_WM_WINDOW_TYPE_DOCK;
+    case WINDOW_TYPE_SPLASH: return ATOM_NET_WM_WINDOW_TYPE_SPLASH;
+    case WINDOW_TYPE_DIALOG: return ATOM_NET_WM_WINDOW_TYPE_DIALOG;
+    case WINDOW_TYPE_MENU: return ATOM_NET_WM_WINDOW_TYPE_MENU;
+    case WINDOW_TYPE_TOOLBAR: return ATOM_NET_WM_WINDOW_TYPE_TOOLBAR;
+    case WINDOW_TYPE_UTILITY: return ATOM_NET_WM_WINDOW_TYPE_UTILITY;
+    case WINDOW_TYPE_DROPDOWN_MENU: return ATOM_NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
+    case WINDOW_TYPE_POPUP_MENU: return ATOM_NET_WM_WINDOW_TYPE_POPUP_MENU;
+    case WINDOW_TYPE_TOOLTIP: return ATOM_NET_WM_WINDOW_TYPE_TOOLTIP;
+    case WINDOW_TYPE_NOTIFICATION: return ATOM_NET_WM_WINDOW_TYPE_NOTIFICATION;
+    case WINDOW_TYPE_COMBO: return ATOM_NET_WM_WINDOW_TYPE_COMBO;
+    case WINDOW_TYPE_DND: return ATOM_NET_WM_WINDOW_TYPE_DND;
     }
-    return _NET_WM_WINDOW_TYPE_NORMAL;
+    return ATOM_NET_WM_WINDOW_TYPE_NORMAL;
 }
 
 static int luaA_window_set_border_width(lua_State* L, lua_object_t*) {

@@ -75,7 +75,7 @@ static int luaA_selection_get(lua_State* L) {
     }
 
     getConnection().convert_selection(
-      selection_window, XCB_ATOM_PRIMARY, UTF8_STRING, XSEL_DATA, Manager::get().x.get_timestamp());
+      selection_window, XCB_ATOM_PRIMARY, ATOM_UTF8_STRING, ATOM_XSEL_DATA, Manager::get().x.get_timestamp());
 
     getConnection().flush();
 

@@ -6,7 +6,10 @@ echo
 echo "#include <xcb/xcb.h>"
 while read atom
 do
-    echo extern xcb_atom_t $atom\;
+    case $atom in
+      "_"*) echo extern xcb_atom_t ATOM$atom\; ;;
+      *)    echo extern xcb_atom_t ATOM_$atom\; ;;
+    esac
 done < $1
 
 # vim: filetype=sh:expandtab:shiftwidth=4:tabstop=8:softtabstop=4:textwidth=80
