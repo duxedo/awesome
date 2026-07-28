@@ -94,6 +94,7 @@ m_dep = cc.find_library('m', required : false)
 
 atoms_ext = custom_target(
     output : 'atoms-extern.h',
+    build_subdir : 'generated',
     input : ['build-utils/atoms-ext.sh', 'src/common/atoms.list'],
     capture : true,
     command : ['/bin/sh', '@INPUT0@', '@INPUT1@'],
@@ -101,6 +102,7 @@ atoms_ext = custom_target(
 
 atoms_int = custom_target(
     output : 'atoms-intern.h',
+    build_subdir : 'generated',
     input : ['build-utils/atoms-int.sh', 'src/common/atoms.list'],
     capture : true,
     command : ['/bin/sh', '@INPUT0@', '@INPUT1@'],

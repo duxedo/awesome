@@ -31,7 +31,7 @@ typedef struct {
     xcb_atom_t* atom;
 } atom_item_t;
 
-#include "atoms-intern.h"
+#include "generated/atoms-intern.h"
 
 void atoms_init(xcb_connection_t* conn) {
     unsigned int i;
