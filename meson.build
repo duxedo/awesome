@@ -1,4 +1,6 @@
-project('pellicle', 'c', 'cpp',
+project('awesome++', 'c', 'cpp',
+    meson_version: '>=1.10.0',
+    version: '0.0.1',
     default_options: [
         'cpp_std=c++23',
         'c_std=gnu18',
