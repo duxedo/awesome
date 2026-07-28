@@ -144,7 +144,7 @@ static bool event_handle_mousegrabber(int x, int y, uint16_t mask) {
  * \param ev The event to handle.
  */
 static void event_emit_button(lua_State* L, xcb_button_press_event_t* ev) {
-    const char* name;
+    const char* name = "";
     switch (XCB_EVENT_RESPONSE_TYPE(ev)) {
     case XCB_BUTTON_PRESS: name = "button::press"; break;
     case XCB_BUTTON_RELEASE: name = "button::release"; break;

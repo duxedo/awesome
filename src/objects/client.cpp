@@ -3453,7 +3453,7 @@ titlebar_get_drawable(lua_State* L, client* c, int cl_idx, client_titlebar_t bar
 }
 
 static void titlebar_resize(lua_State* L, int cidx, client* c, client_titlebar_t bar, int size) {
-    const char* property_name;
+    const char* property_name = "";
 
     if (size < 0) {
         return;
