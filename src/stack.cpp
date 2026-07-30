@@ -127,7 +127,7 @@ static window_layer_t client_layer_translator(client* c) {
      * ensures that focus changes alone (e.g. sloppy / mouse-enter focus)
      * do not alter the stacking order of fullscreen windows. */
     } else if (c->fullscreen && !Manager::get().getStack().empty()
-            && Manager::get().getStack().back() == c)
+            && Manager::get().getStack().back() == c) {
         return WINDOW_LAYER_FULLSCREEN;
     } else if (c->above) {
         return WINDOW_LAYER_ABOVE;

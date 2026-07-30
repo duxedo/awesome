@@ -550,7 +550,7 @@ int main(int argc, char** argv) {
     }
 
     /* Setup pipe for SIGCHLD processing */
-    if (!g_unix_open_pipe(sigchld_pipe, FD_CLOEXEC, NULL) {
+    if (!g_unix_open_pipe(sigchld_pipe, FD_CLOEXEC, NULL)) {
         log_fatal("Failed to create pipe");
     }
     g_unix_fd_add(sigchld_pipe[0], G_IO_IN, reap_children, NULL);
